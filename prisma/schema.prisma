@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  name          String
+  locale        String         @default("nl")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  children      ChildProfile[]
+
+  @@map("users")
+}
+
+model ChildProfile {
+  id                       String   @id @default(uuid())
+  userId                   String   @map("user_id")
+  name                     String
+  age                      Int
+  gender                   String   // "boy" | "girl" | "other"
+  interests                String[] // e.g. ["dinosaurs", "space", "animals"]
+  pets                     Json?    // [{ name, type, description }]
+  friends                  Json?    // [{ name, relationship }]
+  favoriteThings           Json?    @map("favorite_things") // { color, food, toy, place }
+  fears                    String[] // things to avoid in stories
+  mainCharacterType        String   @map("main_character_type") // "self" | "stuffed_animal" | "action_hero" | "custom"
+  mainCharacterDescription String?  @map("main_character_description")
+  characterBible           Json?    @map("character_bible") // grows over time with story summaries
+  referenceImages          String[] @map("reference_images") // S3/R2 URLs
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stories Story[]
+  books   StoryBook[]
+
+  @@map("child_profiles")
+}
+
+model Story {
+  id               String      @id @default(uuid())
+  childProfileId   String      @map("child_profile_id")
+  title            String
+  subtitle         String?
+  language         String      @default("nl") // "nl" | "en"
+  setting          String      // e.g. "fantasy_forest", "space_adventure"
+  status           String      @default("generating") // "generating" | "ready" | "error"
+  generationParams Json?       @map("generation_params") // questions/answers for this story
+  isFavorite       Boolean     @default(false) @map("is_favorite")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  childProfile ChildProfile @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
+  pages        StoryPage[]
+  jobs         GenerationJob[]
+  bookStories  BookStory[]
+
+  @@map("stories")
+}
+
+model StoryPage {
+  id                      String @id @default(uuid())
+  storyId                 String @map("story_id")
+  pageNumber              Int    @map("page_number")
+  text                    String
+  illustrationUrl         String? @map("illustration_url") // S3/R2 URL
+  illustrationPrompt      String? @map("illustration_prompt") // for regeneration
+  illustrationDescription String? @map("illustration_description") // alt text
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, pageNumber])
+  @@map("story_pages")
+}
+
+model StoryBook {
+  id              String   @id @default(uuid())
+  childProfileId  String   @map("child_profile_id")
+  title           String
+  coverImageUrl   String?  @map("cover_image_url")
+  interiorPdfUrl  String?  @map("interior_pdf_url")
+  coverPdfUrl     String?  @map("cover_pdf_url")
+  printStatus     String   @default("draft") @map("print_status") // "draft" | "pdf_ready" | "ordered" | "printed" | "shipped"
+  printJobId      String?  @map("print_job_id") // Lulu print job ID
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  childProfile ChildProfile @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
+  bookStories  BookStory[]
+
+  @@map("story_books")
+}
+
+model BookStory {
+  id          String @id @default(uuid())
+  bookId      String @map("book_id")
+  storyId     String @map("story_id")
+  sortOrder   Int    @map("sort_order")
+
+  book  StoryBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  story Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, storyId])
+  @@map("book_stories")
+}
+
+model GenerationJob {
+  id           String    @id @default(uuid())
+  storyId      String    @map("story_id")
+  type         String    // "text" | "illustration" | "pdf"
+  status       String    @default("pending") // "pending" | "processing" | "completed" | "failed"
+  progress     Int       @default(0) // 0-100
+  errorMessage String?   @map("error_message")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  completedAt  DateTime? @map("completed_at")
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@map("generation_jobs")
+}

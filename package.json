@@ -8,10 +8,26 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/engines",
+      "@swc/core",
+      "@parcel/watcher"
+    ]
+  },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.81.0",
+    "@prisma/client": "^7.6.0",
+    "@tanstack/react-query": "^5.96.0",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.38.0",
     "next": "16.2.1",
+    "next-intl": "^4.8.4",
+    "prisma": "^7.6.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
