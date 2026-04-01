@@ -25,15 +25,29 @@ export function buildSystemPrompt(characterBible: {
     previousAdventures,
   } = characterBible;
 
-  const ageGroup = age <= 4 ? "2-4" : age <= 7 ? "5-7" : "8-10";
+  const ageGroup = age <= 1 ? "0-1" : age <= 4 ? "2-4" : age <= 7 ? "5-7" : "8-10";
 
-  const ageGuidelines: Record<string, string> = {
-    "2-4":
-      "Use very simple, short sentences. Include repetition and familiar concepts. Use onomatopoeia and sensory words. Keep vocabulary basic. The story should be comforting and gentle.",
-    "5-7":
-      "Use slightly longer sentences with simple plot structures. Include clear emotions and relatable situations. Add some humor and surprise. Characters should solve simple problems.",
-    "8-10":
-      "Use more complex narrative structures. Include humor, problem-solving, and mild suspense. Characters can face challenges and learn lessons. Vocabulary can be richer.",
+  const ageGuidelines: Record<string, { text: string; pages: number; wordsPerPage: string }> = {
+    "0-1": {
+      pages: 5,
+      wordsPerPage: "5-15",
+      text: "Write for a baby/toddler. Use EXTREMELY simple language: 1-2 very short sentences per page maximum. Focus on sounds (boom! splash! miauw!), colors, animals, and sensory experiences. Use lots of repetition — repeat key words and phrases across pages. The tone must be warm, soft, and soothing like a parent talking to their baby. Think of classic baby books like 'Nijntje'. Example page: 'Kijk! Daar is een rode bal. Bal! Bal!' — that level of simplicity.",
+    },
+    "2-4": {
+      pages: 6,
+      wordsPerPage: "15-40",
+      text: "Use very simple, short sentences. Include repetition and familiar concepts. Use onomatopoeia and sensory words. Keep vocabulary basic. The story should be comforting and gentle. Think of picture book language.",
+    },
+    "5-7": {
+      pages: 8,
+      wordsPerPage: "40-80",
+      text: "Use slightly longer sentences with simple plot structures. Include clear emotions and relatable situations. Add some humor and surprise. Characters should solve simple problems.",
+    },
+    "8-10": {
+      pages: 8,
+      wordsPerPage: "60-120",
+      text: "Use more complex narrative structures. Include humor, problem-solving, and mild suspense. Characters can face challenges and learn lessons. Vocabulary can be richer.",
+    },
   };
 
   let characterDescription = "";
@@ -79,11 +93,11 @@ Interests: ${interests.join(", ")}${petsSection}${friendsSection}${favoritesSect
 
 ## Writing Guidelines
 Age group: ${ageGroup} years old
-${ageGuidelines[ageGroup]}
+${ageGuidelines[ageGroup].text}
 
 ## Story Structure
-- Write exactly 6 pages
-- Each page should have 50-150 words (adjusted for age group: shorter for younger children)
+- Write exactly ${ageGuidelines[ageGroup].pages} pages
+- Each page should have ${ageGuidelines[ageGroup].wordsPerPage} words — this is CRITICAL, do not exceed!
 - Structure: Setup → Adventure begins → Challenge → Climax → Resolution → Warm ending
 - Every story must end on a positive, warm note
 - Weave in the child's real interests and details naturally - don't force them

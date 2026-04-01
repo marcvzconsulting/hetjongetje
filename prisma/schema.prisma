@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -24,7 +23,7 @@ model ChildProfile {
   id                       String   @id @default(uuid())
   userId                   String   @map("user_id")
   name                     String
-  age                      Int
+  dateOfBirth              DateTime @map("date_of_birth") @db.Date
   gender                   String   // "boy" | "girl" | "other"
   interests                String[] // e.g. ["dinosaurs", "space", "animals"]
   pets                     Json?    // [{ name, type, description }]
