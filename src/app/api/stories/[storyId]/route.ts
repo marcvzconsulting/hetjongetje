@@ -34,3 +34,24 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(_request: NextRequest, { params }: Props) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
+  }
+
+  const { storyId } = await params;
+
+  const story = await prisma.story.findFirst({
+    where: { id: storyId, childProfile: { userId: session.user.id } },
+  });
+
+  if (!story) {
+    return NextResponse.json({ error: "Verhaal niet gevonden" }, { status: 404 });
+  }
+
+  await prisma.story.delete({ where: { id: storyId } });
+
+  return NextResponse.json({ success: true });
+}

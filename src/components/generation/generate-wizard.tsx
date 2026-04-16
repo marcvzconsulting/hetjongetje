@@ -6,16 +6,24 @@ import {
   STORY_SETTINGS,
   ADVENTURE_TYPES,
   STORY_MOODS,
+  OCCASIONS,
   type StorySetting,
   type AdventureType,
   type StoryMood,
+  type Occasion,
 } from "@/lib/ai/prompts/story-request";
 
 interface ChildData {
   id: string;
   name: string;
-  age: number;
+  dateOfBirth: string;
   gender: string;
+  hairColor: string | null;
+  hairStyle: string | null;
+  eyeColor: string | null;
+  skinColor: string | null;
+  wearsGlasses: boolean;
+  hasFreckles: boolean;
   interests: string[];
   pets: { name: string; type: string }[] | null;
   friends: { name: string; relationship: string }[] | null;
@@ -23,6 +31,7 @@ interface ChildData {
   fears: string[];
   mainCharacterType: string;
   mainCharacterDescription: string | null;
+  approvedCharacterPrompt: string | null;
 }
 
 interface Props {
@@ -62,6 +71,7 @@ interface StoryParams {
   setting: string;
   adventureType: string;
   mood: string;
+  occasion: string;
   companion: string;
   specialDetail: string;
 }
@@ -77,6 +87,7 @@ export function GenerateWizard({ child }: Props) {
     setting: "",
     adventureType: "",
     mood: "",
+    occasion: "none",
     companion: "",
     specialDetail: "",
   });
@@ -94,8 +105,15 @@ export function GenerateWizard({ child }: Props) {
     try {
       const characterBible = {
         childName: child.name,
-        age: child.age,
+        dateOfBirth: child.dateOfBirth,
         gender: child.gender,
+        hairColor: child.hairColor || undefined,
+        hairStyle: child.hairStyle || undefined,
+        eyeColor: child.eyeColor || undefined,
+        skinColor: child.skinColor || undefined,
+        wearsGlasses: child.wearsGlasses,
+        hasFreckles: child.hasFreckles,
+        approvedCharacterPrompt: child.approvedCharacterPrompt || undefined,
         interests: child.interests,
         pets: child.pets || undefined,
         friends: child.friends || undefined,
@@ -115,6 +133,7 @@ export function GenerateWizard({ child }: Props) {
             setting: params.setting,
             adventureType: params.adventureType,
             mood: params.mood,
+            occasion: params.occasion !== "none" ? params.occasion : undefined,
             companion: params.companion || undefined,
             specialDetail: params.specialDetail || undefined,
           },
@@ -342,8 +361,49 @@ export function GenerateWizard({ child }: Props) {
         </div>
       )}
 
-      {/* Step 4: Details + samenvatting */}
+      {/* Step 4: Aanleiding (optioneel) */}
       {step === 4 && (
+        <div className="space-y-4">
+          <label className="block text-sm font-medium">
+            Is er een speciale aanleiding? (optioneel)
+          </label>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            {Object.entries(OCCASIONS)
+              .filter(([key]) => key !== "none")
+              .map(([key, occ]) => (
+              <button
+                key={key}
+                onClick={() => updateParams({ occasion: params.occasion === key ? "none" : key })}
+                className={`flex flex-col items-center gap-2 rounded-xl border-2 p-3 text-center transition-all ${
+                  params.occasion === key
+                    ? "border-primary bg-primary/5"
+                    : "border-muted hover:border-primary/30"
+                }`}
+              >
+                <span className="text-xl">{occ.emoji}</span>
+                <span className="text-[0.65rem] font-medium leading-tight">{occ.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setStep(3)}
+              className="flex-1 rounded-lg border border-muted px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              Terug
+            </button>
+            <button
+              onClick={() => setStep(5)}
+              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
+            >
+              {params.occasion === "none" ? "Overslaan" : "Volgende"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Details + samenvatting */}
+      {step === 5 && (
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -395,6 +455,11 @@ export function GenerateWizard({ child }: Props) {
               <strong>
                 {STORY_SETTINGS[params.setting as StorySetting]?.label}
               </strong>
+              {params.occasion !== "none" && (
+                <>
+                  {" "}met als thema <strong>{OCCASIONS[params.occasion as Occasion]?.label}</strong>
+                </>
+              )}
               {params.companion && (
                 <>
                   {" "}samen met <strong>{params.companion}</strong>
@@ -405,7 +470,7 @@ export function GenerateWizard({ child }: Props) {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep(3)}
+              onClick={() => setStep(4)}
               className="flex-1 rounded-lg border border-muted px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
             >
               Terug

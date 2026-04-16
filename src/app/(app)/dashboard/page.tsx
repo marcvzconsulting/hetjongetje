@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 import { calculateAge } from "@/lib/utils/age";
-import { STORY_SETTINGS } from "@/lib/ai/prompts/story-request";
+import { StoryLibrary } from "@/components/story/story-library";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -16,6 +16,14 @@ export default async function DashboardPage() {
       stories: {
         orderBy: { createdAt: "desc" },
         where: { status: "ready" },
+        include: {
+          pages: {
+            where: { illustrationUrl: { not: null } },
+            orderBy: { pageNumber: "asc" },
+            take: 1,
+            select: { illustrationUrl: true },
+          },
+        },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -30,7 +38,7 @@ export default async function DashboardPage() {
               Hallo, {session.user.name}! 👋
             </h1>
             <p className="text-muted-foreground">
-              Welkom bij Het Jongetje
+              Welkom bij Ons Verhaaltje
             </p>
           </div>
           <SignOutButton />
@@ -54,8 +62,16 @@ export default async function DashboardPage() {
         ) : (
           children.map((child) => {
             const age = calculateAge(child.dateOfBirth);
-            const favorites = child.stories.filter((s) => s.isFavorite);
-            const others = child.stories.filter((s) => !s.isFavorite);
+
+            // Serialize stories for client component
+            const serializedStories = child.stories.map((s) => ({
+              id: s.id,
+              title: s.title,
+              setting: s.setting,
+              isFavorite: s.isFavorite,
+              createdAt: s.createdAt.toISOString(),
+              coverUrl: s.pages[0]?.illustrationUrl || null,
+            }));
 
             return (
               <div key={child.id} className="mb-10">
@@ -92,51 +108,12 @@ export default async function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Story library */}
-                {child.stories.length === 0 ? (
-                  <div className="rounded-2xl border-2 border-dashed border-muted p-8 text-center">
-                    <div className="text-3xl mb-2">📖</div>
-                    <p className="text-sm text-muted-foreground">
-                      Nog geen verhalen voor {child.name}.{" "}
-                      <Link
-                        href={`/generate/${child.id}`}
-                        className="text-primary font-medium hover:text-primary-light"
-                      >
-                        Maak het eerste verhaal!
-                      </Link>
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    {/* Favorites section */}
-                    {favorites.length > 0 && (
-                      <div className="mb-4">
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                          ❤️ Bibliotheek
-                        </h3>
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                          {favorites.map((story) => (
-                            <StoryCard key={story.id} story={story} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Other stories */}
-                    {others.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2">
-                          {favorites.length > 0 ? "Overige verhalen" : "Alle verhalen"}
-                        </h3>
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                          {others.map((story) => (
-                            <StoryCard key={story.id} story={story} />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Story library with sort/filter/delete */}
+                <StoryLibrary
+                  stories={serializedStories}
+                  childName={child.name}
+                  childId={child.id}
+                />
               </div>
             );
           })
@@ -154,31 +131,5 @@ export default async function DashboardPage() {
         )}
       </div>
     </div>
-  );
-}
-
-function StoryCard({ story }: { story: { id: string; title: string; setting: string; isFavorite: boolean; createdAt: Date } }) {
-  const settingInfo = STORY_SETTINGS[story.setting as keyof typeof STORY_SETTINGS];
-
-  return (
-    <Link
-      href={`/story/${story.id}`}
-      className="group rounded-xl bg-white border border-muted p-4 transition-all hover:shadow-md hover:border-primary/30"
-    >
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-2xl">{settingInfo?.emoji || "📖"}</span>
-        {story.isFavorite && <span className="text-sm">❤️</span>}
-      </div>
-      <h4 className="font-semibold text-sm group-hover:text-primary transition-colors line-clamp-2">
-        {story.title}
-      </h4>
-      <p className="text-xs text-muted-foreground mt-1">
-        {settingInfo?.label || story.setting} &middot;{" "}
-        {new Date(story.createdAt).toLocaleDateString("nl-NL", {
-          day: "numeric",
-          month: "short",
-        })}
-      </p>
-    </Link>
   );
 }

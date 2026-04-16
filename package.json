@@ -1,5 +1,5 @@
 {
-  "name": "hetjongetje",
+  "name": "ons-verhaaltje",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:push": "prisma db push --config prisma/prisma.config.ts",
     "db:generate": "prisma generate --config prisma/prisma.config.ts",
-    "db:studio": "prisma studio --config prisma/prisma.config.ts"
+    "db:studio": "prisma studio --config prisma/prisma.config.ts",
+    "migrate:storage": "tsx scripts/migrate-fal-to-scaleway.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -21,8 +22,12 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.81.0",
+    "@aws-sdk/client-s3": "^3.1030.0",
+    "@aws-sdk/s3-request-presigner": "^3.1030.0",
+    "@fal-ai/client": "^1.9.5",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
+    "@sentry/nextjs": "^10.49.0",
     "@tanstack/react-query": "^5.96.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
@@ -47,6 +52,7 @@
     "eslint-config-next": "16.2.1",
     "pg": "^8.20.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

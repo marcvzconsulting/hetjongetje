@@ -61,6 +61,27 @@ export const STORY_SETTINGS = {
   },
 } as const;
 
+export const OCCASIONS = {
+  none: { label: "Geen", labelEn: "", description: "", emoji: "" },
+  birthday: { label: "Verjaardag", labelEn: "Birthday", description: "A birthday celebration with cake, presents, balloons, and a party", emoji: "🎂" },
+  christmas: { label: "Kerst", labelEn: "Christmas", description: "Christmas with snow, a decorated tree, Santa Claus, reindeer, and presents", emoji: "🎄" },
+  sinterklaas: { label: "Sinterklaas", labelEn: "Sinterklaas (Dutch holiday)", description: "The Dutch Sinterklaas with his steamboat from Spain, pieten helpers, pepernoten, shoes by the fireplace, and surprises", emoji: "🎅" },
+  easter: { label: "Pasen", labelEn: "Easter", description: "Easter with the Easter bunny, hidden colorful eggs, baby chicks, and chocolate", emoji: "🐣" },
+  new_years: { label: "Oud & Nieuw", labelEn: "New Year's Eve", description: "New Year's Eve with fireworks, confetti, counting down, and wishes", emoji: "🎆" },
+  mothers_day: { label: "Moederdag", labelEn: "Mother's Day", description: "A Mother's Day celebration with love, flowers, breakfast in bed, and handmade gifts", emoji: "💐" },
+  fathers_day: { label: "Vaderdag", labelEn: "Father's Day", description: "A Father's Day celebration with love, adventures together, and special surprises for dad", emoji: "👔" },
+  valentines: { label: "Valentijnsdag", labelEn: "Valentine's Day", description: "Valentine's Day with hearts, friendship, love letters, and kindness", emoji: "💌" },
+  kings_day: { label: "Koningsdag", labelEn: "King's Day (Dutch holiday)", description: "Dutch King's Day with orange clothes, flea markets, canal boats, and outdoor festivities", emoji: "🧡" },
+  sint_maarten: { label: "Sint Maarten", labelEn: "Sint Maarten (Dutch lantern festival)", description: "Sint Maarten lantern festival, walking door-to-door with handmade lanterns singing songs for candy and treats", emoji: "🏮" },
+  three_kings: { label: "Drie Koningen", labelEn: "Three Kings / Epiphany", description: "Three Kings Day with the three wise men, a star to follow, and singing door-to-door", emoji: "⭐" },
+  sugar_feast: { label: "Suikerfeest", labelEn: "Eid al-Fitr (Sugar Feast)", description: "Eid al-Fitr celebration with family gatherings, delicious sweets, new clothes, and sharing with others", emoji: "🌙" },
+  hanukkah: { label: "Chanoeka", labelEn: "Hanukkah", description: "Hanukkah with the menorah, dreidel games, latkes, and eight nights of light", emoji: "🕎" },
+  carnival: { label: "Carnaval", labelEn: "Carnival", description: "Carnival celebration with colorful costumes, masks, music, parades, and dancing", emoji: "🎭" },
+  animal_day: { label: "Dierendag", labelEn: "World Animal Day", description: "World Animal Day celebrating and caring for animals, visiting a shelter, and learning about nature", emoji: "🐾" },
+} as const;
+
+export type Occasion = keyof typeof OCCASIONS;
+
 export type StorySetting = keyof typeof STORY_SETTINGS;
 
 export const ADVENTURE_TYPES = {

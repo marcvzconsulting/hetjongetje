@@ -35,6 +35,12 @@ export async function POST(request: NextRequest) {
       fears,
       mainCharacterType,
       mainCharacterDescription,
+      hairColor,
+      hairStyle,
+      eyeColor,
+      skinColor,
+      wearsGlasses,
+      hasFreckles,
     } = body;
 
     if (!name || !dateOfBirth || !gender || !mainCharacterType) {
@@ -57,6 +63,12 @@ export async function POST(request: NextRequest) {
         fears: fears || [],
         mainCharacterType,
         mainCharacterDescription: mainCharacterDescription || null,
+        hairColor: hairColor || null,
+        hairStyle: hairStyle || null,
+        eyeColor: eyeColor || null,
+        skinColor: skinColor || null,
+        wearsGlasses: wearsGlasses || false,
+        hasFreckles: hasFreckles || false,
         characterBible: undefined,
         referenceImages: [],
       },

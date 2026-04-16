@@ -65,7 +65,7 @@ export function StoryReader({ storyId, title: initialTitle, subtitle, childName,
   }
 
   const nextPage = useCallback(() => {
-    if (currentPage < totalPages - 1) {
+    if (currentPage < totalPages) {
       setDirection(1);
       setCurrentPage((p) => p + 1);
     }
@@ -79,8 +79,9 @@ export function StoryReader({ storyId, title: initialTitle, subtitle, childName,
   }, [currentPage]);
 
   const isFirstPage = currentPage === -1;
-  const isLastPage = currentPage === totalPages - 1;
-  const page = currentPage >= 0 ? pages[currentPage] : null;
+  const isEndPage = currentPage === totalPages; // extra "einde" page
+  const isLastStoryPage = currentPage === totalPages - 1;
+  const page = currentPage >= 0 && currentPage < totalPages ? pages[currentPage] : null;
 
   // Swipe handling for touch devices
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -111,9 +112,9 @@ export function StoryReader({ storyId, title: initialTitle, subtitle, childName,
       <div className="flex items-center justify-between px-4 py-2 bg-[#fdf6e3]/90 backdrop-blur-sm border-b border-amber-200/50 z-10">
         <Link
           href="/dashboard"
-          className="text-sm text-amber-800/60 hover:text-amber-900 transition-colors"
+          className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 transition-colors"
         >
-          &larr; Terug
+          📚 Bibliotheek
         </Link>
         <div className="flex items-center gap-2">
           <button
@@ -244,10 +245,40 @@ export function StoryReader({ storyId, title: initialTitle, subtitle, childName,
               </div>
             ) : null}
 
-            {/* Last page extra */}
-            {isLastPage && (
-              <div className="mt-4 text-center">
-                <p className="text-lg font-bold text-primary">Einde ✨</p>
+            {/* End page */}
+            {isEndPage && (
+              <div className="flex-1 flex flex-col items-center justify-center text-center rounded-3xl bg-white shadow-lg border border-amber-100 p-8 sm:p-12">
+                <div className="text-5xl mb-4">✨</div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-amber-900 mb-2">
+                  Einde
+                </h2>
+                <p className="text-amber-700/70 mb-8">
+                  Dat was het verhaal voor {childName}!
+                </p>
+                <div className="flex flex-col gap-3 w-full max-w-xs">
+                  <button
+                    onClick={toggleFavorite}
+                    className={`rounded-xl px-6 py-3 text-sm font-semibold transition-colors ${
+                      isFavorite
+                        ? "bg-red-50 text-red-600 border-2 border-red-200"
+                        : "bg-primary text-white hover:bg-primary-light"
+                    }`}
+                  >
+                    {isFavorite ? "❤️ Opgeslagen in bibliotheek" : "🤍 Opslaan in bibliotheek"}
+                  </button>
+                  <Link
+                    href={`/generate/${childId}`}
+                    className="rounded-xl bg-secondary px-6 py-3 text-sm font-semibold text-white text-center transition-colors hover:bg-secondary/80"
+                  >
+                    ✨ Nog een verhaal maken
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="rounded-xl border-2 border-amber-200 px-6 py-3 text-sm font-semibold text-amber-800 text-center transition-colors hover:bg-amber-50"
+                  >
+                    📚 Naar mijn bibliotheek
+                  </Link>
+                </div>
               </div>
             )}
           </motion.div>
@@ -282,13 +313,8 @@ export function StoryReader({ storyId, title: initialTitle, subtitle, childName,
           ))}
         </div>
 
-        {isLastPage ? (
-          <Link
-            href={`/generate/${childId}`}
-            className="flex items-center gap-1 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-          >
-            Nog een verhaal ✨
-          </Link>
+        {isEndPage ? (
+          <span className="w-20" />
         ) : (
           <button
             onClick={nextPage}

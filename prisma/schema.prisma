@@ -30,8 +30,16 @@ model ChildProfile {
   friends                  Json?    // [{ name, relationship }]
   favoriteThings           Json?    @map("favorite_things") // { color, food, toy, place }
   fears                    String[] // things to avoid in stories
+  hairColor                String?  @map("hair_color")       // e.g. "blond", "bruin", "rood"
+  hairStyle                String?  @map("hair_style")       // e.g. "kort", "lang", "krullen"
+  eyeColor                 String?  @map("eye_color")        // e.g. "blauw", "bruin", "groen"
+  skinColor                String?  @map("skin_color")       // e.g. "licht", "getint", "donker"
+  wearsGlasses             Boolean  @default(false) @map("wears_glasses")
+  hasFreckles              Boolean  @default(false) @map("has_freckles")
   mainCharacterType        String   @map("main_character_type") // "self" | "stuffed_animal" | "action_hero" | "custom"
   mainCharacterDescription String?  @map("main_character_description")
+  approvedCharacterPrompt  String?  @map("approved_character_prompt") // locked prompt after parent approval
+  approvedPreviewUrl       String?  @map("approved_preview_url")      // the approved preview image URL
   characterBible           Json?    @map("character_bible") // grows over time with story summaries
   referenceImages          String[] @map("reference_images") // S3/R2 URLs
   createdAt                DateTime @default(now()) @map("created_at")
@@ -109,6 +117,17 @@ model BookStory {
 
   @@unique([bookId, storyId])
   @@map("book_stories")
+}
+
+/// Fixed-window rate limiting counters.
+/// One row per (user, action) combination. Reset atomically when the window expires.
+model RateLimit {
+  key         String   @id // e.g. "story-create:<userId>" or "preview:<userId>"
+  count       Int      @default(0)
+  windowStart DateTime @default(now()) @map("window_start")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("rate_limits")
 }
 
 model GenerationJob {

@@ -6,7 +6,7 @@ export default function Home() {
       <main className="flex flex-1 w-full max-w-4xl flex-col items-center justify-center px-6 py-16 text-center">
         <div className="mb-8 text-6xl">📖✨</div>
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
-          Het <span className="text-primary">Jongetje</span>
+          Ons <span className="text-primary">Verhaaltje</span>
         </h1>
         <p className="mt-4 max-w-xl text-lg text-muted-foreground">
           Magische, gepersonaliseerde verhalen voor jouw kind. Met prachtige

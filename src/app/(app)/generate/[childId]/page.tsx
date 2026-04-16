@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { GenerateWizard } from "@/components/generation/generate-wizard";
-import { calculateAge } from "@/lib/utils/age";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -36,8 +35,14 @@ export default async function GeneratePage({ params }: Props) {
           child={{
             id: child.id,
             name: child.name,
-            age: calculateAge(child.dateOfBirth),
+            dateOfBirth: child.dateOfBirth.toISOString(),
             gender: child.gender,
+            hairColor: child.hairColor,
+            hairStyle: child.hairStyle,
+            eyeColor: child.eyeColor,
+            skinColor: child.skinColor,
+            wearsGlasses: child.wearsGlasses,
+            hasFreckles: child.hasFreckles,
             interests: child.interests,
             pets: child.pets as { name: string; type: string }[] | null,
             friends: child.friends as { name: string; relationship: string }[] | null,
@@ -45,6 +50,7 @@ export default async function GeneratePage({ params }: Props) {
             fears: child.fears,
             mainCharacterType: child.mainCharacterType,
             mainCharacterDescription: child.mainCharacterDescription,
+            approvedCharacterPrompt: child.approvedCharacterPrompt,
           }}
         />
       </div>

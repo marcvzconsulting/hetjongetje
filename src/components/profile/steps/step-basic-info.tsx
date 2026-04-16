@@ -1,6 +1,7 @@
 "use client";
 
 import type { ProfileData } from "../profile-wizard";
+import { HairColorPicker, HairStylePicker, EyeColorPicker, SkinColorPicker } from "../appearance-pickers";
 
 interface Props {
   data: ProfileData;
@@ -73,7 +74,7 @@ export function StepBasicInfo({ data, onChange, onNext }: Props) {
               </>
             ) : (
               <span className="text-red-500">
-                Het Jongetje is bedoeld voor kinderen van 0 tot 10 jaar
+                Ons Verhaaltje is bedoeld voor kinderen van 0 tot 10 jaar
               </span>
             )}
           </p>
@@ -104,6 +105,42 @@ export function StepBasicInfo({ data, onChange, onNext }: Props) {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Uiterlijk */}
+      <div>
+        <label className="block text-sm font-medium mb-3">
+          Hoe ziet {data.name || "je kind"} eruit?
+        </label>
+        <p className="text-xs text-muted-foreground mb-3">
+          Dit gebruiken we voor de illustraties zodat het karakter steeds hetzelfde eruitziet
+        </p>
+
+        <div className="space-y-4">
+          <SkinColorPicker value={data.skinColor} onChange={(v) => onChange({ skinColor: v })} />
+          <HairColorPicker value={data.hairColor} onChange={(v) => onChange({ hairColor: v })} />
+          <HairStylePicker value={data.hairStyle} onChange={(v) => onChange({ hairStyle: v })} />
+          <EyeColorPicker value={data.eyeColor} onChange={(v) => onChange({ eyeColor: v })} />
+        </div>
+
+        <label className="flex items-center gap-2 mt-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={data.wearsGlasses}
+            onChange={(e) => onChange({ wearsGlasses: e.target.checked })}
+            className="w-4 h-4 rounded border-muted text-primary focus:ring-primary"
+          />
+          <span className="text-sm">Bril</span>
+        </label>
+        <label className="flex items-center gap-2 mt-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={data.hasFreckles}
+            onChange={(e) => onChange({ hasFreckles: e.target.checked })}
+            className="w-4 h-4 rounded border-muted text-primary focus:ring-primary"
+          />
+          <span className="text-sm">Sproetjes</span>
+        </label>
       </div>
 
       <button

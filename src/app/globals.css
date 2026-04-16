@@ -21,10 +21,22 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --font-sans: var(--font-nunito);
+  --font-serif: var(--font-lora);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Drop cap for book viewer */
+.first-letter-terra::first-letter {
+  font-size: 3.2em;
+  font-weight: 700;
+  float: left;
+  line-height: 0.72;
+  margin: 0.04em 0.1em 0 0;
+  color: #C8693C;
+  font-family: Georgia, serif;
 }

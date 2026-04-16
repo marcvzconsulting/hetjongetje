@@ -11,6 +11,12 @@ export interface ProfileData {
   name: string;
   dateOfBirth: string;
   gender: string;
+  hairColor: string;
+  hairStyle: string;
+  eyeColor: string;
+  skinColor: string;
+  wearsGlasses: boolean;
+  hasFreckles: boolean;
   interests: string[];
   pets: { name: string; type: string }[];
   friends: { name: string; relationship: string }[];
@@ -29,6 +35,12 @@ const INITIAL_DATA: ProfileData = {
   name: "",
   dateOfBirth: "",
   gender: "",
+  hairColor: "",
+  hairStyle: "",
+  eyeColor: "",
+  skinColor: "",
+  wearsGlasses: false,
+  hasFreckles: false,
   interests: [],
   pets: [],
   friends: [],
