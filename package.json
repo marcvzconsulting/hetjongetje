@@ -5,11 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "prisma generate --config prisma/prisma.config.ts",
     "start": "next start",
     "lint": "eslint",
     "db:push": "prisma db push --config prisma/prisma.config.ts",
     "db:generate": "prisma generate --config prisma/prisma.config.ts",
     "db:studio": "prisma studio --config prisma/prisma.config.ts",
+    "db:push:prod": "tsx scripts/push-schema-prod.ts",
     "migrate:storage": "tsx scripts/migrate-fal-to-scaleway.ts"
   },
   "pnpm": {
