@@ -12,14 +12,17 @@
     "db:generate": "prisma generate --config prisma/prisma.config.ts",
     "db:studio": "prisma studio --config prisma/prisma.config.ts",
     "db:push:prod": "tsx scripts/push-schema-prod.ts",
-    "migrate:storage": "tsx scripts/migrate-fal-to-scaleway.ts"
+    "migrate:storage": "tsx scripts/migrate-fal-to-scaleway.ts",
+    "migrate:dev-to-prod": "tsx scripts/migrate-dev-to-prod.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
       "prisma",
       "@prisma/engines",
       "@swc/core",
-      "@parcel/watcher"
+      "@parcel/watcher",
+      "@sentry/cli",
+      "esbuild"
     ]
   },
   "dependencies": {
