@@ -1,6 +1,6 @@
 # Ons Verhaaltje — Architectuur Overzicht
 
-Laatst bijgewerkt: 2026-04-17
+Laatst bijgewerkt: 2026-04-17 (v2: monitoring toegevoegd)
 
 Dit document legt uit welke diensten we gebruiken, waarvoor, en hoe alles samenwerkt. Bedoeld voor als je door de bomen het bos niet meer ziet.
 
@@ -13,6 +13,8 @@ Dit document legt uit welke diensten we gebruiken, waarvoor, en hoe alles samenw
 | **GitHub** | github.com/marcvzconsulting/hetjongetje | Broncode bewaren, triggert auto-deploys | Gratis | `marcvzconsulting` |
 | **TransIP** | transip.nl | Domeinnaam `onsverhaaltje.nl` + mail-forwarding | ~€5/jr domein | Persoonlijk |
 | **Vercel** | vercel.com | Host de Next.js app, domein-koppeling, SSL | Gratis (Hobby) | GitHub login |
+| **Vercel Analytics** | vercel.com → project → Analytics | Pageviews, bezoekers, referrers — privacy-first | Gratis tot 2.500 events/mnd | (onderdeel Vercel) |
+| **Vercel Speed Insights** | vercel.com → project → Speed Insights | Core Web Vitals bij echte bezoekers | Gratis tot 10.000 samples/mnd | (onderdeel Vercel) |
 | **Neon** | neon.tech | Productie PostgreSQL database (Frankfurt) | Gratis tier | GitHub login |
 | **Scaleway** | console.scaleway.com | Image storage voor illustraties (Amsterdam) | <€1/mnd verwacht | `admin@onsverhaaltje.nl` |
 | **Sentry** | de.sentry.io | Error tracking + monitoring (Frankfurt) | Gratis tier | `admin@onsverhaaltje.nl` |
@@ -171,6 +173,39 @@ flowchart TB
 
 ---
 
+## 📊 Monitoring — wat zie je waar
+
+Vier verschillende bronnen voor vier verschillende vragen:
+
+```mermaid
+flowchart LR
+    App[www.onsverhaaltje.nl]
+
+    App -->|stuurt errors naar| Sentry[Sentry<br/>Issues]
+    App -->|anonieme pageviews| VA[Vercel<br/>Analytics]
+    App -->|performance samples| VSI[Vercel<br/>Speed Insights]
+    App -->|bezoeker-logs| VLogs[Vercel<br/>Logs]
+
+    Sentry -->|email bij nieuwe issue| Inbox[admin@<br/>onsverhaaltje.nl]
+
+    style App fill:#2a9d8f,color:#fff
+    style Inbox fill:#e9c46a
+```
+
+| Vraag | Waar kijk je? | Update frequentie |
+|---|---|---|
+| "Werkt de site?" | Vercel → Deployments (groen/rood) | Real-time |
+| "Crasht er iets?" | Sentry → Issues (+ email alert) | Real-time + email |
+| "Hoeveel bezoekers heb ik?" | Vercel → Analytics | ~15 min delay |
+| "Is de site snel genoeg?" | Vercel → Speed Insights | ~15 min delay |
+| "Wie heeft iets stuks gedaan?" | Vercel → Runtime Logs | Real-time |
+| "Hoeveel AI credits nog over?" | Anthropic + fal.ai dashboards | Real-time |
+
+**Privacy-kenmerken van onze monitoring:**
+- Vercel Analytics gebruikt **geen cookies** — GDPR-vrij zonder cookie banner
+- Sentry scrubt automatisch kindernamen, foto's, verhaalteksten vóór verzenden
+- Speed Insights aggregeert alleen, geen individuele user tracking
+
 ## 🚨 Wat te doen als er iets stuk gaat
 
 | Symptoom | Eerst kijken bij | Volgende stap |
@@ -181,6 +216,9 @@ flowchart TB
 | Verhaal genereren faalt | Sentry → Issues + Vercel logs | Check credits bij Anthropic en fal.ai |
 | Per ongeluk data verwijderd | Neon → Restore | Point-in-time restore tot 6u terug |
 | Email komt niet meer binnen | TransIP → DNS | Check dat MX-records nog op TransIP staan |
+| Site voelt traag aan | Vercel → Speed Insights | Zoek pagina's met hoge LCP/INP |
+| Minder bezoekers dan verwacht | Vercel → Analytics → Referrers | Check of social-link nog klopt |
+| Tester zegt "er ging iets mis" maar Sentry is leeg | Vercel → Runtime Logs | Zoek op de tijd van de melding |
 
 ---
 
