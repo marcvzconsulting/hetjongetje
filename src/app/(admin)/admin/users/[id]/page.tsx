@@ -79,7 +79,7 @@ async function generateResetLinkAction(formData: FormData) {
     userId,
     createdByAdminId: session.user.id,
   });
-  const url = buildResetUrl(token);
+  const url = await buildResetUrl(token);
   revalidatePath(`/admin/users/${userId}`);
   redirect(
     `/admin/users/${userId}?resetLink=${encodeURIComponent(url)}&resetExp=${expiresAt.getTime()}`

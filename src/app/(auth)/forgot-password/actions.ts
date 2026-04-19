@@ -20,7 +20,7 @@ export async function requestResetAction(formData: FormData) {
   // which emails have accounts.
   if (user) {
     const { token } = await createPasswordResetToken({ userId: user.id });
-    const url = buildResetUrl(token);
+    const url = await buildResetUrl(token);
     // TODO: send via email. For now we log the link so it's usable in dev.
     console.log(
       `[password-reset] Reset link for ${user.email}: ${url}`
