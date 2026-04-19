@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 
 const REGION = process.env.SCALEWAY_REGION || "nl-ams";
@@ -84,6 +85,38 @@ export async function deleteObject(key: string): Promise<void> {
   await getClient().send(
     new DeleteObjectCommand({ Bucket: BUCKET!, Key: key })
   );
+}
+
+/**
+ * Delete many objects in one or more batched calls (S3 allows up to 1000 keys
+ * per request). Returns the keys that failed to delete (empty array on full
+ * success).
+ */
+export async function deleteObjects(keys: string[]): Promise<string[]> {
+  if (keys.length === 0) return [];
+  const client = getClient();
+  const failed: string[] = [];
+  const BATCH = 1000;
+
+  for (let i = 0; i < keys.length; i += BATCH) {
+    const chunk = keys.slice(i, i + BATCH);
+    const res = await client.send(
+      new DeleteObjectsCommand({
+        Bucket: BUCKET!,
+        Delete: {
+          Objects: chunk.map((k) => ({ Key: k })),
+          Quiet: true,
+        },
+      })
+    );
+    if (res.Errors?.length) {
+      for (const err of res.Errors) {
+        if (err.Key) failed.push(err.Key);
+      }
+    }
+  }
+
+  return failed;
 }
 
 /** Extract the storage key from a URL we produced, or null if it's not ours. */

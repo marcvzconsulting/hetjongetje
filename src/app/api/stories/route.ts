@@ -14,6 +14,7 @@ import {
   storyEndingKey,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { reserveStoryCredit, refundStoryCredit } from "@/lib/user-gate";
 
 // Allow extra time: story gen + illustrations + uploads
 export const maxDuration = 120;
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
   const blocked = await enforceRateLimit("storyCreate", session.user.id);
   if (blocked) return blocked;
 
+  let creditReserved = false;
   try {
     const body = await request.json();
     const { childId, characterBible, storyRequest } = body as {
@@ -70,6 +72,35 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Reserve one story credit atomically. Admins bypass. New accounts with
+    // status=pending or credits=0 get blocked before any paid AI call runs.
+    const reserved = await reserveStoryCredit(session.user.id);
+    if (!reserved.ok) {
+      if (reserved.reason === "not_approved") {
+        return NextResponse.json(
+          {
+            error:
+              "Je account is nog niet goedgekeurd. Wacht even of neem contact op.",
+          },
+          { status: 403 }
+        );
+      }
+      if (reserved.reason === "no_credits") {
+        return NextResponse.json(
+          {
+            error:
+              "Je hebt geen verhalen meer over. Neem contact op om je tegoed bij te vullen.",
+          },
+          { status: 402 }
+        );
+      }
+      return NextResponse.json(
+        { error: "Account niet gevonden" },
+        { status: 401 }
+      );
+    }
+    creditReserved = true;
 
     // Pre-generate a storyId so we can use it for both the DB row and
     // the storage keys, keeping illustrations grouped per story in the bucket.
@@ -166,6 +197,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ story });
   } catch (error) {
     console.error("Story generation error:", error);
+    if (creditReserved) {
+      await refundStoryCredit(session.user.id).catch((refundErr) => {
+        console.error("[credits] refund failed:", refundErr);
+      });
+    }
     return NextResponse.json(
       { error: "Er ging iets mis bij het genereren van het verhaal" },
       { status: 500 }

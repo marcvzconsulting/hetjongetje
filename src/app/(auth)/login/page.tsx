@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justReset = searchParams.get("reset") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -48,6 +50,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {justReset && !error && (
+            <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+              ✓ Wachtwoord gewijzigd. Log in met je nieuwe wachtwoord.
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
               {error}
@@ -94,6 +101,15 @@ export default function LoginPage() {
           >
             {loading ? "Bezig met inloggen..." : "Inloggen"}
           </button>
+
+          <p className="text-center text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground hover:text-primary"
+            >
+              Wachtwoord vergeten?
+            </Link>
+          </p>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -104,5 +120,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

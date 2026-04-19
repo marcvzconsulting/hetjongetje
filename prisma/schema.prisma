@@ -12,11 +12,75 @@ model User {
   passwordHash  String         @map("password_hash")
   name          String
   locale        String         @default("nl")
+  role          String         @default("user") // "user" | "admin"
+  status        String         @default("pending") // "pending" | "approved" | "suspended"
+  storyCredits  Int            @default(0) @map("story_credits")
+  lastLoginAt   DateTime?      @map("last_login_at")
+  phone         String?
+  street        String?
+  houseNumber   String?        @map("house_number")
+  postalCode    String?        @map("postal_code")
+  city          String?
+  country       String?
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   children      ChildProfile[]
+  subscription  Subscription?
+  adminNotes    AdminNote[]    @relation("NotesAboutUser")
+  authoredNotes AdminNote[]    @relation("NotesByAdmin")
+  resetTokens   PasswordResetToken[]
 
   @@map("users")
+}
+
+/// Tokens for password-reset flow (self-service or admin-initiated).
+/// Raw token lives in the reset link; only the SHA-256 hash is stored.
+model PasswordResetToken {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdByAdminId String? @map("created_by_admin_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Placeholder subscription model — not wired to a payment provider yet.
+model Subscription {
+  id               String    @id @default(uuid())
+  userId           String    @unique @map("user_id")
+  plan             String    @default("free") // "free" | "basic" | "premium"
+  status           String    @default("active") // "active" | "cancelled" | "expired" | "trialing"
+  startedAt        DateTime  @default(now()) @map("started_at")
+  endsAt           DateTime? @map("ends_at")
+  cancelledAt      DateTime? @map("cancelled_at")
+  stripeCustomerId String?   @map("stripe_customer_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+/// Internal notes an admin can attach to any user for support context.
+model AdminNote {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation("NotesAboutUser", fields: [userId], references: [id], onDelete: Cascade)
+  author User @relation("NotesByAdmin", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("admin_notes")
 }
 
 model ChildProfile {

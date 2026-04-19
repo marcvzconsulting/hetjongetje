@@ -5,10 +5,69 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 import { calculateAge } from "@/lib/utils/age";
 import { StoryLibrary } from "@/components/story/story-library";
+import { loadUserGate } from "@/lib/user-gate";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const gate = await loadUserGate(session.user.id);
+  if (!gate) redirect("/login");
+
+  if (!gate.isApproved) {
+    return (
+      <div className="min-h-full px-6 py-12">
+        <div className="mx-auto max-w-lg">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold">Hallo, {session.user.name}!</h1>
+            <div className="flex gap-2">
+              <Link
+                href="/account"
+                className="rounded-lg border border-muted px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                Mijn account
+              </Link>
+              <SignOutButton />
+            </div>
+          </div>
+
+          {gate.status === "suspended" ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+              <div className="mb-3 text-4xl">🚫</div>
+              <h2 className="text-lg font-bold text-red-900">
+                Account geblokkeerd
+              </h2>
+              <p className="mt-2 text-sm text-red-800">
+                Je account is tijdelijk opgeschort. Neem contact met ons op
+                voor meer informatie.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
+              <div className="mb-3 text-4xl">⏳</div>
+              <h2 className="text-lg font-bold text-amber-900">
+                Wachten op goedkeuring
+              </h2>
+              <p className="mt-2 text-sm text-amber-800">
+                Bedankt voor je registratie! We bekijken je account zo snel
+                mogelijk. Zodra je goedgekeurd bent, kun je hier kindprofielen
+                aanmaken en verhalen genereren.
+              </p>
+              <p className="mt-4 text-xs text-amber-700/80">
+                Heb je vragen? Mail ons op{" "}
+                <a
+                  href="mailto:hallo@onsverhaaltje.nl"
+                  className="underline"
+                >
+                  hallo@onsverhaaltje.nl
+                </a>
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const children = await prisma.childProfile.findMany({
     where: { userId: session.user.id },
@@ -41,7 +100,27 @@ export default async function DashboardPage() {
               Welkom bij Ons Verhaaltje
             </p>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-2">
+            {!gate.isAdmin && (
+              <span
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  gate.storyCredits > 0
+                    ? "bg-primary/10 text-primary"
+                    : "bg-red-100 text-red-700"
+                }`}
+                title="Aantal verhalen dat je nog kunt maken"
+              >
+                {gate.storyCredits} verhalen over
+              </span>
+            )}
+            <Link
+              href="/account"
+              className="rounded-lg border border-muted px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+            >
+              Mijn account
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
 
         {children.length === 0 ? (

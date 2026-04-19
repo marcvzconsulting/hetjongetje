@@ -45,3 +45,11 @@ next-env.d.ts
 # graphify (generated knowledge graph)
 /graphify-out/
 .graphify_python
+
+# claude code local settings
+.claude/settings.local.json
+
+# design exploration (not for production)
+/src/app/design-exploration/
+/src/design-exploration/
+/public/design-exploration/
