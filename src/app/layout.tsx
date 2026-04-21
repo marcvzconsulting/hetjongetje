@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nunito, Lora } from "next/font/google";
+import { Nunito, Lora, Fraunces, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
@@ -17,6 +17,19 @@ const lora = Lora({
   style: ["normal", "italic"],
 });
 
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
 export const metadata: Metadata = {
   title: "Ons Verhaaltje - Gepersonaliseerde Kinderverhalen",
   description:
@@ -29,7 +42,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="nl" className={`${nunito.variable} ${lora.variable} h-full antialiased`}>
+    <html
+      lang="nl"
+      className={`${nunito.variable} ${lora.variable} ${fraunces.variable} ${inter.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { V2 } from "@/components/v2/tokens";
+import { EBtn, Kicker, IconV2 } from "@/components/v2";
 import type { ProfileData } from "../profile-wizard";
 
 interface Props {
@@ -8,6 +10,136 @@ interface Props {
   onChange: (updates: Partial<ProfileData>) => void;
   onNext: () => void;
   onBack: () => void;
+}
+
+const fieldLabel = {
+  fontFamily: V2.ui,
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  color: V2.inkMute,
+  display: "block",
+  marginBottom: 8,
+};
+
+const underlineInput = {
+  flex: 1,
+  minWidth: 0,
+  padding: "10px 0",
+  border: "none",
+  borderBottom: `1px solid ${V2.paperShade}`,
+  background: "transparent",
+  fontSize: 16,
+  fontFamily: V2.body,
+  color: V2.ink,
+  outline: "none",
+};
+
+const addBtn = (disabled: boolean) => ({
+  padding: "10px 14px",
+  background: disabled ? "transparent" : V2.ink,
+  color: disabled ? V2.inkMute : V2.paper,
+  border: `1px solid ${disabled ? V2.paperShade : V2.ink}`,
+  fontFamily: V2.ui,
+  fontSize: 13,
+  fontWeight: 500,
+  letterSpacing: 0.2,
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.5 : 1,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+});
+
+function Chip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 10px 6px 14px",
+        background: V2.paper,
+        border: `1px solid ${V2.paperShade}`,
+        fontFamily: V2.body,
+        fontSize: 14,
+        color: V2.ink,
+      }}
+    >
+      {label}
+      <button
+        onClick={onRemove}
+        type="button"
+        style={{
+          background: "transparent",
+          border: "none",
+          color: V2.inkMute,
+          cursor: "pointer",
+          padding: 2,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        aria-label="Verwijder"
+      >
+        <IconV2 name="close" size={12} color={V2.inkMute} />
+      </button>
+    </span>
+  );
+}
+
+function SectionTitle({
+  kicker,
+  title,
+  italicized,
+  description,
+}: {
+  kicker: string;
+  title: string;
+  italicized?: string;
+  description: string;
+}) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <Kicker>{kicker}</Kicker>
+      <h3
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: 22,
+          margin: "10px 0 4px",
+          letterSpacing: -0.4,
+          color: V2.ink,
+        }}
+      >
+        {title}
+        {italicized && (
+          <>
+            {" "}
+            <span style={{ fontStyle: "italic" }}>{italicized}</span>
+          </>
+        )}
+      </h3>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontStyle: "italic",
+          fontSize: 13,
+          color: V2.inkMute,
+          margin: 0,
+        }}
+      >
+        {description}
+      </p>
+    </div>
+  );
 }
 
 export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
@@ -54,168 +186,248 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
     onChange({ fears: data.fears.filter((_, i) => i !== index) });
   }
 
+  const childName = data.name || "het kind";
+
   return (
-    <div className="space-y-6">
+    <div>
+      <Kicker>Vrienden, huisdieren & angsten</Kicker>
+      <h2
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: "clamp(28px, 3.6vw, 32px)",
+          margin: "12px 0 8px",
+          letterSpacing: -0.7,
+          lineHeight: 1.1,
+          color: V2.ink,
+        }}
+      >
+        De mensen — en dieren —{" "}
+        <span style={{ fontStyle: "italic" }}>om hen heen.</span>
+      </h2>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 15,
+          color: V2.inkSoft,
+          marginTop: 4,
+          marginBottom: 36,
+          lineHeight: 1.55,
+          maxWidth: 560,
+        }}
+      >
+        Alles is optioneel. Wat je invult komt terug in de verhalen.
+      </p>
+
       {/* Pets */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Heeft {data.name || "je kind"} huisdieren? 🐾
-        </label>
-        <p className="text-xs text-muted-foreground mb-3">
-          Huisdieren kunnen meespelen in de verhalen
-        </p>
+      <div style={{ marginBottom: 40 }}>
+        <SectionTitle
+          kicker="Huisdieren"
+          title={`Heeft ${childName} huisdieren`}
+          italicized="om zich heen?"
+          description="Huisdieren kunnen meespelen in de verhalen."
+        />
+
         {data.pets.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
             {data.pets.map((pet, i) => (
-              <span
+              <Chip
                 key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-secondary/10 px-3 py-1 text-sm"
-              >
-                {pet.name} ({pet.type})
-                <button
-                  onClick={() => removePet(i)}
-                  className="ml-1 text-muted-foreground hover:text-red-500"
-                >
-                  &times;
-                </button>
-              </span>
+                label={`${pet.name} (${pet.type})`}
+                onRemove={() => removePet(i)}
+              />
             ))}
           </div>
         )}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={petName}
-            onChange={(e) => setPetName(e.target.value)}
-            placeholder="Naam (bijv. Bella)"
-            className="flex-1 rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <input
-            type="text"
-            value={petType}
-            onChange={(e) => setPetType(e.target.value)}
-            placeholder="Soort (bijv. kat)"
-            className="flex-1 rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+            <label style={fieldLabel}>Naam</label>
+            <input
+              type="text"
+              value={petName}
+              onChange={(e) => setPetName(e.target.value)}
+              placeholder="Bijv. Bella"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
+          <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+            <label style={fieldLabel}>Soort</label>
+            <input
+              type="text"
+              value={petType}
+              onChange={(e) => setPetType(e.target.value)}
+              placeholder="Bijv. kat"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
           <button
+            type="button"
             onClick={addPet}
             disabled={!petName || !petType}
-            className="rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary/80 disabled:opacity-50"
+            style={addBtn(!petName || !petType)}
           >
-            +
+            <IconV2 name="plus" size={14} color={(!petName || !petType) ? V2.inkMute : V2.paper} /> Toevoegen
           </button>
         </div>
       </div>
 
       {/* Friends */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Beste vriendjes 🤝
-        </label>
-        <p className="text-xs text-muted-foreground mb-3">
-          Vrienden kunnen opduiken als personages in de verhalen
-        </p>
+      <div
+        style={{
+          borderTop: `1px solid ${V2.paperShade}`,
+          paddingTop: 28,
+          marginBottom: 40,
+        }}
+      >
+        <SectionTitle
+          kicker="Vrienden"
+          title="Beste"
+          italicized="vriendjes."
+          description="Vrienden kunnen opduiken als personages in de verhalen."
+        />
+
         {data.friends.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
             {data.friends.map((friend, i) => (
-              <span
+              <Chip
                 key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-accent/30 px-3 py-1 text-sm"
-              >
-                {friend.name}
-                <button
-                  onClick={() => removeFriend(i)}
-                  className="ml-1 text-muted-foreground hover:text-red-500"
-                >
-                  &times;
-                </button>
-              </span>
+                label={friend.relationship ? `${friend.name} · ${friend.relationship}` : friend.name}
+                onRemove={() => removeFriend(i)}
+              />
             ))}
           </div>
         )}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={friendName}
-            onChange={(e) => setFriendName(e.target.value)}
-            placeholder="Naam"
-            className="flex-1 rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <input
-            type="text"
-            value={friendRelation}
-            onChange={(e) => setFriendRelation(e.target.value)}
-            placeholder="Relatie (bijv. buurmeisje)"
-            className="flex-1 rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+            <label style={fieldLabel}>Naam</label>
+            <input
+              type="text"
+              value={friendName}
+              onChange={(e) => setFriendName(e.target.value)}
+              placeholder="Bijv. Noor"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
+          <div style={{ flex: "1 1 160px", minWidth: 0 }}>
+            <label style={fieldLabel}>Relatie</label>
+            <input
+              type="text"
+              value={friendRelation}
+              onChange={(e) => setFriendRelation(e.target.value)}
+              placeholder="Bijv. buurmeisje"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
           <button
+            type="button"
             onClick={addFriend}
             disabled={!friendName}
-            className="rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary/80 disabled:opacity-50"
+            style={addBtn(!friendName)}
           >
-            +
+            <IconV2 name="plus" size={14} color={!friendName ? V2.inkMute : V2.paper} /> Toevoegen
           </button>
         </div>
       </div>
 
-      {/* Fears / things to avoid */}
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Waar is {data.name || "je kind"} bang voor? 🙈
-        </label>
-        <p className="text-xs text-muted-foreground mb-3">
-          Deze onderwerpen vermijden we in de verhalen
-        </p>
+      {/* Fears */}
+      <div
+        style={{
+          borderTop: `1px solid ${V2.paperShade}`,
+          paddingTop: 28,
+        }}
+      >
+        <SectionTitle
+          kicker="Vermijden"
+          title={`Waar is ${childName}`}
+          italicized="bang voor?"
+          description="Deze onderwerpen houden we uit de verhalen."
+        />
+
         {data.fears.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
             {data.fears.map((fear, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-red-50 px-3 py-1 text-sm text-red-700"
-              >
-                {fear}
-                <button
-                  onClick={() => removeFear(i)}
-                  className="ml-1 hover:text-red-900"
-                >
-                  &times;
-                </button>
-              </span>
+              <Chip key={i} label={fear} onRemove={() => removeFear(i)} />
             ))}
           </div>
         )}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={fearInput}
-            onChange={(e) => setFearInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addFear()}
-            placeholder="Bijv. donker, spinnen, onweer"
-            className="flex-1 rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+            <label style={fieldLabel}>Onderwerp</label>
+            <input
+              type="text"
+              value={fearInput}
+              onChange={(e) => setFearInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addFear())}
+              placeholder="Bijv. donker, spinnen, onweer"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
           <button
+            type="button"
             onClick={addFear}
             disabled={!fearInput}
-            className="rounded-lg bg-secondary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary/80 disabled:opacity-50"
+            style={addBtn(!fearInput)}
           >
-            +
+            <IconV2 name="plus" size={14} color={!fearInput ? V2.inkMute : V2.paper} /> Toevoegen
           </button>
         </div>
       </div>
 
-      <div className="flex gap-3">
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 40,
+          paddingTop: 28,
+          borderTop: `1px solid ${V2.paperShade}`,
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
         <button
+          type="button"
           onClick={onBack}
-          className="flex-1 rounded-lg border border-muted px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
         >
-          Terug
+          ← Vorige stap
         </button>
-        <button
-          onClick={onNext}
-          className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-        >
-          Volgende stap
-        </button>
+        <EBtn kind="primary" size="lg" onClick={onNext}>
+          Volgende <IconV2 name="arrow" size={16} color={V2.paper} />
+        </EBtn>
       </div>
     </div>
   );

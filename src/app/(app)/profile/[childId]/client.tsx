@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { HairColorPicker, HairStylePicker, EyeColorPicker, SkinColorPicker } from "@/components/profile/appearance-pickers";
+import { V2 } from "@/components/v2/tokens";
+import { EBtn, Kicker, IconV2 } from "@/components/v2";
+import {
+  HairColorPicker,
+  HairStylePicker,
+  EyeColorPicker,
+  SkinColorPicker,
+} from "@/components/profile/appearance-pickers";
 import { CharacterPreview } from "@/components/profile/character-preview";
 
 interface ChildData {
@@ -35,26 +41,138 @@ interface Props {
 }
 
 const INTEREST_OPTIONS = [
-  { value: "animals", label: "Dieren", emoji: "🐾" },
-  { value: "space", label: "Ruimte", emoji: "🚀" },
-  { value: "princesses", label: "Prinsessen", emoji: "👑" },
-  { value: "dinosaurs", label: "Dinosaurussen", emoji: "🦕" },
-  { value: "sports", label: "Sport", emoji: "⚽" },
-  { value: "music", label: "Muziek", emoji: "🎵" },
-  { value: "cars", label: "Auto's", emoji: "🚗" },
-  { value: "nature", label: "Natuur", emoji: "🌿" },
-  { value: "cooking", label: "Koken", emoji: "👩‍🍳" },
-  { value: "art", label: "Tekenen", emoji: "🎨" },
-  { value: "building", label: "Bouwen", emoji: "🧱" },
-  { value: "reading", label: "Lezen", emoji: "📖" },
+  { value: "animals", label: "Dieren" },
+  { value: "space", label: "Ruimte" },
+  { value: "princesses", label: "Prinsessen" },
+  { value: "dinosaurs", label: "Dinosaurussen" },
+  { value: "sports", label: "Sport" },
+  { value: "music", label: "Muziek" },
+  { value: "cars", label: "Auto's" },
+  { value: "nature", label: "Natuur" },
+  { value: "cooking", label: "Koken" },
+  { value: "art", label: "Tekenen" },
+  { value: "building", label: "Bouwen" },
+  { value: "reading", label: "Lezen" },
 ];
 
 const CHARACTER_TYPES = [
-  { value: "self", label: "Zichzelf", description: "Het kind is de held van het verhaal", emoji: "🧒" },
-  { value: "stuffed_animal", label: "Knuffeldier", description: "Het favoriete knuffeldier als held", emoji: "🧸" },
-  { value: "action_hero", label: "Superheld", description: "Een favoriete held of figuur", emoji: "🦸" },
-  { value: "custom", label: "Eigen personage", description: "Een zelf bedacht karakter", emoji: "✨" },
+  { value: "self", label: "Zichzelf", description: "Het kind is de held" },
+  { value: "stuffed_animal", label: "Knuffeldier", description: "Een favoriete knuffel als held" },
+  { value: "action_hero", label: "Superheld", description: "Een favoriete held of figuur" },
+  { value: "custom", label: "Eigen personage", description: "Een zelf bedacht karakter" },
 ];
+
+const fieldLabel = {
+  fontFamily: V2.ui,
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  color: V2.inkMute,
+  display: "block",
+  marginBottom: 8,
+};
+
+const underlineInput = {
+  width: "100%",
+  padding: "10px 0",
+  border: "none",
+  borderBottom: `1px solid ${V2.paperShade}`,
+  background: "transparent",
+  fontSize: 16,
+  fontFamily: V2.body,
+  color: V2.ink,
+  outline: "none",
+};
+
+// ── Shared view blocks ──────────────────────────────────────────
+
+function SubCard({
+  kicker,
+  title,
+  titleItalic,
+  children,
+}: {
+  kicker: string;
+  title?: string;
+  titleItalic?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      style={{
+        background: V2.paper,
+        border: `1px solid ${V2.paperShade}`,
+        padding: 24,
+      }}
+    >
+      <Kicker>{kicker}</Kicker>
+      {(title || titleItalic) && (
+        <h3
+          style={{
+            fontFamily: V2.display,
+            fontWeight: 300,
+            fontSize: 22,
+            margin: "10px 0 18px",
+            letterSpacing: -0.4,
+            color: V2.ink,
+          }}
+        >
+          {title}
+          {titleItalic && (
+            <>
+              {" "}
+              <span style={{ fontStyle: "italic" }}>{titleItalic}</span>
+            </>
+          )}
+        </h3>
+      )}
+      <div style={{ marginTop: title || titleItalic ? 0 : 14 }}>{children}</div>
+    </section>
+  );
+}
+
+function Dl({ rows }: { rows: [string, React.ReactNode][] }) {
+  return (
+    <dl
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, auto) minmax(0, 1fr)",
+        gap: "10px 20px",
+        margin: 0,
+      }}
+    >
+      {rows.map(([term, value], i) => (
+        <div key={i} style={{ display: "contents" }}>
+          <dt
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: V2.inkMute,
+              paddingTop: 2,
+            }}
+          >
+            {term}
+          </dt>
+          <dd
+            style={{
+              fontFamily: V2.body,
+              fontSize: 15,
+              color: V2.ink,
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            {value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export function ProfileEditor({ child }: Props) {
   const router = useRouter();
@@ -106,7 +224,9 @@ export function ProfileEditor({ child }: Props) {
     try {
       const res = await fetch(`/api/children/${child.id}`, { method: "DELETE" });
       if (res.ok) router.push("/dashboard");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     setDeleting(false);
   }
 
@@ -120,108 +240,208 @@ export function ProfileEditor({ child }: Props) {
   }
 
   const charType = CHARACTER_TYPES.find((c) => c.value === data.mainCharacterType);
+  const genderLabel =
+    child.gender === "boy" ? "Jongen" : child.gender === "girl" ? "Meisje" : "Anders";
+
+  // ── View mode ──────────────────────────────────────────────────
 
   if (!editing) {
-    // View mode
     return (
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <Link
-            href="/dashboard"
-            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 28,
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 12,
+              color: V2.inkMute,
+              letterSpacing: 0.2,
+            }}
           >
-            ← Terug
-          </Link>
-          <button
-            onClick={() => setEditing(true)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-light transition-colors"
-          >
-            Profiel bewerken
-          </button>
+            {child.storyCount} {child.storyCount === 1 ? "verhaal" : "verhalen"} · {genderLabel}
+          </div>
+          <EBtn kind="ghost" size="sm" onClick={() => setEditing(true)}>
+            <IconV2 name="pen" size={14} color={V2.ink} /> Profiel bewerken
+          </EBtn>
         </div>
 
-        <div className="text-center mb-8">
-          <span className="text-5xl">
-            {child.gender === "boy" ? "👦" : child.gender === "girl" ? "👧" : "🧒"}
-          </span>
-          <h1 className="text-2xl font-bold mt-3">{child.name}</h1>
-          <p className="text-muted-foreground">{child.age} jaar oud &middot; {child.storyCount} verhalen</p>
-        </div>
-
-        <div className="space-y-6">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Interests */}
-          <div className="rounded-2xl bg-white border border-muted p-5">
-            <h3 className="font-semibold mb-3">Interesses</h3>
-            <div className="flex flex-wrap gap-2">
-              {child.interests.map((interest) => {
-                const option = INTEREST_OPTIONS.find((o) => o.value === interest);
-                return (
-                  <span key={interest} className="rounded-full bg-muted px-3 py-1 text-sm">
-                    {option ? `${option.emoji} ${option.label}` : interest}
-                  </span>
-                );
-              })}
-              {child.interests.length === 0 && (
-                <span className="text-sm text-muted-foreground">Nog geen interesses ingevuld</span>
+          <SubCard kicker="Interesses">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {child.interests.length === 0 ? (
+                <span
+                  style={{
+                    fontFamily: V2.body,
+                    fontStyle: "italic",
+                    fontSize: 14,
+                    color: V2.inkMute,
+                  }}
+                >
+                  Nog geen interesses ingevuld.
+                </span>
+              ) : (
+                child.interests.map((interest) => {
+                  const option = INTEREST_OPTIONS.find((o) => o.value === interest);
+                  return (
+                    <span
+                      key={interest}
+                      style={{
+                        padding: "6px 12px",
+                        border: `1px solid ${V2.paperShade}`,
+                        fontFamily: V2.body,
+                        fontSize: 14,
+                        color: V2.ink,
+                        background: V2.paperDeep,
+                      }}
+                    >
+                      {option?.label ?? interest}
+                    </span>
+                  );
+                })
               )}
             </div>
-          </div>
+          </SubCard>
 
           {/* Appearance */}
           {(child.hairColor || child.eyeColor || child.skinColor) && (
-            <div className="rounded-2xl bg-white border border-muted p-5">
-              <h3 className="font-semibold mb-3">Uiterlijk</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {child.hairColor && <div><span className="text-muted-foreground">Haar:</span> {child.hairColor}{child.hairStyle ? `, ${child.hairStyle}` : ""}</div>}
-                {child.eyeColor && <div><span className="text-muted-foreground">Ogen:</span> {child.eyeColor}</div>}
-                {child.skinColor && <div><span className="text-muted-foreground">Huid:</span> {child.skinColor}</div>}
-                {child.wearsGlasses && <div>Draagt een bril</div>}
-                {child.hasFreckles && <div>Sproetjes</div>}
-              </div>
-            </div>
+            <SubCard kicker="Uiterlijk">
+              <Dl
+                rows={[
+                  ...(child.hairColor
+                    ? [["Haar", `${child.hairColor}${child.hairStyle ? `, ${child.hairStyle}` : ""}`] as [string, React.ReactNode]]
+                    : []),
+                  ...(child.eyeColor ? [["Ogen", child.eyeColor] as [string, React.ReactNode]] : []),
+                  ...(child.skinColor ? [["Huid", child.skinColor] as [string, React.ReactNode]] : []),
+                  ...(child.wearsGlasses ? [["Bril", "Ja"] as [string, React.ReactNode]] : []),
+                  ...(child.hasFreckles ? [["Sproetjes", "Ja"] as [string, React.ReactNode]] : []),
+                ]}
+              />
+            </SubCard>
           )}
 
           {/* Favorites */}
-          {child.favoriteThings && (
-            <div className="rounded-2xl bg-white border border-muted p-5">
-              <h3 className="font-semibold mb-3">Favoriete dingen</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {child.favoriteThings.color && <div><span className="text-muted-foreground">Kleur:</span> {child.favoriteThings.color}</div>}
-                {child.favoriteThings.food && <div><span className="text-muted-foreground">Eten:</span> {child.favoriteThings.food}</div>}
-                {child.favoriteThings.toy && <div><span className="text-muted-foreground">Speelgoed:</span> {child.favoriteThings.toy}</div>}
-                {child.favoriteThings.place && <div><span className="text-muted-foreground">Plek:</span> {child.favoriteThings.place}</div>}
-              </div>
-            </div>
-          )}
+          {child.favoriteThings &&
+            (child.favoriteThings.color ||
+              child.favoriteThings.food ||
+              child.favoriteThings.toy ||
+              child.favoriteThings.place) && (
+              <SubCard kicker="Favoriete dingen">
+                <Dl
+                  rows={[
+                    ...(child.favoriteThings.color
+                      ? [["Kleur", child.favoriteThings.color] as [string, React.ReactNode]]
+                      : []),
+                    ...(child.favoriteThings.food
+                      ? [["Eten", child.favoriteThings.food] as [string, React.ReactNode]]
+                      : []),
+                    ...(child.favoriteThings.toy
+                      ? [["Speelgoed", child.favoriteThings.toy] as [string, React.ReactNode]]
+                      : []),
+                    ...(child.favoriteThings.place
+                      ? [["Plek", child.favoriteThings.place] as [string, React.ReactNode]]
+                      : []),
+                  ]}
+                />
+              </SubCard>
+            )}
 
-          {/* Pets & Friends */}
+          {/* Pets & friends */}
           {(child.pets.length > 0 || child.friends.length > 0) && (
-            <div className="rounded-2xl bg-white border border-muted p-5">
-              <h3 className="font-semibold mb-3">Vrienden & huisdieren</h3>
-              <div className="space-y-2 text-sm">
+            <SubCard kicker="Vrienden & huisdieren">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {child.pets.map((pet, i) => (
-                  <div key={i}>🐾 {pet.name} ({pet.type})</div>
+                  <div
+                    key={`p${i}`}
+                    style={{
+                      fontFamily: V2.body,
+                      fontSize: 15,
+                      color: V2.ink,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: V2.ui,
+                        fontSize: 10,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        color: V2.inkMute,
+                        marginRight: 12,
+                      }}
+                    >
+                      Huisdier
+                    </span>
+                    <span style={{ fontStyle: "italic" }}>{pet.name}</span>
+                    <span style={{ color: V2.inkMute }}> — {pet.type}</span>
+                  </div>
                 ))}
                 {child.friends.map((friend, i) => (
-                  <div key={i}>👫 {friend.name} {friend.relationship && `(${friend.relationship})`}</div>
+                  <div
+                    key={`f${i}`}
+                    style={{
+                      fontFamily: V2.body,
+                      fontSize: 15,
+                      color: V2.ink,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: V2.ui,
+                        fontSize: 10,
+                        letterSpacing: "0.14em",
+                        textTransform: "uppercase",
+                        color: V2.inkMute,
+                        marginRight: 12,
+                      }}
+                    >
+                      Vriend
+                    </span>
+                    <span style={{ fontStyle: "italic" }}>{friend.name}</span>
+                    {friend.relationship && (
+                      <span style={{ color: V2.inkMute }}> — {friend.relationship}</span>
+                    )}
+                  </div>
                 ))}
               </div>
-            </div>
+            </SubCard>
           )}
 
           {/* Character */}
-          <div className="rounded-2xl bg-white border border-muted p-5">
-            <h3 className="font-semibold mb-3">Hoofdpersonage</h3>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{charType?.emoji}</span>
-              <div>
-                <p className="font-medium text-sm">{charType?.label}</p>
-                {child.mainCharacterDescription && (
-                  <p className="text-sm text-muted-foreground">{child.mainCharacterDescription}</p>
-                )}
+          <SubCard kicker="Hoofdpersonage">
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div
+                style={{
+                  fontFamily: V2.display,
+                  fontSize: 20,
+                  fontStyle: "italic",
+                  color: V2.ink,
+                }}
+              >
+                {charType?.label ?? data.mainCharacterType}
               </div>
+              {child.mainCharacterDescription && (
+                <p
+                  style={{
+                    fontFamily: V2.body,
+                    fontSize: 14,
+                    color: V2.inkSoft,
+                    margin: 0,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {child.mainCharacterDescription}
+                </p>
+              )}
             </div>
-          </div>
+          </SubCard>
 
           {/* Character preview */}
           <CharacterPreview
@@ -231,132 +451,265 @@ export function ProfileEditor({ child }: Props) {
             isApproved={child.hasApprovedPrompt}
           />
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <Link
+          {/* Primary action */}
+          <div
+            style={{
+              marginTop: 8,
+              paddingTop: 24,
+              borderTop: `1px solid ${V2.paperShade}`,
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
+            <EBtn
+              kind="primary"
+              size="lg"
               href={`/generate/${child.id}`}
-              className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-semibold text-white hover:bg-primary-light transition-colors"
             >
-              Nieuw verhaal maken
-            </Link>
+              Nieuw verhaal maken{" "}
+              <IconV2 name="arrow" size={16} color={V2.paper} />
+            </EBtn>
           </div>
         </div>
       </div>
     );
   }
 
-  // Edit mode
+  // ── Edit mode ──────────────────────────────────────────────────
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 28,
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <Kicker>Bewerken</Kicker>
         <button
+          type="button"
           onClick={() => setEditing(false)}
-          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
         >
           ← Annuleren
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "12px 16px",
+            background: "rgba(196,165,168,0.2)",
+            borderLeft: `2px solid ${V2.rose}`,
+            fontFamily: V2.body,
+            fontSize: 14,
+            color: V2.ink,
+          }}
+        >
+          {error}
+        </div>
       )}
 
-      <div className="space-y-6">
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Basic info */}
-        <div className="rounded-2xl bg-white border border-muted p-5 space-y-4">
-          <h3 className="font-semibold">Basisgegevens</h3>
-          <div>
-            <label className="block text-xs font-medium mb-1">Naam</label>
-            <input
-              type="text"
-              value={data.name}
-              onChange={(e) => setData((d) => ({ ...d, name: e.target.value }))}
-              className="w-full rounded-lg border border-muted px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Geboortedatum</label>
-            <input
-              type="date"
-              value={data.dateOfBirth}
-              onChange={(e) => setData((d) => ({ ...d, dateOfBirth: e.target.value }))}
-              className="w-full rounded-lg border border-muted px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Geslacht</label>
-            <div className="flex gap-2">
-              {[
-                { value: "boy", label: "Jongen", emoji: "👦" },
-                { value: "girl", label: "Meisje", emoji: "👧" },
-                { value: "other", label: "Anders", emoji: "🧒" },
-              ].map((g) => (
-                <button
-                  key={g.value}
-                  onClick={() => setData((d) => ({ ...d, gender: g.value }))}
-                  className={`flex-1 flex items-center justify-center gap-1 rounded-lg border-2 py-2 text-sm transition-all ${
-                    data.gender === g.value ? "border-primary bg-primary/5" : "border-muted"
-                  }`}
-                >
-                  {g.emoji} {g.label}
-                </button>
-              ))}
+        <SubCard kicker="Basisgegevens">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 24,
+            }}
+          >
+            <div>
+              <label style={fieldLabel}>Naam</label>
+              <input
+                type="text"
+                value={data.name}
+                onChange={(e) => setData((d) => ({ ...d, name: e.target.value }))}
+                style={underlineInput}
+              />
+            </div>
+            <div>
+              <label style={fieldLabel}>Geboortedatum</label>
+              <input
+                type="date"
+                value={data.dateOfBirth}
+                onChange={(e) => setData((d) => ({ ...d, dateOfBirth: e.target.value }))}
+                style={underlineInput}
+              />
             </div>
           </div>
-        </div>
+          <div style={{ marginTop: 20 }}>
+            <label style={fieldLabel}>Geslacht</label>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: 8,
+              }}
+            >
+              {[
+                { value: "boy", label: "Jongen" },
+                { value: "girl", label: "Meisje" },
+                { value: "other", label: "Anders" },
+              ].map((g) => {
+                const active = data.gender === g.value;
+                return (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => setData((d) => ({ ...d, gender: g.value }))}
+                    style={{
+                      padding: "14px 12px",
+                      textAlign: "center",
+                      background: active ? V2.ink : "transparent",
+                      color: active ? V2.paper : V2.ink,
+                      border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                      cursor: "pointer",
+                      fontFamily: V2.display,
+                      fontSize: 16,
+                      fontStyle: active ? "italic" : "normal",
+                    }}
+                  >
+                    {g.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </SubCard>
 
         {/* Appearance */}
-        <div className="rounded-2xl bg-white border border-muted p-5 space-y-4">
-          <h3 className="font-semibold">Uiterlijk</h3>
-          <p className="text-xs text-muted-foreground">Dit gebruiken we voor consistente illustraties</p>
-          <SkinColorPicker value={data.skinColor} onChange={(v) => setData((d) => ({ ...d, skinColor: v }))} />
-          <HairColorPicker value={data.hairColor} onChange={(v) => setData((d) => ({ ...d, hairColor: v }))} />
-          <HairStylePicker value={data.hairStyle} onChange={(v) => setData((d) => ({ ...d, hairStyle: v }))} />
-          <EyeColorPicker value={data.eyeColor} onChange={(v) => setData((d) => ({ ...d, eyeColor: v }))} />
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={data.wearsGlasses}
-              onChange={(e) => setData((d) => ({ ...d, wearsGlasses: e.target.checked }))}
-              className="w-4 h-4 rounded border-muted text-primary focus:ring-primary"
+        <SubCard kicker="Uiterlijk">
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 13,
+              color: V2.inkMute,
+              margin: "0 0 20px",
+            }}
+          >
+            Voor consistente illustraties door elk verhaal heen.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <SkinColorPicker
+              value={data.skinColor}
+              onChange={(v) => setData((d) => ({ ...d, skinColor: v }))}
             />
-            <span className="text-sm">Bril</span>
-          </label>
-          <label className="flex items-center gap-2 mt-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={data.hasFreckles}
-              onChange={(e) => setData((d) => ({ ...d, hasFreckles: e.target.checked }))}
-              className="w-4 h-4 rounded border-muted text-primary focus:ring-primary"
+            <HairColorPicker
+              value={data.hairColor}
+              onChange={(v) => setData((d) => ({ ...d, hairColor: v }))}
             />
-            <span className="text-sm">Sproetjes</span>
-          </label>
-        </div>
+            <HairStylePicker
+              value={data.hairStyle}
+              onChange={(v) => setData((d) => ({ ...d, hairStyle: v }))}
+            />
+            <EyeColorPicker
+              value={data.eyeColor}
+              onChange={(v) => setData((d) => ({ ...d, eyeColor: v }))}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 24, marginTop: 20, flexWrap: "wrap" }}>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+                fontFamily: V2.ui,
+                fontSize: 14,
+                color: V2.ink,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={data.wearsGlasses}
+                onChange={(e) => setData((d) => ({ ...d, wearsGlasses: e.target.checked }))}
+                style={{ width: 16, height: 16, accentColor: V2.ink }}
+              />
+              Bril
+            </label>
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                cursor: "pointer",
+                fontFamily: V2.ui,
+                fontSize: 14,
+                color: V2.ink,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={data.hasFreckles}
+                onChange={(e) => setData((d) => ({ ...d, hasFreckles: e.target.checked }))}
+                style={{ width: 16, height: 16, accentColor: V2.ink }}
+              />
+              Sproetjes
+            </label>
+          </div>
+        </SubCard>
 
         {/* Interests */}
-        <div className="rounded-2xl bg-white border border-muted p-5">
-          <h3 className="font-semibold mb-3">Interesses</h3>
-          <div className="flex flex-wrap gap-2">
-            {INTEREST_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => toggleInterest(opt.value)}
-                className={`rounded-full px-3 py-1.5 text-sm transition-all ${
-                  data.interests.includes(opt.value)
-                    ? "bg-primary text-white"
-                    : "bg-muted hover:bg-muted/80"
-                }`}
-              >
-                {opt.emoji} {opt.label}
-              </button>
-            ))}
+        <SubCard kicker="Interesses">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {INTEREST_OPTIONS.map((opt) => {
+              const active = data.interests.includes(opt.value);
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => toggleInterest(opt.value)}
+                  style={{
+                    padding: "12px 16px",
+                    textAlign: "center",
+                    background: active ? V2.ink : "transparent",
+                    color: active ? V2.paper : V2.ink,
+                    border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                    cursor: "pointer",
+                    fontFamily: V2.display,
+                    fontSize: 15,
+                    fontStyle: active ? "italic" : "normal",
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </SubCard>
 
         {/* Favorites */}
-        <div className="rounded-2xl bg-white border border-muted p-5 space-y-3">
-          <h3 className="font-semibold">Favoriete dingen</h3>
-          <div className="grid grid-cols-2 gap-3">
+        <SubCard kicker="Favoriete dingen">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 24,
+            }}
+          >
             {[
               { key: "color", label: "Kleur", placeholder: "Blauw" },
               { key: "food", label: "Eten", placeholder: "Pannenkoeken" },
@@ -364,102 +717,213 @@ export function ProfileEditor({ child }: Props) {
               { key: "place", label: "Plek", placeholder: "Het park" },
             ].map((field) => (
               <div key={field.key}>
-                <label className="block text-xs font-medium mb-1">{field.label}</label>
+                <label style={fieldLabel}>{field.label}</label>
                 <input
                   type="text"
-                  value={data.favoriteThings[field.key as keyof typeof data.favoriteThings]}
+                  value={
+                    data.favoriteThings[field.key as keyof typeof data.favoriteThings]
+                  }
                   onChange={(e) =>
                     setData((d) => ({
                       ...d,
-                      favoriteThings: { ...d.favoriteThings, [field.key]: e.target.value },
+                      favoriteThings: {
+                        ...d.favoriteThings,
+                        [field.key]: e.target.value,
+                      },
                     }))
                   }
                   placeholder={field.placeholder}
-                  className="w-full rounded-lg border border-muted px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  style={underlineInput}
                 />
               </div>
             ))}
           </div>
-        </div>
+        </SubCard>
 
         {/* Character */}
-        <div className="rounded-2xl bg-white border border-muted p-5 space-y-3">
-          <h3 className="font-semibold">Hoofdpersonage</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {CHARACTER_TYPES.map((ct) => (
-              <button
-                key={ct.value}
-                onClick={() => setData((d) => ({ ...d, mainCharacterType: ct.value }))}
-                className={`flex flex-col items-center gap-1 rounded-xl border-2 p-3 text-center transition-all ${
-                  data.mainCharacterType === ct.value
-                    ? "border-primary bg-primary/5"
-                    : "border-muted hover:border-primary/30"
-                }`}
-              >
-                <span className="text-xl">{ct.emoji}</span>
-                <span className="text-xs font-medium">{ct.label}</span>
-              </button>
-            ))}
+        <SubCard kicker="Hoofdpersonage">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: 8,
+            }}
+          >
+            {CHARACTER_TYPES.map((ct) => {
+              const active = data.mainCharacterType === ct.value;
+              return (
+                <button
+                  key={ct.value}
+                  type="button"
+                  onClick={() =>
+                    setData((d) => ({ ...d, mainCharacterType: ct.value }))
+                  }
+                  style={{
+                    textAlign: "left",
+                    padding: 16,
+                    background: active ? V2.ink : "transparent",
+                    color: active ? V2.paper : V2.ink,
+                    border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: V2.display,
+                      fontSize: 17,
+                      fontStyle: active ? "italic" : "normal",
+                    }}
+                  >
+                    {ct.label}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: V2.ui,
+                      fontSize: 11,
+                      marginTop: 4,
+                      opacity: 0.75,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {ct.description}
+                  </div>
+                </button>
+              );
+            })}
           </div>
           {data.mainCharacterType !== "self" && (
-            <textarea
-              value={data.mainCharacterDescription}
-              onChange={(e) => setData((d) => ({ ...d, mainCharacterDescription: e.target.value }))}
-              placeholder="Beschrijf het personage..."
-              rows={2}
-              className="w-full rounded-lg border border-muted px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+            <div style={{ marginTop: 18 }}>
+              <label style={fieldLabel}>Beschrijving</label>
+              <textarea
+                value={data.mainCharacterDescription}
+                onChange={(e) =>
+                  setData((d) => ({ ...d, mainCharacterDescription: e.target.value }))
+                }
+                placeholder="Beschrijf het personage..."
+                rows={2}
+                style={{
+                  ...underlineInput,
+                  resize: "vertical",
+                  minHeight: 50,
+                }}
+              />
+            </div>
           )}
-        </div>
+        </SubCard>
 
-        {/* Save button */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-light transition-colors disabled:opacity-50"
-          >
-            {saving ? "Opslaan..." : "Profiel opslaan"}
-          </button>
-          <button
-            onClick={() => setEditing(false)}
-            className="rounded-lg border border-muted px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
-          >
+        {/* Save / cancel */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 12,
+            paddingTop: 24,
+            borderTop: `1px solid ${V2.paperShade}`,
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <EBtn kind="ghost" size="md" onClick={() => setEditing(false)}>
             Annuleren
-          </button>
+          </EBtn>
+          <EBtn
+            kind="primary"
+            size="lg"
+            onClick={() => !saving && handleSave()}
+            style={{
+              opacity: saving ? 0.6 : 1,
+              cursor: saving ? "not-allowed" : "pointer",
+            }}
+          >
+            {saving ? "Opslaan..." : "Profiel opslaan"}{" "}
+            {!saving && <IconV2 name="arrow" size={16} color={V2.paper} />}
+          </EBtn>
         </div>
 
-        {/* Delete profile */}
-        <div className="rounded-2xl border border-red-200 p-5">
-          <h3 className="font-semibold text-red-600 mb-2">Profiel verwijderen</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            Dit verwijdert het profiel en alle {child.storyCount} verhalen. Dit kan niet ongedaan worden gemaakt.
+        {/* Danger zone */}
+        <section
+          style={{
+            marginTop: 32,
+            padding: 24,
+            background: "rgba(196,165,168,0.08)",
+            border: `1px solid rgba(176, 74, 65, 0.25)`,
+          }}
+        >
+          <Kicker color={V2.heart}>Gevarenzone</Kicker>
+          <h3
+            style={{
+              fontFamily: V2.display,
+              fontWeight: 300,
+              fontSize: 22,
+              margin: "10px 0 8px",
+              letterSpacing: -0.4,
+              color: V2.ink,
+            }}
+          >
+            Profiel{" "}
+            <span style={{ fontStyle: "italic" }}>verwijderen.</span>
+          </h3>
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontSize: 14,
+              color: V2.inkSoft,
+              margin: "0 0 18px",
+              lineHeight: 1.6,
+              maxWidth: "60ch",
+            }}
+          >
+            Dit verwijdert het profiel en alle {child.storyCount}{" "}
+            {child.storyCount === 1 ? "verhaal" : "verhalen"}. Dit kan niet worden teruggedraaid.
           </p>
           {deleteConfirm ? (
-            <div className="flex gap-2">
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50"
+                style={{
+                  padding: "10px 20px",
+                  background: V2.heart,
+                  color: V2.paper,
+                  border: "none",
+                  fontFamily: V2.ui,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: 0.2,
+                  cursor: deleting ? "not-allowed" : "pointer",
+                  borderRadius: 2,
+                  opacity: deleting ? 0.6 : 1,
+                }}
               >
                 {deleting ? "Verwijderen..." : "Ja, verwijder alles"}
               </button>
-              <button
-                onClick={() => setDeleteConfirm(false)}
-                className="rounded-lg border border-muted px-4 py-2 text-sm font-medium hover:bg-muted"
-              >
+              <EBtn kind="ghost" size="sm" onClick={() => setDeleteConfirm(false)}>
                 Annuleren
-              </button>
+              </EBtn>
             </div>
           ) : (
             <button
+              type="button"
               onClick={() => setDeleteConfirm(true)}
-              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              style={{
+                padding: "10px 18px",
+                background: "transparent",
+                color: V2.heart,
+                border: `1px solid ${V2.heart}`,
+                fontFamily: V2.ui,
+                fontSize: 14,
+                fontWeight: 500,
+                letterSpacing: 0.2,
+                cursor: "pointer",
+                borderRadius: 2,
+              }}
             >
               Profiel verwijderen
             </button>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

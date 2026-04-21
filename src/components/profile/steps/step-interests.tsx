@@ -1,5 +1,7 @@
 "use client";
 
+import { V2 } from "@/components/v2/tokens";
+import { EBtn, Kicker, IconV2 } from "@/components/v2";
 import type { ProfileData } from "../profile-wizard";
 
 interface Props {
@@ -10,23 +12,46 @@ interface Props {
 }
 
 const INTEREST_OPTIONS = [
-  { value: "dinosaurs", label: "Dinosaurussen", emoji: "🦕" },
-  { value: "space", label: "Ruimte", emoji: "🚀" },
-  { value: "animals", label: "Dieren", emoji: "🐾" },
-  { value: "princesses", label: "Prinsessen", emoji: "👑" },
-  { value: "cars", label: "Auto's", emoji: "🏎️" },
-  { value: "sports", label: "Sport", emoji: "⚽" },
-  { value: "music", label: "Muziek", emoji: "🎵" },
-  { value: "cooking", label: "Koken", emoji: "👨‍🍳" },
-  { value: "nature", label: "Natuur", emoji: "🌿" },
-  { value: "pirates", label: "Piraten", emoji: "🏴‍☠️" },
-  { value: "fairies", label: "Feeën", emoji: "🧚" },
-  { value: "robots", label: "Robots", emoji: "🤖" },
-  { value: "art", label: "Tekenen", emoji: "🎨" },
-  { value: "building", label: "Bouwen", emoji: "🧱" },
-  { value: "superheroes", label: "Superhelden", emoji: "🦸" },
-  { value: "swimming", label: "Zwemmen", emoji: "🏊" },
+  { value: "dinosaurs", label: "Dinosaurussen" },
+  { value: "space", label: "Ruimte" },
+  { value: "animals", label: "Dieren" },
+  { value: "princesses", label: "Prinsessen" },
+  { value: "cars", label: "Auto's" },
+  { value: "sports", label: "Sport" },
+  { value: "music", label: "Muziek" },
+  { value: "cooking", label: "Koken" },
+  { value: "nature", label: "Natuur" },
+  { value: "pirates", label: "Piraten" },
+  { value: "fairies", label: "Feeën" },
+  { value: "robots", label: "Robots" },
+  { value: "art", label: "Tekenen" },
+  { value: "building", label: "Bouwen" },
+  { value: "superheroes", label: "Superhelden" },
+  { value: "swimming", label: "Zwemmen" },
 ];
+
+const fieldLabel = {
+  fontFamily: V2.ui,
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  color: V2.inkMute,
+  display: "block",
+  marginBottom: 8,
+};
+
+const underlineInput = {
+  width: "100%",
+  padding: "10px 0",
+  border: "none",
+  borderBottom: `1px solid ${V2.paperShade}`,
+  background: "transparent",
+  fontSize: 16,
+  fontFamily: V2.body,
+  color: V2.ink,
+  outline: "none",
+};
 
 export function StepInterests({ data, onChange, onNext, onBack }: Props) {
   function toggleInterest(value: string) {
@@ -39,43 +64,105 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Waar houdt {data.name || "je kind"} van?
-        </label>
-        <p className="text-xs text-muted-foreground mb-3">
-          Kies er zoveel als je wilt - dit helpt ons persoonlijkere verhalen te
-          maken
-        </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {INTEREST_OPTIONS.map((option) => (
+    <div>
+      <Kicker>Wat vindt het kind leuk?</Kicker>
+      <h2
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: "clamp(28px, 3.6vw, 32px)",
+          margin: "12px 0 8px",
+          letterSpacing: -0.7,
+          lineHeight: 1.1,
+          color: V2.ink,
+        }}
+      >
+        Waar houdt{" "}
+        <span style={{ fontStyle: "italic" }}>
+          {data.name || "het kind"}
+        </span>{" "}
+        van?
+      </h2>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 15,
+          color: V2.inkSoft,
+          marginTop: 4,
+          marginBottom: 28,
+          lineHeight: 1.55,
+          maxWidth: 560,
+        }}
+      >
+        Kies er zoveel als je wilt — dit maakt de verhalen persoonlijker.
+      </p>
+
+      {/* Interests grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+          gap: 8,
+          marginBottom: 40,
+        }}
+      >
+        {INTEREST_OPTIONS.map((option) => {
+          const active = data.interests.includes(option.value);
+          return (
             <button
               key={option.value}
+              type="button"
               onClick={() => toggleInterest(option.value)}
-              className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm transition-all ${
-                data.interests.includes(option.value)
-                  ? "border-primary bg-primary/5 font-medium"
-                  : "border-muted hover:border-primary/30"
-              }`}
+              style={{
+                padding: "14px 16px",
+                textAlign: "center",
+                background: active ? V2.ink : "transparent",
+                color: active ? V2.paper : V2.ink,
+                border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                cursor: "pointer",
+                fontFamily: V2.display,
+                fontSize: 15,
+                fontWeight: 400,
+                fontStyle: active ? "italic" : "normal",
+                letterSpacing: -0.2,
+                transition: "background .15s",
+              }}
             >
-              <span>{option.emoji}</span>
-              <span>{option.label}</span>
+              {option.label}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Favoriete dingen
-        </label>
-        <p className="text-xs text-muted-foreground mb-3">Optioneel, maar leuk voor in de verhalen</p>
-        <div className="grid grid-cols-2 gap-3">
+      {/* Favorite things */}
+      <div
+        style={{
+          borderTop: `1px solid ${V2.paperShade}`,
+          paddingTop: 28,
+        }}
+      >
+        <Kicker>Favoriete dingen</Kicker>
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: V2.inkMute,
+            margin: "10px 0 24px",
+          }}
+        >
+          Optioneel — wij weven deze details door de verhalen.
+        </p>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: 24,
+          }}
+        >
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">
-              Favoriete kleur
-            </label>
+            <label style={fieldLabel}>Favoriete kleur</label>
             <input
               type="text"
               value={data.favoriteThings.color}
@@ -84,14 +171,12 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
                   favoriteThings: { ...data.favoriteThings, color: e.target.value },
                 })
               }
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Bijv. blauw"
+              style={underlineInput}
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">
-              Favoriete eten
-            </label>
+            <label style={fieldLabel}>Favoriete eten</label>
             <input
               type="text"
               value={data.favoriteThings.food}
@@ -100,14 +185,12 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
                   favoriteThings: { ...data.favoriteThings, food: e.target.value },
                 })
               }
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Bijv. pannenkoeken"
+              style={underlineInput}
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">
-              Favoriete speelgoed
-            </label>
+            <label style={fieldLabel}>Favoriete speelgoed</label>
             <input
               type="text"
               value={data.favoriteThings.toy}
@@ -116,14 +199,12 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
                   favoriteThings: { ...data.favoriteThings, toy: e.target.value },
                 })
               }
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Bijv. Lego"
+              style={underlineInput}
             />
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">
-              Favoriete plek
-            </label>
+            <label style={fieldLabel}>Favoriete plek</label>
             <input
               type="text"
               value={data.favoriteThings.place}
@@ -132,26 +213,44 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
                   favoriteThings: { ...data.favoriteThings, place: e.target.value },
                 })
               }
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               placeholder="Bijv. het strand"
+              style={underlineInput}
             />
           </div>
         </div>
       </div>
 
-      <div className="flex gap-3">
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 40,
+          paddingTop: 28,
+          borderTop: `1px solid ${V2.paperShade}`,
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
         <button
+          type="button"
           onClick={onBack}
-          className="flex-1 rounded-lg border border-muted px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
         >
-          Terug
+          ← Vorige stap
         </button>
-        <button
-          onClick={onNext}
-          className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-        >
-          Volgende stap
-        </button>
+        <EBtn kind="primary" size="lg" onClick={onNext}>
+          Volgende <IconV2 name="arrow" size={16} color={V2.paper} />
+        </EBtn>
       </div>
     </div>
   );

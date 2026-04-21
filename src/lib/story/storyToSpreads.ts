@@ -1,4 +1,4 @@
-import type { Spread, IllustrationTheme } from "@/components/story/BookViewer";
+import type { Spread, IllustrationTheme } from "@/lib/story/spread-types";
 import { STORY_SETTINGS } from "@/lib/ai/prompts/story-request";
 
 export interface StoryPageData {

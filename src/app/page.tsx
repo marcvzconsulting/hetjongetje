@@ -1,291 +1,352 @@
 import Link from "next/link";
-import {
-  CREAM,
-  INK,
-  PURPLE,
-  AMBER,
-  DISPLAY,
-  BODY,
-  HAND,
-  INK_RGB,
-} from "@/components/landing/tokens";
-import { fontVariables } from "@/components/landing/fonts";
-import { PaperGrain } from "@/components/landing/PaperGrain";
-import { PageHeader } from "@/components/landing/PageHeader";
-import { HeroIllustration } from "@/components/landing/HeroIllustration";
-import { SectionDivider } from "@/components/landing/SectionDivider";
-import { StoryPreview } from "@/components/landing/StoryPreview";
-import { Footer } from "@/components/landing/Footer";
+import { V2 } from "@/components/v2/tokens";
+import { Logo, EBtn, Kicker, IconV2 } from "@/components/v2";
+import { StarField } from "@/components/v2/StarField";
+import { StoryPreviewV2 } from "@/components/v2/landing/StoryPreviewV2";
+
+// Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
+const SAMPLE_NAME = "Noor";
 
 export default function Home() {
   return (
     <div
-      className={`${fontVariables} relative flex flex-1 flex-col overflow-hidden`}
-      style={{ backgroundColor: CREAM, color: INK, fontFamily: BODY }}
+      className="v2-root"
+      style={{
+        fontFamily: V2.body,
+        color: V2.ink,
+        background: V2.paper,
+      }}
     >
-      <PaperGrain />
-      <PageHeader />
-
-      <main className="relative z-10 flex-1">
-        <Hero />
-        <SectionDivider />
-        <ExamplePreview />
-        <SectionDivider />
-        <HowItWorks />
-        <SectionDivider />
-        <WhyDifferent />
-        <BookSection />
-        <SectionDivider />
-        <Pricing />
-        <SectionDivider />
-        <Testimonial />
-        <SectionDivider />
-        <FinalCta />
-      </main>
-
+      <Nav />
+      <Hero />
+      <StoryPreviewSection />
+      <HowItGoes />
+      <NightHero />
+      <BookSection />
+      <Pricing />
+      <Testimonial />
+      <SlotCTA />
       <Footer />
     </div>
   );
 }
 
-// —— Section: Hero ————————————————————————————————————————————————————
+// ── Nav ────────────────────────────────────────────────────────────
 
-function Hero() {
+function Nav() {
   return (
-    <section className="relative mx-auto max-w-[1280px] px-8 pt-12 pb-20 md:px-16 md:pt-20 md:pb-32">
-      <SectionFurniture number="01" eyebrow="Ons Verhaaltje" tail="voorblad" />
-
-      <div className="mt-12 grid grid-cols-12 gap-x-6 md:mt-14 md:items-center">
-        <div className="col-span-12 md:col-span-6">
-          <p
-            className="mb-7 text-[12px] uppercase tracking-[0.3em]"
-            style={{ fontFamily: DISPLAY, color: PURPLE, opacity: 0.85 }}
-          >
-            Voor het slapengaan
-          </p>
-          <h1
-            className="text-[clamp(2.6rem,5.4vw,4.6rem)] leading-[1.04] tracking-[-0.015em]"
-            style={{ fontFamily: DISPLAY, fontWeight: 400 }}
-          >
-            Vanavond een verhaal
-            <br />
-            dat <em style={{ fontStyle: "italic" }}>écht</em> over{" "}
-            <span
-              style={{
-                fontFamily: HAND,
-                color: PURPLE,
-                fontWeight: 500,
-                fontStyle: "normal",
-              }}
-            >
-              Emma
-            </span>{" "}
-            gaat.
-          </h1>
-          <p
-            className="mt-8 max-w-[52ch] text-[17px] leading-[1.65]"
-            style={{ opacity: 0.82 }}
-          >
-            Vertel ons wat er speelt in het leven van je kind. De nieuwe
-            knuffel, het katje van de buren, het broertje dat eraan komt.
-            En wij maken er een voorleesverhaal van met zachte
-            {" "}aquarel-illustraties. Elke avond een nieuw hoofdstuk uit
-            hun eigen leven. Samen terug te lezen in jullie eigen
-            gedrukte boekje.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
-            <PrimaryCta href="/register">Probeer een verhaal gratis</PrimaryCta>
-            <span
-              className="text-[22px] leading-none"
-              style={{ fontFamily: HAND, color: INK, opacity: 0.7 }}
-            >
-              klaar in drie minuten
-            </span>
-          </div>
-        </div>
-        <div className="col-span-12 mt-12 md:col-span-6 md:mt-0">
-          <HeroIllustration
-            alt="Emma omhelst haar olifantje in de keuken bij avondlicht. Een illustratie uit haar verhaal."
-            caption="Een illustratie uit Emma's verhaal. Naam, knuffel en plek zijn echt van haar."
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// —— Section: Voorbeeldverhaal ——————————————————————————————————————
-
-function ExamplePreview() {
-  return (
-    <section className="relative mx-auto max-w-[1280px] px-8 py-16 md:px-16 md:py-20">
-      <SectionHeader
-        number="02"
-        eyebrow="Voorbeeldverhaal"
-        heading="Zo ziet een verhaal er uit."
-      />
-      <div className="mt-14 grid grid-cols-12 gap-x-6">
-        <div className="col-span-12 md:col-span-10 md:col-start-2">
-          <StoryPreview />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// —— Section: Hoe het werkt ——————————————————————————————————————————
-
-function HowItWorks() {
-  const steps = [
-    {
-      n: "01",
-      title: "Vertel wie je kind is.",
-      body: "Naam, leeftijd, knuffel, de mensen om hen heen. Wat ze leuk vinden, waar ze bang voor zijn, de grap die elke avond terugkomt.",
-      image: "/images/spots/vertellen.png",
-      alt: "Jongetje op een kleed met een knuffelkonijn tegen zijn schouder",
-    },
-    {
-      n: "02",
-      title: "Wij schrijven het verhaal.",
-      body: "In een paar minuten maken we een voorleesverhaal met aquarel-illustraties. Een echt verhaal. Geen sjabloon met naam ingevuld.",
-      image: "/images/spots/schrijven.png",
-      alt: "Werktafel met beschreven vel, schetsboek, penseel en theekop",
-    },
-    {
-      n: "03",
-      title: "Voorlezen vanavond.",
-      body: "Op de tablet, of uitgeprint. En op het einde van het jaar bundel je de mooiste tot een echt kinderboek.",
-      image: "/images/spots/voorlezen.png",
-      alt: "Meisje in bed met een prentenboek op het dekbed en een teddybeer",
-    },
-  ];
-
-  return (
-    <section className="relative mx-auto max-w-[1280px] px-8 py-16 md:px-16 md:py-20">
-      <SectionHeader
-        number="03"
-        eyebrow="Hoe het werkt"
-        heading="Drie stappen, geen wachtkamer."
-      />
-      <div className="mt-20 space-y-20 md:mt-24 md:space-y-28">
-        {steps.map((step, i) => (
-          <Step
-            key={step.n}
-            n={step.n}
-            title={step.title}
-            body={step.body}
-            image={step.image}
-            alt={step.alt}
-            flip={i % 2 === 1}
-          />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Step({
-  n,
-  title,
-  body,
-  image,
-  alt,
-  flip,
-}: {
-  n: string;
-  title: string;
-  body: string;
-  image: string;
-  alt: string;
-  flip: boolean;
-}) {
-  return (
-    <div
-      className={`flex flex-col gap-10 md:items-center md:gap-16 ${
-        flip ? "md:flex-row-reverse" : "md:flex-row"
-      }`}
-    >
-      <div className="md:basis-7/12">
-        <p
-          className="mb-3 text-[clamp(4rem,9vw,7rem)] leading-none tabular-nums"
-          style={{ fontFamily: DISPLAY, color: INK, fontWeight: 400 }}
-        >
-          {n}
-        </p>
-        <h3
-          className="text-[clamp(1.5rem,2.8vw,2.1rem)] leading-[1.15] tracking-[-0.01em]"
-          style={{ fontFamily: DISPLAY, fontWeight: 400 }}
-        >
-          {title}
-        </h3>
-        <p
-          className="mt-4 max-w-[52ch] text-[16.5px] leading-[1.65]"
-          style={{ opacity: 0.82 }}
-        >
-          {body}
-        </p>
-      </div>
-      <div className="md:basis-5/12">
-        <SpotImage src={image} alt={alt} />
-      </div>
-    </div>
-  );
-}
-
-function SpotImage({ src, alt }: { src: string; alt: string }) {
-  const vignette =
-    "radial-gradient(ellipse 70% 74% at 50% 50%, black 50%, transparent 92%)";
-  return (
-    <div
-      className="mx-auto aspect-square w-full max-w-[320px]"
+    <nav
       style={{
-        maskImage: vignette,
-        WebkitMaskImage: vignette,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "24px 48px",
+        borderBottom: `1px solid ${V2.paperShade}`,
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="block h-full w-full object-cover select-none"
-        draggable={false}
-        loading="lazy"
-      />
-    </div>
+      <Link href="/" aria-label="Ons Verhaaltje — home">
+        <Logo size={22} />
+      </Link>
+      <div
+        style={{
+          display: "flex",
+          gap: 36,
+          alignItems: "center",
+          fontFamily: V2.ui,
+          fontSize: 14,
+          fontWeight: 500,
+        }}
+      >
+        <Link href="/hoe-het-werkt" style={{ color: V2.ink, textDecoration: "none" }}>
+          Hoe het werkt
+        </Link>
+        <Link href="#voorbeeld" style={{ color: V2.ink, textDecoration: "none" }}>
+          Voorbeeld
+        </Link>
+        <Link href="#prijs" style={{ color: V2.ink, textDecoration: "none" }}>
+          Prijs
+        </Link>
+        <Link href="/login" style={{ color: V2.ink, textDecoration: "none" }}>
+          Inloggen
+        </Link>
+        <EBtn kind="primary" size="sm" href="/register">
+          Probeer het
+        </EBtn>
+      </div>
+    </nav>
   );
 }
 
-// —— Section: Waarom dit anders is ———————————————————————————————————
+// ── Hero ───────────────────────────────────────────────────────────
 
-function WhyDifferent() {
+function Hero() {
+  const vignette =
+    "radial-gradient(ellipse 68% 74% at 50% 47%, black 52%, transparent 92%)";
   return (
-    <section className="relative mx-auto max-w-[1280px] px-8 py-16 md:px-16 md:py-20">
-      <SectionHeader number="04" eyebrow="Waarom dit anders is" />
-      <div className="mt-12 grid grid-cols-12 gap-x-6">
-        <div className="col-span-12 md:col-span-8 md:col-start-3">
+    <section style={{ padding: "96px 48px 80px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 0.9fr)",
+            gap: 72,
+            alignItems: "center",
+          }}
+        >
+          {/* Left: typography + CTA */}
+          <div>
+            <Kicker>Nr. 001 — een persoonlijk kinderboek</Kicker>
+            <h1
+              style={{
+                fontFamily: V2.display,
+                fontWeight: 300,
+                fontSize: "clamp(54px, 7vw, 96px)",
+                lineHeight: 0.98,
+                margin: "28px 0 0",
+                letterSpacing: -2.2,
+              }}
+            >
+              Een verhaaltje<br />
+              waarin{" "}
+              <span style={{ fontStyle: "italic", fontWeight: 400 }}>
+                {SAMPLE_NAME}
+              </span>
+              <br />
+              zichzelf{" "}
+              <span style={{ fontStyle: "italic", fontWeight: 400 }}>
+                herkent.
+              </span>
+            </h1>
+            <p
+              style={{
+                fontFamily: V2.body,
+                fontSize: 19,
+                lineHeight: 1.55,
+                margin: "32px 0 0",
+                color: V2.inkSoft,
+                maxWidth: 520,
+              }}
+            >
+              Jullie vertellen ons wie ze is — de knuffel op het bed, het
+              katje van de buren, het broertje dat eraan komt. Wij maken
+              er een voorleesverhaal van, met een illustratie, klaar om
+              voor te lezen. Elke avond anders.
+            </p>
+            <div style={{ marginTop: 36 }}>
+              <EBtn kind="primary" size="lg" href="/register">
+                Begin met een gratis verhaal{" "}
+                <IconV2 name="arrow" size={16} color={V2.paper} />
+              </EBtn>
+              <div
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 13,
+                  color: V2.inkMute,
+                  marginTop: 14,
+                }}
+              >
+                Geen creditcard nodig · klaar in 3 minuten
+              </div>
+            </div>
+          </div>
+
+          {/* Right: hero illustration */}
+          <figure style={{ margin: 0 }}>
+            <div
+              style={{
+                aspectRatio: "1 / 1",
+                maskImage: vignette,
+                WebkitMaskImage: vignette,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/hero-illustration.png"
+                alt="Een klein meisje in pyjama met een knuffelolifant"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+                draggable={false}
+              />
+            </div>
+            <figcaption
+              style={{
+                marginTop: 12,
+                fontFamily: V2.display,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: V2.inkMute,
+                textAlign: "center",
+              }}
+            >
+              Uit het verhaal van {SAMPLE_NAME}, vier jaar.
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Voorbeeld-spread ────────────────────────────────────────────────
+
+function StoryPreviewSection() {
+  return (
+    <section
+      id="voorbeeld"
+      style={{
+        padding: "48px 48px 96px",
+        borderTop: `1px solid ${V2.paperShade}`,
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <Kicker>Voorbeeld</Kicker>
           <h2
-            className="text-[clamp(2rem,4vw,3.4rem)] leading-[1.08] tracking-[-0.015em]"
-            style={{ fontFamily: DISPLAY, fontWeight: 400 }}
+            style={{
+              fontFamily: V2.display,
+              fontWeight: 300,
+              fontSize: "clamp(36px, 4.4vw, 52px)",
+              lineHeight: 1.05,
+              margin: "20px 0 0",
+              letterSpacing: -1.4,
+            }}
           >
-            Niet iedere Emma is dezelfde Emma.
+            Zo leest het voor <br />
+            <span style={{ fontStyle: "italic", fontWeight: 400 }}>
+              jullie kind.
+            </span>
           </h2>
-          <div
-            className="mt-8 max-w-[60ch] space-y-5 text-[17px] leading-[1.65]"
-            style={{ opacity: 0.85 }}
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontSize: 17,
+              lineHeight: 1.6,
+              maxWidth: 560,
+              margin: "16px auto 0",
+              color: V2.inkSoft,
+            }}
           >
-            <p>
-              Persoonlijk betekent voor ons meer dan een naam in een sjabloon
-              vervangen. Het betekent dat de knuffel die in het verhaal eindigt
-              ook echt op het bed ligt, dat de plek waar het zich afspeelt het
-              straatje is waar je woont, dat het broertje of zusje dezelfde
-              streken uithaalt als thuis.
-            </p>
-            <p>
-              We gebruiken AI om dit betaalbaar te maken. Anders zou een
-              schrijver per kind een week werk hebben. Maar de ingrediënten
-              komen van jou: wie je kind is, wat ze meemaken, wat ze grappig
-              vinden. Wij zetten ze om in een verhaal dat klopt.
-            </p>
+            Kies leeftijd en geslacht, en zie hoe een verhaal eruit ziet
+            voor iemand van die leeftijd. De taal past zich aan — korte
+            zinnen voor een tweejarige, meer beeld en verhaal voor vier.
+          </p>
+        </div>
+        <StoryPreviewV2 />
+      </div>
+    </section>
+  );
+}
+
+// ── Hoe het gaat ───────────────────────────────────────────────────
+
+function HowItGoes() {
+  const steps = [
+    {
+      n: "I",
+      t: "Jullie vullen het profiel in",
+      b: "Naam, leeftijd, de knuffel, de mensen, de grapjes die thuis terugkomen. Dit doe je maar één keer — daarna weten wij genoeg.",
+    },
+    {
+      n: "II",
+      t: "Vertel wat er vanavond speelt",
+      b: "Een zin is genoeg. Of vertel meer: 'Er was vandaag een tekening van oma', 'Noor wilde vanmiddag alleen olifantenbrood'.",
+    },
+    {
+      n: "III",
+      t: "Voorlezen — of laten voorlezen",
+      b: "Op de tablet, of op papier. Aan het einde van het jaar bundel je de mooiste verhalen in een echt gedrukt boekje.",
+    },
+  ];
+  return (
+    <section
+      style={{
+        padding: "96px 48px",
+        borderTop: `1px solid ${V2.paperShade}`,
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 360px) minmax(0, 1fr)",
+            gap: 80,
+          }}
+        >
+          <div>
+            <Kicker>Hoe het gaat</Kicker>
+            <h2
+              style={{
+                fontFamily: V2.display,
+                fontWeight: 300,
+                fontSize: 52,
+                lineHeight: 1.02,
+                margin: "20px 0 0",
+                letterSpacing: -1.4,
+              }}
+            >
+              Drie stappen,
+              <br />
+              <span style={{ fontStyle: "italic", fontWeight: 400 }}>
+                meer niet.
+              </span>
+            </h2>
+          </div>
+          <div>
+            {steps.map((s) => (
+              <div
+                key={s.n}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "80px 1fr",
+                  gap: 24,
+                  padding: "28px 0",
+                  borderTop: `1px solid ${V2.paperShade}`,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: V2.display,
+                    fontStyle: "italic",
+                    fontSize: 44,
+                    fontWeight: 300,
+                    color: V2.goldDeep,
+                    lineHeight: 1,
+                  }}
+                >
+                  {s.n}
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontFamily: V2.display,
+                      fontWeight: 400,
+                      fontSize: 26,
+                      margin: 0,
+                      letterSpacing: -0.4,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {s.t}
+                  </h3>
+                  <p
+                    style={{
+                      fontFamily: V2.body,
+                      fontSize: 17,
+                      lineHeight: 1.6,
+                      margin: "10px 0 0",
+                      color: V2.inkSoft,
+                      maxWidth: 560,
+                    }}
+                  >
+                    {s.b}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -293,267 +354,252 @@ function WhyDifferent() {
   );
 }
 
-// —— Section: Het boekje (full-bleed) —————————————————————————————
+// ── Nachthero: waarom anders ───────────────────────────────────────
+
+function NightHero() {
+  return (
+    <section
+      style={{
+        padding: "120px 48px",
+        background: V2.night,
+        color: V2.paper,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <StarField count={14} />
+      <div style={{ maxWidth: 900, margin: "0 auto", position: "relative" }}>
+        <Kicker color={V2.gold}>
+          Waarom {SAMPLE_NAME}, en niet &lsquo;het kind&rsquo;
+        </Kicker>
+        <h2
+          style={{
+            fontFamily: V2.display,
+            fontWeight: 300,
+            fontSize: "clamp(44px, 5.5vw, 64px)",
+            lineHeight: 1.05,
+            margin: "24px 0 0",
+            letterSpacing: -1.6,
+            color: V2.paper,
+          }}
+        >
+          Niet iedere {SAMPLE_NAME} is{" "}
+          <span style={{ fontStyle: "italic", color: V2.gold }}>dezelfde</span>{" "}
+          {SAMPLE_NAME}.
+        </h2>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 48,
+            marginTop: 56,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontSize: 19,
+              lineHeight: 1.65,
+              margin: 0,
+              opacity: 0.85,
+            }}
+          >
+            Persoonlijk betekent voor ons meer dan een naam in een sjabloon.
+            Het betekent dat de knuffel die in het verhaal eindigt ook echt
+            op het bed ligt. Het straatje is het straatje om de hoek. Het
+            broertje haalt dezelfde streken uit als thuis.
+          </p>
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontSize: 19,
+              lineHeight: 1.65,
+              margin: 0,
+              opacity: 0.85,
+            }}
+          >
+            Dat is het verschil. We maken geen verhaal over een meisje dat
+            toevallig jouw naam heeft — we maken er één waarin jij jezelf
+            herkent. Tot in de kleinste details.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Boekje ─────────────────────────────────────────────────────────
 
 function BookSection() {
   return (
-    <section className="relative grid grid-cols-1 gap-10 py-16 md:grid-cols-2 md:items-center md:gap-0 md:py-24">
-      <div className="md:pl-8 lg:pl-16 px-8 md:px-0">
-        <BookPhotoPlaceholder />
-      </div>
-      <div className="px-8 md:px-12 lg:pl-20 lg:pr-24">
-        <p
-          className="mb-4 text-[12px] uppercase tracking-[0.3em]"
-          style={{ fontFamily: DISPLAY, color: PURPLE, opacity: 0.85 }}
-        >
-          Het boekje
-        </p>
-        <h2
-          className="text-[clamp(2rem,4vw,3.4rem)] leading-[1.08] tracking-[-0.015em]"
-          style={{ fontFamily: DISPLAY, fontWeight: 400 }}
-        >
-          Aan het einde van het jaar,
-          <br />
-          een echt boekje.
-        </h2>
-        <p
-          className="mt-6 max-w-[48ch] text-[17px] leading-[1.65]"
-          style={{ opacity: 0.82 }}
-        >
-          De mooiste verhalen van het afgelopen jaar, gedrukt als een echt
-          kinderboek. Hardcover, gebonden, om jaren mee te doen.
-        </p>
-        <p
-          className="mt-6 text-[22px]"
-          style={{ fontFamily: HAND, color: INK, opacity: 0.7 }}
-        >
-          voor op het nachtkastje.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function BookPhotoPlaceholder() {
-  return (
-    <div
-      className="flex aspect-[5/4] w-full flex-col items-center justify-center gap-3 rounded-[1px]"
-      style={{
-        border: `1px dashed rgba(${INK_RGB},0.3)`,
-        color: `rgba(${INK_RGB},0.55)`,
-        backgroundColor: `rgba(${INK_RGB},0.03)`,
-      }}
-    >
-      <span className="text-[11px] uppercase tracking-[0.24em]">
-        photography placeholder
-      </span>
-      <span
-        className="max-w-[44ch] px-6 text-center text-[14px] italic leading-[1.55]"
-        style={{ fontFamily: DISPLAY }}
+    <section style={{ padding: "96px 48px" }}>
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1.1fr) minmax(0, 1fr)",
+          gap: 80,
+          alignItems: "center",
+        }}
       >
-        real shoot required. Ouder en kind op bed, gedrukt boekje open
-        tussen hen, daglicht door het raam, Apartamento-magazine register.
-      </span>
-    </div>
-  );
-}
-
-// —— Section: Prijs ——————————————————————————————————————————————————
-
-function Pricing() {
-  return (
-    <section className="relative mx-auto max-w-[1280px] px-8 py-16 md:px-16 md:py-20">
-      <SectionHeader
-        number="06"
-        eyebrow="Wat het kost"
-        heading="Een eerlijke prijs voor één avondritueel."
-      />
-      <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-2 md:items-start md:gap-x-10">
-        <PriceColumn
-          eyebrow="Per maand"
-          price="€7,95"
-          unit="per maand"
-          features={[
-            "8 verhalen per maand",
-            "Alle verhalen blijven bewaard",
-            "Meerdere kinderen op één account",
-            "Opzeggen kan elk moment",
-          ]}
-        />
-        <PriceColumn
-          eyebrow="Per jaar"
-          eyebrowAccent="bespaar €16"
-          price="€79"
-          unit="per jaar"
-          featured
-          features={[
-            "Eén beslissing, een heel jaar verhalen",
-            "Alle verhalen blijven bewaard",
-            "Meerdere kinderen op één account",
-            "Opzeggen kan elk moment",
-          ]}
-        />
-      </div>
-
-      <p
-        className="mt-12 max-w-[58ch] text-[14px] italic"
-        style={{ fontFamily: DISPLAY, opacity: 0.7 }}
-      >
-        Een gedrukt jaarboek bestellen? Dat kan los. €29,95 per boek.
-      </p>
-
-      <div className="mt-12 flex flex-wrap items-center gap-x-7 gap-y-4">
-        <PrimaryCta href="/register">
-          Probeer eerst een verhaal gratis
-        </PrimaryCta>
-        <span className="max-w-[42ch] text-[14px]" style={{ opacity: 0.7 }}>
-          Geen creditcard nodig. Je eerste verhaal is binnen drie minuten klaar.
-        </span>
-      </div>
-    </section>
-  );
-}
-
-function PriceColumn({
-  eyebrow,
-  eyebrowAccent,
-  price,
-  unit,
-  features,
-  featured,
-}: {
-  eyebrow: string;
-  eyebrowAccent?: string;
-  price: string;
-  unit: string;
-  features: string[];
-  featured?: boolean;
-}) {
-  const inner = (
-    <>
-      <div className="flex items-baseline gap-3">
-        <p
-          className="text-[12px] uppercase tracking-[0.24em]"
-          style={{ fontFamily: DISPLAY, color: INK, opacity: 0.7 }}
-        >
-          {eyebrow}
-        </p>
-        {eyebrowAccent && (
-          <span
-            className="text-[12px] uppercase tracking-[0.18em]"
-            style={{ fontFamily: DISPLAY, color: INK }}
-          >
-            · {eyebrowAccent}
-          </span>
-        )}
-      </div>
-      <div className="mt-6 flex items-baseline gap-3">
-        <span
-          className="text-[clamp(2.6rem,5vw,3.8rem)] leading-none tabular-nums"
-          style={{ fontFamily: DISPLAY, color: INK, fontWeight: 400 }}
-        >
-          {price}
-        </span>
-        <span className="text-[14px]" style={{ color: INK, opacity: 0.7 }}>
-          {unit}
-        </span>
-      </div>
-      <ul
-        className="mt-8 space-y-3 text-[15.5px] leading-[1.6]"
-        style={{ color: INK, opacity: 0.85 }}
-      >
-        {features.map((f) => (
-          <li key={f} className="flex gap-3">
-            <span
-              aria-hidden
-              className="mt-2 inline-block h-1 w-1 shrink-0 rounded-full"
-              style={{ backgroundColor: INK, opacity: 0.5 }}
-            />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
-
-  if (featured) {
-    return (
-      <div className="relative">
-        <p
-          className="mb-3 text-[19px] leading-none"
-          style={{ fontFamily: HAND, color: INK, opacity: 0.7 }}
-        >
-          de meeste ouders kiezen dit
-        </p>
-        <div
-          className="rounded-[2px] p-7 md:p-9"
-          style={{ border: `1px solid rgba(${INK_RGB},0.45)` }}
-        >
-          {inner}
-        </div>
-      </div>
-    );
-  }
-
-  return <div className="md:px-2 md:pt-[68px]">{inner}</div>;
-}
-
-// —— Section: Ouders vertellen ————————————————————————————————————
-
-function Testimonial() {
-  // TODO[copy]: replace placeholder with one real parent quote, ~30–40 woorden,
-  // over een specifiek moment. Geen generieke lof. Wacht op echte ouderreacties.
-  return (
-    <section className="relative mx-auto max-w-[1280px] px-8 py-20 md:px-16 md:py-28">
-      <SectionHeader number="07" eyebrow="Ouders vertellen" />
-      <div className="mt-12 grid grid-cols-12 gap-x-6">
-        <blockquote className="col-span-12 md:col-span-9 md:col-start-3">
-          <p
-            className="text-[clamp(1.6rem,3.2vw,2.6rem)] leading-[1.35] tracking-[-0.005em]"
-            style={{ fontFamily: DISPLAY, fontWeight: 400 }}
-          >
-            {"„[TESTIMONIAL PLACEHOLDER. Een echt ouderquote, ongeveer 30 tot 40 woorden, over een specifiek moment. Geen generieke lof. Wacht op echte ouderreacties.]”"}
-          </p>
-          <footer className="mt-6 text-[14px]" style={{ opacity: 0.7 }}>
-            [Naam], moeder van [Kindnaam] (4)
-          </footer>
-        </blockquote>
-      </div>
-    </section>
-  );
-}
-
-// —— Section: Slot-CTA ——————————————————————————————————————————————
-
-function FinalCta() {
-  return (
-    <section className="relative mx-auto max-w-[1280px] px-8 py-20 md:px-16 md:py-28">
-      <SectionHeader number="08" eyebrow="Begin vanavond" />
-      <div className="mt-12 grid grid-cols-12 gap-x-6">
-        <div className="col-span-12 md:col-span-9 md:col-start-3">
+        <div>
+          <Kicker>Aan het einde van het jaar</Kicker>
           <h2
-            className="text-[clamp(2.6rem,5.4vw,4.6rem)] leading-[1.04] tracking-[-0.015em]"
-            style={{ fontFamily: DISPLAY, fontWeight: 400 }}
+            style={{
+              fontFamily: V2.display,
+              fontWeight: 300,
+              fontSize: "clamp(38px, 4.8vw, 56px)",
+              lineHeight: 1.03,
+              margin: "20px 0 0",
+              letterSpacing: -1.4,
+            }}
           >
-            Begin vanavond.
+            Een <span style={{ fontStyle: "italic", fontWeight: 400 }}>echt</span>{" "}
+            boekje.
+            <br />
+            Hardcover. Gebonden.
           </h2>
           <p
-            className="mt-6 max-w-[52ch] text-[17px] leading-[1.65]"
-            style={{ opacity: 0.82 }}
+            style={{
+              fontFamily: V2.body,
+              fontSize: 18,
+              lineHeight: 1.6,
+              marginTop: 24,
+              color: V2.inkSoft,
+              maxWidth: 520,
+            }}
           >
-            Eén gratis verhaal, voor het slapengaan van vanavond. Het is in
-            drie minuten klaar.
+            De mooiste verhalen van het jaar worden een echt kinderboek.
+            Voor op het nachtkastje — of om ooit aan hun eigen kinderen voor
+            te lezen.
           </p>
-          <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
-            <PrimaryCta href="/register">
-              Probeer een verhaal gratis
-            </PrimaryCta>
+          <div
+            style={{
+              marginTop: 32,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 12,
+              fontFamily: V2.display,
+            }}
+          >
+            <span style={{ fontSize: 32, fontWeight: 400 }}>€29,95</span>
             <span
-              className="text-[22px] leading-none"
-              style={{ fontFamily: HAND, color: INK, opacity: 0.7 }}
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 14,
+                color: V2.inkMute,
+              }}
             >
-              vanavond nog voorlezen
+              of €19,95 met jaarabonnement
             </span>
+          </div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div
+            style={{
+              width: 280,
+              height: 380,
+              background: V2.night,
+              position: "relative",
+              boxShadow: "0 20px 50px rgba(20,20,46,0.25)",
+            }}
+          >
+            {/* Spine shadow */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: 0,
+                width: 12,
+                background:
+                  "linear-gradient(90deg, rgba(0,0,0,0.3), transparent)",
+              }}
+            />
+            {/* Title */}
+            <div
+              style={{
+                position: "absolute",
+                top: 48,
+                left: 32,
+                right: 32,
+                fontFamily: V2.display,
+                fontSize: 24,
+                color: V2.paper,
+                fontWeight: 300,
+                letterSpacing: -0.4,
+                lineHeight: 1.1,
+              }}
+            >
+              Het jaar van
+              <br />
+              <span style={{ fontStyle: "italic", color: V2.gold }}>
+                {SAMPLE_NAME}
+              </span>
+            </div>
+            {/* Moon crescent */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 90,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background: V2.gold,
+                opacity: 0.92,
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                bottom: 90,
+                left: "50%",
+                transform: "translateX(-30%)",
+                width: 80,
+                height: 80,
+                borderRadius: "50%",
+                background: V2.night,
+              }}
+            />
+            {/* stars */}
+            {[
+              { t: 140, l: 40, s: 2 },
+              { t: 170, r: 50, s: 2 },
+              { t: 210, l: 60, s: 1.5 },
+            ].map((st, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "absolute",
+                  top: st.t,
+                  left: st.l,
+                  right: st.r,
+                  width: st.s,
+                  height: st.s,
+                  borderRadius: "50%",
+                  background: V2.gold,
+                }}
+              />
+            ))}
+            {/* year */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 32,
+                left: 0,
+                right: 0,
+                textAlign: "center",
+                fontFamily: V2.mono,
+                fontSize: 11,
+                color: V2.gold,
+                letterSpacing: "0.2em",
+              }}
+            >
+              MMXXVI
+            </div>
           </div>
         </div>
       </div>
@@ -561,101 +607,399 @@ function FinalCta() {
   );
 }
 
-// —— Shared bits ———————————————————————————————————————————————————
+// ── Prijs ──────────────────────────────────────────────────────────
 
-function SectionHeader({
-  number,
-  eyebrow,
-  heading,
-}: {
-  number: string;
-  eyebrow: string;
-  heading?: string;
-}) {
+function Pricing() {
+  const plans = [
+    {
+      t: "Per maand",
+      p: "€7,95",
+      u: "per maand",
+      f: [
+        "8 verhalen per maand",
+        "Verhalen blijven bewaard",
+        "Meerdere kinderen",
+        "Opzeggen kan altijd",
+      ],
+    },
+    {
+      t: "Per jaar",
+      p: "€79",
+      u: "per jaar — bespaar €16",
+      badge: "meest gekozen",
+      f: [
+        "Onbeperkt verhalen",
+        "Verhalen blijven bewaard",
+        "Meerdere kinderen",
+        "€10 korting op het boekje",
+      ],
+      featured: true,
+    },
+    {
+      t: "Los bijkopen",
+      p: "€1,50",
+      u: "per los verhaal",
+      f: [
+        "Bovenop je abonnement",
+        "Pakket van 10 voor €12",
+        "Direct beschikbaar",
+      ],
+    },
+  ];
   return (
-    <header className="grid grid-cols-12 gap-x-6">
-      <div className="col-span-12 md:col-span-2">
-        <span
-          className="text-[12px] tabular-nums"
-          style={{ fontFamily: DISPLAY, color: AMBER }}
-        >
-          {number}
-        </span>
-      </div>
-      <div className="col-span-12 md:col-span-10">
-        <p
-          className="text-[13px] italic"
-          style={{ fontFamily: DISPLAY, opacity: 0.6 }}
-        >
-          {eyebrow}
-        </p>
-        {heading && (
-          <h2
-            className="mt-2 text-[clamp(1.8rem,3.4vw,2.8rem)] leading-[1.1] tracking-[-0.01em]"
-            style={{ fontFamily: DISPLAY, fontWeight: 400 }}
-          >
-            {heading}
-          </h2>
-        )}
-      </div>
-    </header>
-  );
-}
-
-function SectionFurniture({
-  number,
-  eyebrow,
-  tail,
-}: {
-  number: string;
-  eyebrow: string;
-  tail: string;
-}) {
-  return (
-    <div className="flex items-baseline justify-between">
-      <span
-        className="text-[11px] uppercase tracking-[0.24em]"
-        style={{ opacity: 0.55 }}
-      >
-        {eyebrow}
-      </span>
-      <span
-        className="text-[12px] tabular-nums"
-        style={{ fontFamily: DISPLAY }}
-      >
-        <span style={{ color: AMBER }}>{number}</span>
-        <span style={{ color: INK, opacity: 0.55 }}>
-          &nbsp;—&nbsp; {tail}
-        </span>
-      </span>
-    </div>
-  );
-}
-
-function PrimaryCta({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group inline-flex items-center rounded-full px-7 py-3.5 text-[15px] font-medium tracking-wide transition-transform duration-300 hover:-translate-y-[1px]"
+    <section
+      id="prijs"
       style={{
-        backgroundColor: PURPLE,
-        color: CREAM,
-        boxShadow: `0 1px 0 rgba(${INK_RGB},0.10)`,
+        padding: "96px 48px",
+        background: V2.paperDeep,
+        borderTop: `1px solid ${V2.paperShade}`,
+        borderBottom: `1px solid ${V2.paperShade}`,
       }}
     >
-      {children}
-      <span
-        aria-hidden
-        className="ml-2 inline-block transition-transform duration-300 group-hover:translate-x-[3px]"
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 64 }}>
+          <Kicker>Wat het kost</Kicker>
+          <h2
+            style={{
+              fontFamily: V2.display,
+              fontWeight: 300,
+              fontSize: "clamp(40px, 5vw, 56px)",
+              margin: "20px 0 0",
+              letterSpacing: -1.4,
+              lineHeight: 1.05,
+            }}
+          >
+            Eén avondritueel.
+            <br />
+            <span style={{ fontStyle: "italic", fontWeight: 400 }}>
+              Eerlijke prijs.
+            </span>
+          </h2>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 0,
+            background: V2.paper,
+            border: `1px solid ${V2.paperShade}`,
+          }}
+        >
+          {plans.map((p, i) => {
+            const featured = p.featured;
+            return (
+              <div
+                key={p.t}
+                style={{
+                  padding: 40,
+                  position: "relative",
+                  background: featured ? V2.night : "transparent",
+                  color: featured ? V2.paper : V2.ink,
+                  borderRight:
+                    i < plans.length - 1
+                      ? `1px solid ${
+                          featured ? "rgba(255,255,255,0.1)" : V2.paperShade
+                        }`
+                      : "none",
+                }}
+              >
+                {featured && p.badge && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      fontFamily: V2.mono,
+                      fontSize: 10,
+                      color: V2.gold,
+                      letterSpacing: "0.16em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    ✦ {p.badge}
+                  </div>
+                )}
+                <div
+                  style={{
+                    fontFamily: V2.ui,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    opacity: 0.65,
+                  }}
+                >
+                  {p.t}
+                </div>
+                <div
+                  style={{
+                    fontFamily: V2.display,
+                    fontSize: 64,
+                    fontWeight: 300,
+                    letterSpacing: -2,
+                    marginTop: 16,
+                    lineHeight: 1,
+                  }}
+                >
+                  {p.p}
+                </div>
+                <div
+                  style={{
+                    fontFamily: V2.ui,
+                    fontSize: 13,
+                    opacity: 0.7,
+                    marginTop: 6,
+                    marginBottom: 32,
+                  }}
+                >
+                  {p.u}
+                </div>
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {p.f.map((f) => (
+                    <li
+                      key={f}
+                      style={{
+                        fontFamily: V2.body,
+                        fontSize: 15,
+                        lineHeight: 1.5,
+                        padding: "10px 0",
+                        display: "flex",
+                        gap: 12,
+                        borderTop: `1px solid ${
+                          featured ? "rgba(255,255,255,0.1)" : V2.paperShade
+                        }`,
+                      }}
+                    >
+                      <IconV2
+                        name="check"
+                        size={16}
+                        color={featured ? V2.gold : V2.ink}
+                      />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ marginTop: 32 }}>
+                  <EBtn
+                    kind={featured ? "on-dark" : "primary"}
+                    size="md"
+                    href="/register"
+                    style={{ width: "100%", justifyContent: "center" }}
+                  >
+                    Begin hiermee →
+                  </EBtn>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p
+          style={{
+            textAlign: "center",
+            fontFamily: V2.body,
+            fontSize: 14,
+            color: V2.inkMute,
+            marginTop: 24,
+          }}
+        >
+          Altijd één gratis proefverhaal voor je iets afsluit.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+// ── Testimonial ────────────────────────────────────────────────────
+
+function Testimonial() {
+  return (
+    <section style={{ padding: "120px 48px" }}>
+      <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+        <Kicker>Ouders vertellen</Kicker>
+        <blockquote
+          style={{
+            fontFamily: V2.display,
+            fontWeight: 300,
+            fontSize: "clamp(26px, 3vw, 38px)",
+            lineHeight: 1.3,
+            margin: "28px 0 0",
+            letterSpacing: -0.6,
+            fontStyle: "italic",
+          }}
+        >
+          &ldquo;Onze {SAMPLE_NAME} vraagt elke avond:{" "}
+          <span style={{ fontStyle: "normal", color: V2.goldDeep }}>
+            mag ik mijn verhaal?
+          </span>{" "}
+          Niet een verhaal. Háár verhaal.&rdquo;
+        </blockquote>
+        <div
+          style={{
+            marginTop: 48,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 14,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: V2.paperShade,
+              fontFamily: V2.display,
+              color: V2.ink,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              fontStyle: "italic",
+            }}
+          >
+            S
+          </span>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontFamily: V2.ui, fontSize: 14, fontWeight: 500 }}>
+              Sanne de Groot
+            </div>
+            <div style={{ fontFamily: V2.ui, fontSize: 13, color: V2.inkMute }}>
+              moeder van {SAMPLE_NAME} (5)
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Slot CTA ────────────────────────────────────────────────────────
+
+function SlotCTA() {
+  return (
+    <section
+      style={{
+        padding: "120px 48px",
+        background: V2.night,
+        color: V2.paper,
+        position: "relative",
+        overflow: "hidden",
+        textAlign: "center",
+      }}
+    >
+      <StarField count={12} />
+      <div
+        style={{
+          position: "relative",
+          maxWidth: 720,
+          margin: "0 auto",
+        }}
       >
-        →
-      </span>
-    </Link>
+        <Kicker color={V2.gold}>Vanavond</Kicker>
+        <h2
+          style={{
+            fontFamily: V2.display,
+            fontWeight: 300,
+            fontSize: "clamp(52px, 7vw, 80px)",
+            margin: "24px 0 0",
+            letterSpacing: -2,
+            lineHeight: 1,
+            color: V2.paper,
+          }}
+        >
+          Begin het{" "}
+          <span style={{ fontStyle: "italic", color: V2.gold }}>
+            avondritueel.
+          </span>
+        </h2>
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontSize: 18,
+            lineHeight: 1.6,
+            marginTop: 28,
+            opacity: 0.8,
+          }}
+        >
+          Eén gratis verhaal om te proberen. Geen creditcard. Klaar in drie
+          minuten.
+        </p>
+        <div style={{ marginTop: 44 }}>
+          <EBtn kind="on-dark" size="lg" href="/register">
+            Maak het eerste verhaal{" "}
+            <IconV2 name="arrow" size={16} color={V2.ink} />
+          </EBtn>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Footer ─────────────────────────────────────────────────────────
+
+function Footer() {
+  return (
+    <footer
+      style={{
+        padding: "48px 48px",
+        borderTop: `1px solid ${V2.paperShade}`,
+        fontFamily: V2.ui,
+        fontSize: 13,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 24,
+          flexWrap: "wrap",
+        }}
+      >
+        <Logo size={16} />
+        <div
+          style={{
+            display: "flex",
+            gap: 32,
+            color: V2.inkMute,
+            flexWrap: "wrap",
+          }}
+        >
+          <Link
+            href="/privacy"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/voorwaarden"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Voorwaarden
+          </Link>
+          <Link
+            href="/veelgestelde-vragen"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            FAQ
+          </Link>
+          <Link
+            href="/over-ons"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Over ons
+          </Link>
+          <a
+            href="mailto:hallo@onsverhaaltje.nl"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            hallo@onsverhaaltje.nl
+          </a>
+        </div>
+      </div>
+    </footer>
   );
 }

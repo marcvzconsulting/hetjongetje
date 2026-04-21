@@ -1,5 +1,7 @@
 "use client";
 
+import { V2 } from "@/components/v2/tokens";
+import { EBtn, Kicker, IconV2 } from "@/components/v2";
 import type { ProfileData } from "../profile-wizard";
 
 interface Props {
@@ -15,27 +17,34 @@ const CHARACTER_TYPES = [
     value: "self",
     label: "Zichzelf als held",
     description: "Het kind is het hoofdpersonage van elk verhaal",
-    emoji: "🧒",
   },
   {
     value: "stuffed_animal",
     label: "Favoriete knuffel",
     description: "De knuffel beleeft de avonturen, het kind is de beste vriend",
-    emoji: "🧸",
   },
   {
     value: "action_hero",
     label: "Favoriete held",
-    description: "Een superheld of actieheid is het hoofdpersonage",
-    emoji: "🦸",
+    description: "Een superheld of filmfiguur is het hoofdpersonage",
   },
   {
     value: "custom",
     label: "Eigen personage",
     description: "Beschrijf zelf een uniek personage",
-    emoji: "✏️",
   },
 ];
+
+const fieldLabel = {
+  fontFamily: V2.ui,
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  color: V2.inkMute,
+  display: "block",
+  marginBottom: 8,
+};
 
 export function StepCharacter({
   data,
@@ -45,6 +54,7 @@ export function StepCharacter({
   saving,
 }: Props) {
   const needsDescription = data.mainCharacterType !== "self";
+  const canSubmit = !(saving || (needsDescription && !data.mainCharacterDescription));
 
   const descriptionPlaceholder =
     data.mainCharacterType === "stuffed_animal"
@@ -54,106 +64,251 @@ export function StepCharacter({
         : "Beschrijf het personage...";
 
   return (
-    <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Wie is het hoofdpersonage?
-        </label>
-        <p className="text-xs text-muted-foreground mb-3">
-          Dit personage staat centraal in elk verhaal
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {CHARACTER_TYPES.map((type) => (
+    <div>
+      <Kicker>Hoofdpersonage</Kicker>
+      <h2
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: "clamp(28px, 3.6vw, 32px)",
+          margin: "12px 0 8px",
+          letterSpacing: -0.7,
+          lineHeight: 1.1,
+          color: V2.ink,
+        }}
+      >
+        Wie staat{" "}
+        <span style={{ fontStyle: "italic" }}>centraal</span> in het verhaal?
+      </h2>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 15,
+          color: V2.inkSoft,
+          marginTop: 4,
+          marginBottom: 28,
+          lineHeight: 1.55,
+          maxWidth: 560,
+        }}
+      >
+        De rode draad door elk verhaal — wie beleeft het avontuur?
+      </p>
+
+      {/* Character type tiles */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 8,
+          marginBottom: 28,
+        }}
+      >
+        {CHARACTER_TYPES.map((type) => {
+          const active = data.mainCharacterType === type.value;
+          return (
             <button
               key={type.value}
+              type="button"
               onClick={() => onChange({ mainCharacterType: type.value })}
-              className={`flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all ${
-                data.mainCharacterType === type.value
-                  ? "border-primary bg-primary/5"
-                  : "border-muted hover:border-primary/30"
-              }`}
+              style={{
+                textAlign: "left",
+                padding: 18,
+                background: active ? V2.ink : "transparent",
+                color: active ? V2.paper : V2.ink,
+                border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                cursor: "pointer",
+                transition: "background .15s",
+              }}
             >
-              <span className="text-2xl">{type.emoji}</span>
-              <div>
-                <div className="font-medium text-sm">{type.label}</div>
-                <div className="text-xs text-muted-foreground">
-                  {type.description}
-                </div>
+              <div
+                style={{
+                  fontFamily: V2.display,
+                  fontSize: 20,
+                  fontStyle: active ? "italic" : "normal",
+                  fontWeight: 400,
+                }}
+              >
+                {type.label}
+              </div>
+              <div
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 12,
+                  marginTop: 6,
+                  opacity: 0.75,
+                  lineHeight: 1.4,
+                }}
+              >
+                {type.description}
               </div>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {needsDescription && (
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Beschrijf het personage
-          </label>
+        <div style={{ marginBottom: 40 }}>
+          <label style={fieldLabel}>Beschrijf het personage</label>
           <textarea
             value={data.mainCharacterDescription}
             onChange={(e) =>
               onChange({ mainCharacterDescription: e.target.value })
             }
             rows={3}
-            className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             placeholder={descriptionPlaceholder}
+            style={{
+              width: "100%",
+              padding: "10px 0",
+              border: "none",
+              borderBottom: `1px solid ${V2.paperShade}`,
+              background: "transparent",
+              fontSize: 16,
+              fontFamily: V2.body,
+              color: V2.ink,
+              outline: "none",
+              resize: "vertical",
+              minHeight: 70,
+            }}
           />
         </div>
       )}
 
       {/* Summary */}
-      <div className="rounded-2xl bg-muted/50 p-4">
-        <h3 className="font-semibold text-sm mb-2">Samenvatting</h3>
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>
-            <strong>Naam:</strong> {data.name}
-          </p>
-          <p>
-            <strong>Geboortedatum:</strong>{" "}
-            {data.dateOfBirth
-              ? new Date(data.dateOfBirth).toLocaleDateString("nl-NL", {
+      <div
+        style={{
+          marginTop: 40,
+          padding: 24,
+          background: V2.paper,
+          border: `1px solid ${V2.paperShade}`,
+        }}
+      >
+        <Kicker>Samenvatting</Kicker>
+        <dl
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "minmax(0, auto) minmax(0, 1fr)",
+            gap: "10px 20px",
+            margin: "14px 0 0",
+          }}
+        >
+          <SummaryRow
+            term="Naam"
+            value={data.name || <em style={{ color: V2.inkMute }}>—</em>}
+          />
+          <SummaryRow
+            term="Geboortedatum"
+            value={
+              data.dateOfBirth ? (
+                new Date(data.dateOfBirth).toLocaleDateString("nl-NL", {
                   day: "numeric",
                   month: "long",
                   year: "numeric",
                 })
-              : "-"}
-          </p>
+              ) : (
+                <em style={{ color: V2.inkMute }}>—</em>
+              )
+            }
+          />
           {data.interests.length > 0 && (
-            <p>
-              <strong>Interesses:</strong> {data.interests.join(", ")}
-            </p>
+            <SummaryRow
+              term="Interesses"
+              value={data.interests.join(", ")}
+            />
           )}
           {data.pets.length > 0 && (
-            <p>
-              <strong>Huisdieren:</strong>{" "}
-              {data.pets.map((p) => `${p.name} (${p.type})`).join(", ")}
-            </p>
+            <SummaryRow
+              term="Huisdieren"
+              value={data.pets.map((p) => `${p.name} (${p.type})`).join(", ")}
+            />
           )}
           {data.friends.length > 0 && (
-            <p>
-              <strong>Vrienden:</strong>{" "}
-              {data.friends.map((f) => f.name).join(", ")}
-            </p>
+            <SummaryRow
+              term="Vrienden"
+              value={data.friends.map((f) => f.name).join(", ")}
+            />
           )}
-        </div>
+        </dl>
       </div>
 
-      <div className="flex gap-3">
+      {/* Footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginTop: 40,
+          paddingTop: 28,
+          borderTop: `1px solid ${V2.paperShade}`,
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
         <button
+          type="button"
           onClick={onBack}
-          className="flex-1 rounded-lg border border-muted px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
         >
-          Terug
+          ← Vorige stap
         </button>
-        <button
-          onClick={onSubmit}
-          disabled={saving || (needsDescription && !data.mainCharacterDescription)}
-          className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light disabled:opacity-50"
+        <EBtn
+          kind="primary"
+          size="lg"
+          onClick={() => canSubmit && onSubmit()}
+          style={{
+            opacity: canSubmit ? 1 : 0.4,
+            cursor: canSubmit ? "pointer" : "not-allowed",
+          }}
         >
-          {saving ? "Profiel opslaan..." : "Profiel opslaan & eerste verhaal maken!"}
-        </button>
+          {saving ? "Profiel opslaan..." : "Profiel opslaan"}{" "}
+          {!saving && <IconV2 name="arrow" size={16} color={V2.paper} />}
+        </EBtn>
       </div>
     </div>
+  );
+}
+
+function SummaryRow({
+  term,
+  value,
+}: {
+  term: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <>
+      <dt
+        style={{
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: V2.inkMute,
+          paddingTop: 2,
+        }}
+      >
+        {term}
+      </dt>
+      <dd
+        style={{
+          fontFamily: V2.body,
+          fontSize: 15,
+          color: V2.ink,
+          margin: 0,
+          lineHeight: 1.5,
+        }}
+      >
+        {value}
+      </dd>
+    </>
   );
 }

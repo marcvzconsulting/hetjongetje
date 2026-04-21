@@ -4,6 +4,10 @@ import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { V2 } from "@/components/v2/tokens";
+import { EBtn } from "@/components/v2";
+import { AuthShell } from "@/components/v2/auth/AuthShell";
+import { AuthField } from "@/components/v2/auth/AuthField";
 
 function LoginForm() {
   const router = useRouter();
@@ -39,87 +43,98 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="text-4xl mb-2">📖✨</div>
-          <h1 className="text-2xl font-bold">Welkom terug</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Log in om verder te gaan met de verhalen
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {justReset && !error && (
-            <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
-              ✓ Wachtwoord gewijzigd. Log in met je nieuwe wachtwoord.
-            </div>
-          )}
-          {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              E-mailadres
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="je@email.nl"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium mb-1"
-            >
-              Wachtwoord
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light disabled:opacity-50"
-          >
-            {loading ? "Bezig met inloggen..." : "Inloggen"}
-          </button>
-
-          <p className="text-center text-sm">
-            <Link
-              href="/forgot-password"
-              className="text-muted-foreground hover:text-primary"
-            >
-              Wachtwoord vergeten?
-            </Link>
-          </p>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+    <AuthShell
+      kicker="Welkom terug"
+      heading={
+        <>
+          De verhalen wachten
+          <br />
+          <span style={{ fontStyle: "italic" }}>op jullie.</span>
+        </>
+      }
+      rightKicker="Gisteravond"
+      rightTitle="Noor en het maanlicht"
+      rightMeta="BLZ 6 / 6 — UITGELEZEN"
+      footer={
+        <>
           Nog geen account?{" "}
-          <Link href="/register" className="font-semibold text-primary hover:text-primary-light">
-            Registreer je hier
+          <Link
+            href="/register"
+            style={{ color: V2.ink, textDecoration: "underline" }}
+          >
+            Begin hier
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {justReset && !error && (
+          <div
+            style={{
+              background: "rgba(93, 202, 165, 0.12)",
+              padding: 12,
+              fontSize: 14,
+              color: V2.ink,
+              marginBottom: 24,
+              fontFamily: V2.body,
+              borderLeft: `2px solid ${V2.goldDeep}`,
+            }}
+          >
+            ✓ Wachtwoord gewijzigd. Log in met je nieuwe wachtwoord.
+          </div>
+        )}
+        {error && (
+          <div
+            style={{
+              background: "rgba(196, 165, 168, 0.2)",
+              padding: 12,
+              fontSize: 14,
+              color: V2.ink,
+              marginBottom: 24,
+              fontFamily: V2.body,
+              borderLeft: `2px solid ${V2.rose}`,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <AuthField
+          label="E-mail"
+          name="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          placeholder="je@email.nl"
+        />
+
+        <AuthField
+          label="Wachtwoord"
+          name="password"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          labelAside={
+            <Link href="/forgot-password" style={{ color: "inherit" }}>
+              Vergeten?
+            </Link>
+          }
+        />
+
+        <EBtn
+          kind="primary"
+          size="lg"
+          type="submit"
+          style={{ width: "100%", justifyContent: "center" }}
+        >
+          {loading ? "Bezig met inloggen…" : "Inloggen →"}
+        </EBtn>
+      </form>
+    </AuthShell>
   );
 }
 

@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Niet-productie design-exploration bestanden (worden niet gedeployed).
+    "src/design-exploration/**",
+    "src/app/design-exploration/**",
   ]),
 ]);
 

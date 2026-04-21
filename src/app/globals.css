@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  /* legacy v1 (kept until every route is migrated to v2) */
   --background: #fefbf6;
   --foreground: #2d2319;
   --primary: #e8734a;
@@ -9,6 +10,21 @@
   --accent: #e9c46a;
   --muted: #f0e6d3;
   --muted-foreground: #8b7355;
+
+  /* v2 — "Dromerige Nacht" editorial palette */
+  --v2-paper: #f5efe4;
+  --v2-paper-deep: #ebe2d1;
+  --v2-paper-shade: #e2d7c2;
+  --v2-ink: #1f1e3a;
+  --v2-ink-soft: #2e2d52;
+  --v2-ink-mute: #6c6a85;
+  --v2-night: #14142e;
+  --v2-night-soft: #1f1f40;
+  --v2-night-mute: #8a88a8;
+  --v2-gold: #c9a961;
+  --v2-gold-soft: #e3d3a6;
+  --v2-gold-deep: #8a7340;
+  --v2-rose: #c4a5a8;
 }
 
 @theme inline {
@@ -22,12 +38,45 @@
   --color-muted-foreground: var(--muted-foreground);
   --font-sans: var(--font-nunito);
   --font-serif: var(--font-lora);
+
+  /* v2 colors available as Tailwind utilities: bg-paper, text-ink, border-gold, etc. */
+  --color-paper: var(--v2-paper);
+  --color-paper-deep: var(--v2-paper-deep);
+  --color-paper-shade: var(--v2-paper-shade);
+  --color-ink: var(--v2-ink);
+  --color-ink-soft: var(--v2-ink-soft);
+  --color-ink-mute: var(--v2-ink-mute);
+  --color-night: var(--v2-night);
+  --color-night-soft: var(--v2-night-soft);
+  --color-night-mute: var(--v2-night-mute);
+  --color-gold: var(--v2-gold);
+  --color-gold-soft: var(--v2-gold-soft);
+  --color-gold-deep: var(--v2-gold-deep);
+  --color-rose: var(--v2-rose);
+
+  /* v2 font stacks */
+  --font-display: var(--font-fraunces), "Lora", Georgia, serif;
+  --font-body-serif: var(--font-lora), Georgia, serif;
+  --font-ui: var(--font-inter), system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* v2 scope: apply to any route that has been migrated by wrapping in `.v2-root`. */
+.v2-root {
+  background: var(--v2-paper);
+  color: var(--v2-ink);
+  font-family: var(--font-lora), Georgia, serif;
+}
+.v2-root .v2-display {
+  font-family: var(--font-fraunces), "Lora", Georgia, serif;
+}
+.v2-root .v2-ui {
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 /* Drop cap for book viewer */

@@ -156,6 +156,10 @@ model StoryBook {
   id              String   @id @default(uuid())
   childProfileId  String   @map("child_profile_id")
   title           String
+  subtitle        String?
+  dedication      String?
+  coverStyle      String?  @map("cover_style")  // "night" | "cream" | "linen"
+  format          String?                         // "soft" | "hard" | "deluxe"
   coverImageUrl   String?  @map("cover_image_url")
   interiorPdfUrl  String?  @map("interior_pdf_url")
   coverPdfUrl     String?  @map("cover_pdf_url")

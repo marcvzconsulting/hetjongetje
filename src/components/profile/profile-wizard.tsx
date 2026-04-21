@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { V2 } from "@/components/v2/tokens";
 import { StepBasicInfo } from "./steps/step-basic-info";
 import { StepInterests } from "./steps/step-interests";
 import { StepPeopleAndPets } from "./steps/step-people-and-pets";
@@ -51,11 +52,17 @@ const INITIAL_DATA: ProfileData = {
 };
 
 const STEPS = [
-  { title: "Basisgegevens", emoji: "📝" },
-  { title: "Interesses", emoji: "⭐" },
-  { title: "Vrienden & huisdieren", emoji: "🐾" },
-  { title: "Hoofdpersonage", emoji: "🦸" },
+  { title: "Basisgegevens" },
+  { title: "Interesses" },
+  { title: "Vrienden & huisdieren" },
+  { title: "Hoofdpersonage" },
 ];
+
+const TOTAL_STEPS = STEPS.length;
+
+function roman(n: number): string {
+  return ["", "I", "II", "III", "IV", "V", "VI", "VII"][n] ?? String(n);
+}
 
 export function ProfileWizard() {
   const router = useRouter();
@@ -93,8 +100,8 @@ export function ProfileWizard() {
         return;
       }
 
-      const child = await res.json();
-      router.push(`/generate/${child.id}`);
+      await res.json();
+      router.push("/dashboard");
     } catch {
       setError("Er ging iets mis. Probeer het opnieuw.");
     } finally {
@@ -104,31 +111,75 @@ export function ProfileWizard() {
 
   return (
     <div>
-      {/* Progress bar */}
-      <div className="mb-8">
-        <div className="flex justify-between mb-2">
-          {STEPS.map((s, i) => (
-            <div
-              key={i}
-              className={`flex flex-col items-center text-xs ${
-                i <= step ? "text-primary" : "text-muted-foreground"
-              }`}
-            >
-              <span className="text-lg mb-1">{s.emoji}</span>
-              <span className="hidden sm:block">{s.title}</span>
-            </div>
-          ))}
+      {/* Meta row — step indicator + section title */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "4px 0 24px",
+          borderBottom: `1px solid ${V2.paperShade}`,
+          marginBottom: 32,
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: V2.mono,
+            fontSize: 11,
+            color: V2.inkMute,
+            letterSpacing: "0.14em",
+          }}
+        >
+          STAP {roman(step + 1)} VAN {roman(TOTAL_STEPS)}
         </div>
-        <div className="h-2 rounded-full bg-muted">
-          <div
-            className="h-2 rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-          />
+        <div
+          style={{
+            fontFamily: V2.display,
+            fontSize: 16,
+            fontStyle: "italic",
+            color: V2.ink,
+          }}
+        >
+          {STEPS[step].title}
         </div>
       </div>
 
+      {/* Progress hairline */}
+      <div
+        style={{
+          height: 1,
+          background: V2.paperShade,
+          marginBottom: 40,
+          position: "relative",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            height: 1,
+            background: V2.ink,
+            width: `${((step + 1) / STEPS.length) * 100}%`,
+            transition: "width .3s",
+          }}
+        />
+      </div>
+
       {error && (
-        <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+        <div
+          style={{
+            background: "rgba(196,165,168,0.2)",
+            padding: 16,
+            marginBottom: 24,
+            fontFamily: V2.body,
+            fontSize: 14,
+            color: V2.ink,
+            borderLeft: `2px solid ${V2.rose}`,
+          }}
+        >
           {error}
         </div>
       )}

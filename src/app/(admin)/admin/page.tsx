@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { V2 } from "@/components/v2/tokens";
+import { Kicker, EBtn, IconV2 } from "@/components/v2";
+import { StarField } from "@/components/v2/StarField";
 
 function Stat({
   label,
@@ -11,13 +14,70 @@ function Stat({
   sub?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-muted bg-white p-5">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">
+    <div
+      style={{
+        background: V2.paper,
+        border: `1px solid ${V2.paperShade}`,
+        padding: "22px 24px",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: V2.inkMute,
+        }}
+      >
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold">{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
+      <div
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: 40,
+          lineHeight: 1,
+          marginTop: 12,
+          letterSpacing: -1,
+          color: V2.ink,
+        }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: V2.inkMute,
+            marginTop: 10,
+            lineHeight: 1.5,
+          }}
+        >
+          {sub}
+        </div>
+      )}
     </div>
+  );
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      style={{
+        fontFamily: V2.display,
+        fontWeight: 300,
+        fontSize: 24,
+        letterSpacing: -0.4,
+        margin: "0 0 20px",
+        color: V2.ink,
+      }}
+    >
+      {children}
+    </h2>
   );
 }
 
@@ -54,33 +114,151 @@ export default async function AdminDashboardPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold">Dashboard</h1>
+      {/* Nacht hero strip with KPI overview — the one hero on the admin side */}
+      <section
+        style={{
+          background: V2.night,
+          color: V2.paper,
+          padding: "44px 40px",
+          position: "relative",
+          overflow: "hidden",
+          marginBottom: 48,
+        }}
+      >
+        <StarField count={10} />
+        <div style={{ position: "relative" }}>
+          <Kicker color={V2.gold}>Admin overview</Kicker>
+          <h1
+            style={{
+              fontFamily: V2.display,
+              fontWeight: 300,
+              fontSize: "clamp(32px, 4vw, 44px)",
+              margin: "14px 0 0",
+              letterSpacing: -1.2,
+              lineHeight: 1.05,
+              color: V2.paper,
+            }}
+          >
+            Dashboard <span style={{ fontStyle: "italic", color: V2.gold }}>vandaag</span>
+          </h1>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 48,
+              marginTop: 32,
+              paddingTop: 28,
+              borderTop: `1px solid rgba(255,255,255,0.12)`,
+              flexWrap: "wrap",
+            }}
+          >
+            {[
+              { n: totalUsers, l: "GEBRUIKERS" },
+              { n: totalStories, l: "VERHALEN" },
+              { n: activeSubs, l: "BETAALDE ABO'S" },
+              { n: processingJobs, l: "JOBS ACTIEF" },
+            ].map((s, i) => (
+              <div key={i}>
+                <div
+                  style={{
+                    fontFamily: V2.display,
+                    fontSize: 36,
+                    fontWeight: 300,
+                    color: V2.gold,
+                    lineHeight: 1,
+                  }}
+                >
+                  {s.n}
+                </div>
+                <div
+                  style={{
+                    fontFamily: V2.mono,
+                    fontSize: 10,
+                    letterSpacing: "0.14em",
+                    marginTop: 8,
+                    opacity: 0.75,
+                    color: V2.paper,
+                  }}
+                >
+                  {s.l}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {pendingUsers > 0 && (
         <Link
           href="/admin/users?status=pending"
-          className="mb-6 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 p-5 transition-colors hover:bg-amber-100"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 20,
+            marginBottom: 48,
+            padding: "20px 24px",
+            background: V2.goldSoft,
+            borderLeft: `3px solid ${V2.goldDeep}`,
+            textDecoration: "none",
+            color: V2.ink,
+          }}
         >
           <div>
-            <div className="text-xs uppercase tracking-wide text-amber-800">
+            <div
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: V2.goldDeep,
+              }}
+            >
               Actie vereist
             </div>
-            <div className="mt-1 text-lg font-bold text-amber-900">
-              {pendingUsers} {pendingUsers === 1 ? "account wacht" : "accounts wachten"} op
-              goedkeuring
+            <div
+              style={{
+                fontFamily: V2.display,
+                fontWeight: 300,
+                fontSize: 22,
+                marginTop: 6,
+                letterSpacing: -0.3,
+                color: V2.ink,
+              }}
+            >
+              {pendingUsers}{" "}
+              {pendingUsers === 1 ? "account wacht" : "accounts wachten"}{" "}
+              <span style={{ fontStyle: "italic" }}>op goedkeuring</span>
             </div>
           </div>
-          <span className="text-sm font-semibold text-amber-900">
-            Bekijken →
+          <span
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 13,
+              fontWeight: 500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: V2.ink,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            Bekijken <IconV2 name="arrow" size={16} />
           </span>
         </Link>
       )}
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Gebruikers
-        </h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <div style={{ marginBottom: 56 }}>
+        <SectionHeading>Gebruikers</SectionHeading>
+        <div
+          style={{
+            display: "grid",
+            gap: 16,
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
           <Stat label="Totaal" value={totalUsers} />
           <Stat label="Nieuw (7 dagen)" value={newUsers7d} />
           <Stat label="Nieuw (30 dagen)" value={newUsers30d} />
@@ -93,22 +271,30 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Content
-        </h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <div style={{ marginBottom: 56 }}>
+        <SectionHeading>Content</SectionHeading>
+        <div
+          style={{
+            display: "grid",
+            gap: 16,
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
           <Stat label="Kindprofielen" value={totalChildren} />
           <Stat label="Verhalen totaal" value={totalStories} />
           <Stat label="Verhalen (7 dagen)" value={stories7d} />
         </div>
       </div>
 
-      <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Abonnementen
-        </h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <div style={{ marginBottom: 56 }}>
+        <SectionHeading>Abonnementen</SectionHeading>
+        <div
+          style={{
+            display: "grid",
+            gap: 16,
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
           <Stat
             label="Actieve betaalde abo's"
             value={activeSubs}
@@ -117,11 +303,15 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Systeem
-        </h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <div style={{ marginBottom: 56 }}>
+        <SectionHeading>Systeem</SectionHeading>
+        <div
+          style={{
+            display: "grid",
+            gap: 16,
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
           <Stat label="Jobs in progress" value={processingJobs} />
           <Stat
             label="Mislukte jobs"
@@ -131,19 +321,13 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="mt-8 flex gap-3">
-        <Link
-          href="/admin/users"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-        >
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <EBtn kind="primary" size="md" href="/admin/users">
           Gebruikers bekijken →
-        </Link>
-        <Link
-          href="/admin/jobs"
-          className="rounded-lg border border-muted px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-        >
+        </EBtn>
+        <EBtn kind="ghost" size="md" href="/admin/jobs">
           Jobs bekijken →
-        </Link>
+        </EBtn>
       </div>
     </div>
   );

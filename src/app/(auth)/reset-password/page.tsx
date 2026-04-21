@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { V2 } from "@/components/v2/tokens";
+import { EBtn } from "@/components/v2";
+import { AuthShell } from "@/components/v2/auth/AuthShell";
+import { AuthField } from "@/components/v2/auth/AuthField";
 import { validateResetToken } from "@/lib/password-reset";
 import { resetPasswordAction } from "./actions";
 
@@ -24,80 +28,118 @@ export default async function ResetPasswordPage({
   const validation = token ? await validateResetToken(token) : null;
   const tokenValid = Boolean(validation);
 
-  return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mb-2 text-4xl">🔐</div>
-          <h1 className="text-2xl font-bold">Nieuw wachtwoord instellen</h1>
+  if (!tokenValid) {
+    return (
+      <AuthShell
+        kicker="Oeps"
+        heading={
+          <>
+            Deze link werkt{" "}
+            <span style={{ fontStyle: "italic" }}>niet meer.</span>
+          </>
+        }
+        rightKicker="Verlopen"
+        rightTitle="Vraag een nieuwe aan"
+        rightMeta="LINKS VERVALLEN NA 1 UUR"
+        footer={
+          <Link
+            href="/login"
+            style={{ color: V2.ink, textDecoration: "underline" }}
+          >
+            ← Terug naar inloggen
+          </Link>
+        }
+      >
+        <div
+          style={{
+            background: "rgba(196, 165, 168, 0.2)",
+            padding: 20,
+            fontSize: 15,
+            color: V2.inkSoft,
+            fontFamily: V2.body,
+            lineHeight: 1.55,
+            borderLeft: `2px solid ${V2.rose}`,
+            marginBottom: 28,
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 500, color: V2.ink }}>
+            Deze link werkt niet meer.
+          </p>
+          <p style={{ margin: "8px 0 0" }}>
+            Hij is mogelijk verlopen of al gebruikt. Vraag hieronder een
+            nieuwe aan.
+          </p>
         </div>
+        <EBtn
+          kind="primary"
+          size="lg"
+          href="/forgot-password"
+          style={{ width: "100%", justifyContent: "center" }}
+        >
+          Nieuwe link aanvragen →
+        </EBtn>
+      </AuthShell>
+    );
+  }
 
-        {!tokenValid ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            <p className="font-medium">Deze link werkt niet meer.</p>
-            <p className="mt-1">
-              Hij is mogelijk verlopen of al gebruikt. Vraag een nieuwe link
-              aan.
-            </p>
-            <Link
-              href="/forgot-password"
-              className="mt-4 inline-block text-sm font-semibold text-primary hover:text-primary-light"
-            >
-              Nieuwe link aanvragen →
-            </Link>
+  return (
+    <AuthShell
+      kicker="Nieuwe sleutel"
+      heading={
+        <>
+          Kies een nieuw{" "}
+          <span style={{ fontStyle: "italic" }}>wachtwoord.</span>
+        </>
+      }
+      rightKicker="Bijna klaar"
+      rightTitle="Dan kun je weer voorlezen"
+      rightMeta="HIERNA DIRECT INLOGGEN"
+    >
+      <form action={resetPasswordAction}>
+        <input type="hidden" name="token" value={token} />
+
+        {errorKey && ERRORS[errorKey] && (
+          <div
+            style={{
+              background: "rgba(196, 165, 168, 0.2)",
+              padding: 12,
+              fontSize: 14,
+              color: V2.ink,
+              marginBottom: 24,
+              fontFamily: V2.body,
+              borderLeft: `2px solid ${V2.rose}`,
+            }}
+          >
+            {ERRORS[errorKey]}
           </div>
-        ) : (
-          <form action={resetPasswordAction} className="space-y-4">
-            <input type="hidden" name="token" value={token} />
-
-            {errorKey && ERRORS[errorKey] && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                {ERRORS[errorKey]}
-              </div>
-            )}
-
-            <div>
-              <label
-                htmlFor="newPassword"
-                className="mb-1 block text-sm font-medium"
-              >
-                Nieuw wachtwoord
-              </label>
-              <input
-                id="newPassword"
-                name="newPassword"
-                type="password"
-                required
-                autoComplete="new-password"
-                className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="Minimaal 6 tekens"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-1 block text-sm font-medium"
-              >
-                Bevestig nieuw wachtwoord
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                autoComplete="new-password"
-                className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-            >
-              Wachtwoord instellen
-            </button>
-          </form>
         )}
-      </div>
-    </div>
+
+        <AuthField
+          label="Nieuw wachtwoord"
+          name="newPassword"
+          type="password"
+          required
+          autoComplete="new-password"
+          placeholder="Minimaal 6 tekens"
+        />
+
+        <AuthField
+          label="Bevestig wachtwoord"
+          name="confirmPassword"
+          type="password"
+          required
+          autoComplete="new-password"
+        />
+
+        <EBtn
+          kind="primary"
+          size="lg"
+          type="submit"
+          style={{ width: "100%", justifyContent: "center" }}
+        >
+          Wachtwoord instellen →
+        </EBtn>
+      </form>
+    </AuthShell>
   );
 }

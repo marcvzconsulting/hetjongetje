@@ -4,6 +4,10 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { V2 } from "@/components/v2/tokens";
+import { EBtn } from "@/components/v2";
+import { AuthShell } from "@/components/v2/auth/AuthShell";
+import { AuthField } from "@/components/v2/auth/AuthField";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -59,106 +63,99 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="text-4xl mb-2">📖✨</div>
-          <h1 className="text-2xl font-bold">Account aanmaken</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Start met het maken van magische verhalen
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium mb-1">
-              Jouw naam
-            </label>
-            <input
-              id="name"
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Bijv. Lisa"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              E-mailadres
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="je@email.nl"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium mb-1"
-            >
-              Wachtwoord
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Minimaal 6 tekens"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium mb-1"
-            >
-              Wachtwoord bevestigen
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg border border-muted bg-white px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Herhaal je wachtwoord"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light disabled:opacity-50"
-          >
-            {loading ? "Account aanmaken..." : "Registreren"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+    <AuthShell
+      kicker="Welkom"
+      heading={
+        <>
+          Begin het{" "}
+          <span style={{ fontStyle: "italic" }}>avondritueel.</span>
+        </>
+      }
+      rightKicker="Vanavond"
+      rightTitle="Jullie eerste verhaal"
+      rightMeta="BLZ 1 / 6 — WACHT OP JULLIE"
+      footer={
+        <>
           Al een account?{" "}
-          <Link href="/login" className="font-semibold text-primary hover:text-primary-light">
+          <Link
+            href="/login"
+            style={{ color: V2.ink, textDecoration: "underline" }}
+          >
             Log hier in
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {error && (
+          <div
+            style={{
+              background: "rgba(196, 165, 168, 0.2)",
+              padding: 12,
+              fontSize: 14,
+              color: V2.ink,
+              marginBottom: 24,
+              fontFamily: V2.body,
+              borderLeft: `2px solid ${V2.rose}`,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <AuthField
+          label="Jouw naam"
+          name="name"
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="name"
+          placeholder="Bijv. Lisa"
+        />
+
+        <AuthField
+          label="E-mail"
+          name="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          placeholder="je@email.nl"
+        />
+
+        <AuthField
+          label="Wachtwoord"
+          name="password"
+          type="password"
+          required
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          placeholder="Minimaal 6 tekens"
+        />
+
+        <AuthField
+          label="Bevestig wachtwoord"
+          name="confirmPassword"
+          type="password"
+          required
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          autoComplete="new-password"
+        />
+
+        <EBtn
+          kind="primary"
+          size="lg"
+          type="submit"
+          style={{ width: "100%", justifyContent: "center" }}
+        >
+          {loading ? "Account aanmaken…" : "Account aanmaken →"}
+        </EBtn>
+      </form>
+    </AuthShell>
   );
 }

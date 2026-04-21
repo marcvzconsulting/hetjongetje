@@ -1,11 +1,16 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import { SignOutButton } from "@/components/ui/sign-out-button";
 import { calculateAge } from "@/lib/utils/age";
-import { StoryLibrary } from "@/components/story/story-library";
 import { loadUserGate } from "@/lib/user-gate";
+import { V2 } from "@/components/v2/tokens";
+import { Kicker, EBtn } from "@/components/v2";
+import { Avatar } from "@/components/v2/Avatar";
+import { StarField } from "@/components/v2/StarField";
+import { AppShell } from "@/components/v2/app/AppShell";
+import { StoryLibraryV2 } from "@/components/v2/story/StoryLibraryV2";
+import { NewStoryButton } from "@/components/v2/generation/NewStoryButton";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -14,61 +19,42 @@ export default async function DashboardPage() {
   const gate = await loadUserGate(session.user.id);
   if (!gate) redirect("/login");
 
+  // ── Pending / suspended: waiting state ─────────────────────
   if (!gate.isApproved) {
     return (
-      <div className="min-h-full px-6 py-12">
-        <div className="mx-auto max-w-lg">
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Hallo, {session.user.name}!</h1>
-            <div className="flex gap-2">
-              <Link
-                href="/account"
-                className="rounded-lg border border-muted px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-              >
-                Mijn account
-              </Link>
-              <SignOutButton />
-            </div>
-          </div>
-
+      <AppShell
+        userName={session.user.name ?? "jij"}
+        credits={null}
+        nav={[
+          { label: "Bibliotheek", href: "/dashboard", active: true },
+          { label: "Account", href: "/account" },
+        ]}
+      >
+        <div style={{ maxWidth: 680, margin: "0 auto", padding: "80px 40px" }}>
           {gate.status === "suspended" ? (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
-              <div className="mb-3 text-4xl">🚫</div>
-              <h2 className="text-lg font-bold text-red-900">
-                Account geblokkeerd
-              </h2>
-              <p className="mt-2 text-sm text-red-800">
-                Je account is tijdelijk opgeschort. Neem contact met ons op
-                voor meer informatie.
-              </p>
-            </div>
+            <WaitingCard
+              kicker="Account opgeschort"
+              title="Tijdelijk geblokkeerd"
+              body="Je account is opgeschort. Neem contact met ons op voor meer informatie."
+            />
           ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
-              <div className="mb-3 text-4xl">⏳</div>
-              <h2 className="text-lg font-bold text-amber-900">
-                Wachten op goedkeuring
-              </h2>
-              <p className="mt-2 text-sm text-amber-800">
-                Bedankt voor je registratie! We bekijken je account zo snel
-                mogelijk. Zodra je goedgekeurd bent, kun je hier kindprofielen
-                aanmaken en verhalen genereren.
-              </p>
-              <p className="mt-4 text-xs text-amber-700/80">
-                Heb je vragen? Mail ons op{" "}
-                <a
-                  href="mailto:hallo@onsverhaaltje.nl"
-                  className="underline"
-                >
-                  hallo@onsverhaaltje.nl
-                </a>
-              </p>
-            </div>
+            <WaitingCard
+              kicker="Nog even geduld"
+              title={
+                <>
+                  We bekijken je account{" "}
+                  <span style={{ fontStyle: "italic" }}>zo snel mogelijk.</span>
+                </>
+              }
+              body="Bedankt voor je registratie! Zodra we je hebben goedgekeurd, kun je hier kindprofielen aanmaken en verhalen genereren."
+            />
           )}
         </div>
-      </div>
+      </AppShell>
     );
   }
 
+  // ── Approved: load data ────────────────────────────────────
   const children = await prisma.childProfile.findMany({
     where: { userId: session.user.id },
     include: {
@@ -88,108 +74,112 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  const creditsToShow = gate.isAdmin ? null : gate.storyCredits;
+
   return (
-    <div className="min-h-full px-6 py-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="flex items-center justify-between mb-8">
+    <AppShell
+      userName={session.user.name ?? "jij"}
+      credits={creditsToShow}
+      nav={[
+        { label: "Bibliotheek", href: "/dashboard", active: true },
+        { label: "Account", href: "/account" },
+      ]}
+    >
+      {/* Hero strip */}
+      <section
+        style={{
+          background: V2.night,
+          color: V2.paper,
+          padding: "56px 40px 64px",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <StarField count={14} />
+        <div
+          style={{
+            position: "relative",
+            maxWidth: 1200,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 24,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
-            <h1 className="text-2xl font-bold">
-              Hallo, {session.user.name}! 👋
+            <Kicker color={V2.gold}>
+              Hallo {session.user.name?.split(" ")[0] ?? "daar"}
+            </Kicker>
+            <h1
+              style={{
+                fontFamily: V2.display,
+                fontWeight: 300,
+                fontSize: "clamp(36px, 4.8vw, 56px)",
+                margin: "20px 0 0",
+                letterSpacing: -1.4,
+                lineHeight: 1.05,
+                color: V2.paper,
+              }}
+            >
+              {children.length === 0 ? (
+                <>
+                  Vanavond begint{" "}
+                  <span style={{ fontStyle: "italic", color: V2.gold }}>
+                    jullie eerste verhaal.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Welk verhaaltje wordt het{" "}
+                  <span style={{ fontStyle: "italic", color: V2.gold }}>
+                    vanavond?
+                  </span>
+                </>
+              )}
             </h1>
-            <p className="text-muted-foreground">
-              Welkom bij Ons Verhaaltje
-            </p>
           </div>
-          <div className="flex items-center gap-2">
-            {!gate.isAdmin && (
-              <span
-                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  gate.storyCredits > 0
-                    ? "bg-primary/10 text-primary"
-                    : "bg-red-100 text-red-700"
-                }`}
-                title="Aantal verhalen dat je nog kunt maken"
-              >
-                {gate.storyCredits} verhalen over
-              </span>
-            )}
-            <Link
-              href="/account"
-              className="rounded-lg border border-muted px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              Mijn account
-            </Link>
-            <SignOutButton />
-          </div>
+          <NewStoryButton
+            childOptions={children.map((c) => ({ id: c.id, name: c.name }))}
+            kind="on-dark"
+            size="lg"
+          />
         </div>
+      </section>
 
+      {/* Child list / empty state */}
+      <section
+        style={{
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "56px 40px 80px",
+        }}
+      >
         {children.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-muted p-12 text-center">
-            <div className="text-4xl mb-3">🧒</div>
-            <h3 className="font-semibold mb-1">Nog geen profielen</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Maak een profiel aan voor je kind om te beginnen met magische
-              verhalen
-            </p>
-            <Link
-              href="/profile/new"
-              className="inline-block rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-            >
-              Eerste profiel aanmaken
-            </Link>
-          </div>
+          <EmptyChildren />
         ) : (
-          children.map((child) => {
+          children.map((child, idx) => {
             const age = calculateAge(child.dateOfBirth);
-
-            // Serialize stories for client component
-            const serializedStories = child.stories.map((s) => ({
+            const serialized = child.stories.map((s) => ({
               id: s.id,
               title: s.title,
               setting: s.setting,
               isFavorite: s.isFavorite,
               createdAt: s.createdAt.toISOString(),
-              coverUrl: s.pages[0]?.illustrationUrl || null,
+              coverUrl: s.pages[0]?.illustrationUrl ?? null,
             }));
-
             return (
-              <div key={child.id} className="mb-10">
-                {/* Child header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">
-                      {child.gender === "boy"
-                        ? "👦"
-                        : child.gender === "girl"
-                          ? "👧"
-                          : "🧒"}
-                    </span>
-                    <div>
-                      <h2 className="text-lg font-bold">{child.name}</h2>
-                      <p className="text-xs text-muted-foreground">
-                        {age} jaar oud &middot; {child.stories.length} verhalen
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/generate/${child.id}`}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-                    >
-                      + Nieuw verhaal
-                    </Link>
-                    <Link
-                      href={`/profile/${child.id}`}
-                      className="rounded-lg border border-muted px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
-                    >
-                      Profiel
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Story library with sort/filter/delete */}
-                <StoryLibrary
-                  stories={serializedStories}
+              <div key={child.id} style={{ marginBottom: idx === children.length - 1 ? 0 : 80 }}>
+                <ChildSectionHeader
+                  name={child.name}
+                  age={age}
+                  gender={child.gender}
+                  storyCount={child.stories.length}
+                  childId={child.id}
+                />
+                <StoryLibraryV2
+                  stories={serialized}
                   childName={child.name}
                   childId={child.id}
                 />
@@ -199,16 +189,203 @@ export default async function DashboardPage() {
         )}
 
         {children.length > 0 && (
-          <div className="mt-6 text-center">
+          <div style={{ marginTop: 48, textAlign: "center" }}>
             <Link
               href="/profile/new"
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 14,
+                color: V2.inkMute,
+                textDecoration: "underline",
+                textUnderlineOffset: 4,
+              }}
             >
               + Nog een kind toevoegen
             </Link>
           </div>
         )}
+      </section>
+    </AppShell>
+  );
+}
+
+// ── Sub components ──────────────────────────────────────────────────
+
+function ChildSectionHeader({
+  name,
+  age,
+  gender,
+  storyCount,
+  childId,
+}: {
+  name: string;
+  age: number;
+  gender: string;
+  storyCount: number;
+  childId: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "space-between",
+        gap: 24,
+        marginBottom: 32,
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+        <Avatar name={name} size={64} />
+        <div>
+          <Kicker>{name}&rsquo;s plankje</Kicker>
+          <h2
+            style={{
+              fontFamily: V2.display,
+              fontWeight: 300,
+              fontSize: 36,
+              letterSpacing: -0.8,
+              margin: "10px 0 0",
+              lineHeight: 1.05,
+            }}
+          >
+            <span style={{ fontStyle: "italic" }}>{name}</span>
+            <span
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 16,
+                color: V2.inkMute,
+                letterSpacing: "0.1em",
+                marginLeft: 14,
+                fontStyle: "normal",
+              }}
+            >
+              · {age}{" "}
+              {gender === "boy" ? "jongen" : gender === "girl" ? "meisje" : ""} · {storyCount}{" "}
+              {storyCount === 1 ? "verhaal" : "verhalen"}
+            </span>
+          </h2>
+        </div>
       </div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <EBtn kind="primary" size="sm" href={`/generate/${childId}`}>
+          + Nieuw verhaal
+        </EBtn>
+        <EBtn kind="ghost" size="sm" href={`/book/${childId}`}>
+          Samenstel boekje
+        </EBtn>
+        <EBtn kind="ghost" size="sm" href={`/profile/${childId}`}>
+          Profiel
+        </EBtn>
+      </div>
+    </div>
+  );
+}
+
+function EmptyChildren() {
+  return (
+    <div
+      style={{
+        border: `1px dashed ${V2.paperShade}`,
+        background: V2.paperDeep,
+        padding: "72px 32px",
+        textAlign: "center",
+      }}
+    >
+      <Kicker>Nog geen profielen</Kicker>
+      <h2
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: 40,
+          letterSpacing: -1,
+          margin: "18px 0 12px",
+          lineHeight: 1.05,
+        }}
+      >
+        Maak je{" "}
+        <span style={{ fontStyle: "italic" }}>eerste profiel.</span>
+      </h2>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 16,
+          color: V2.inkSoft,
+          maxWidth: 440,
+          margin: "0 auto 28px",
+          lineHeight: 1.55,
+        }}
+      >
+        Eén keer de basics invullen — naam, leeftijd, knuffel, de mensen
+        eromheen. Daarna weten wij genoeg om elke avond een nieuw verhaal
+        te maken.
+      </p>
+      <EBtn kind="primary" size="lg" href="/profile/new">
+        Eerste profiel aanmaken →
+      </EBtn>
+    </div>
+  );
+}
+
+function WaitingCard({
+  kicker,
+  title,
+  body,
+}: {
+  kicker: string;
+  title: React.ReactNode;
+  body: string;
+}) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${V2.paperShade}`,
+        background: V2.paperDeep,
+        padding: "48px 40px",
+        textAlign: "center",
+      }}
+    >
+      <Kicker>{kicker}</Kicker>
+      <h1
+        style={{
+          fontFamily: V2.display,
+          fontWeight: 300,
+          fontSize: 40,
+          letterSpacing: -1,
+          margin: "18px 0 16px",
+          lineHeight: 1.1,
+        }}
+      >
+        {title}
+      </h1>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 16,
+          color: V2.inkSoft,
+          lineHeight: 1.55,
+          maxWidth: 480,
+          margin: "0 auto",
+        }}
+      >
+        {body}
+      </p>
+      <p
+        style={{
+          marginTop: 28,
+          fontFamily: V2.ui,
+          fontSize: 13,
+          color: V2.inkMute,
+        }}
+      >
+        Vragen? Mail ons op{" "}
+        <a
+          href="mailto:hallo@onsverhaaltje.nl"
+          style={{ color: V2.ink, textDecoration: "underline" }}
+        >
+          hallo@onsverhaaltje.nl
+        </a>
+      </p>
     </div>
   );
 }

@@ -46,6 +46,7 @@ export default async function StoryPage({ params }: Props) {
       storyId={story.id}
       childId={story.childProfile.id}
       childName={story.childProfile.name}
+      storyTitle={story.title}
       spreads={spreads}
       isFavorite={story.isFavorite}
     />

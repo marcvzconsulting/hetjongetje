@@ -1,7 +1,11 @@
+import Link from "next/link";
+import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { redirect, notFound } from "next/navigation";
-import { GenerateWizard } from "@/components/generation/generate-wizard";
+import { loadUserGate } from "@/lib/user-gate";
+import { V2 } from "@/components/v2/tokens";
+import { AppShell } from "@/components/v2/app/AppShell";
+import { GenerateWizardV2 } from "@/components/v2/generation/GenerateWizardV2";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -10,6 +14,11 @@ interface Props {
 export default async function GeneratePage({ params }: Props) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const gate = await loadUserGate(session.user.id);
+  if (!gate?.isApproved) redirect("/dashboard");
+
+  const credits = gate.isAdmin ? null : gate.storyCredits;
 
   const { childId } = await params;
 
@@ -20,18 +29,38 @@ export default async function GeneratePage({ params }: Props) {
   if (!child) notFound();
 
   return (
-    <div className="min-h-full px-6 py-8">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-8 text-center">
-          <div className="text-4xl mb-2">✨📖</div>
-          <h1 className="text-2xl font-bold">
-            Nieuw verhaal voor {child.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Beantwoord een paar vragen en we maken een magisch verhaal
-          </p>
+    <AppShell
+      userName={session.user.name ?? "jij"}
+      credits={credits}
+      nav={[
+        { label: "Bibliotheek", href: "/dashboard" },
+        { label: "Account", href: "/account" },
+      ]}
+    >
+      <div
+        style={{
+          maxWidth: 820,
+          margin: "0 auto",
+          padding: "40px 40px 80px",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            marginBottom: 8,
+          }}
+        >
+          <Link
+            href="/dashboard"
+            style={{ color: V2.inkMute, textDecoration: "none" }}
+          >
+            ← Terug naar bibliotheek
+          </Link>
         </div>
-        <GenerateWizard
+
+        <GenerateWizardV2
           child={{
             id: child.id,
             name: child.name,
@@ -45,8 +74,16 @@ export default async function GeneratePage({ params }: Props) {
             hasFreckles: child.hasFreckles,
             interests: child.interests,
             pets: child.pets as { name: string; type: string }[] | null,
-            friends: child.friends as { name: string; relationship: string }[] | null,
-            favoriteThings: child.favoriteThings as { color?: string; food?: string; toy?: string; place?: string } | null,
+            friends: child.friends as {
+              name: string;
+              relationship: string;
+            }[] | null,
+            favoriteThings: child.favoriteThings as {
+              color?: string;
+              food?: string;
+              toy?: string;
+              place?: string;
+            } | null,
             fears: child.fears,
             mainCharacterType: child.mainCharacterType,
             mainCharacterDescription: child.mainCharacterDescription,
@@ -54,6 +91,6 @@ export default async function GeneratePage({ params }: Props) {
           }}
         />
       </div>
-    </div>
+    </AppShell>
   );
 }

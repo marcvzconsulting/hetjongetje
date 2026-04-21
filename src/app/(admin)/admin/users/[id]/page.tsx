@@ -10,6 +10,8 @@ import {
   buildResetUrl,
 } from "@/lib/password-reset";
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
+import { V2 } from "@/components/v2/tokens";
+import { Kicker, EBtn, IconV2 } from "@/components/v2";
 
 function formatDateTime(date: Date | null | undefined): string {
   if (!date) return "—";
@@ -191,6 +193,164 @@ async function deleteUserAction(formData: FormData) {
   redirect(`/admin/users?deleted=${encodeURIComponent(target.email)}`);
 }
 
+// ── Styling helpers ────────────────────────────────────────────
+
+const sectionStyle: React.CSSProperties = {
+  marginTop: 48,
+  paddingTop: 36,
+  borderTop: `1px solid ${V2.paperShade}`,
+};
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontFamily: V2.display,
+  fontWeight: 300,
+  fontSize: 26,
+  margin: 0,
+  letterSpacing: -0.5,
+  color: V2.ink,
+};
+
+const sectionMetaStyle: React.CSSProperties = {
+  fontFamily: V2.body,
+  fontStyle: "italic",
+  fontSize: 14,
+  color: V2.inkMute,
+  margin: "6px 0 0",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 0",
+  border: "none",
+  borderBottom: `1px solid ${V2.paperShade}`,
+  background: "transparent",
+  fontSize: 15,
+  fontFamily: V2.body,
+  color: V2.ink,
+  outline: "none",
+};
+
+const selectStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "10px 0",
+  border: "none",
+  borderBottom: `1px solid ${V2.paperShade}`,
+  background: "transparent",
+  fontSize: 15,
+  fontFamily: V2.body,
+  color: V2.ink,
+  outline: "none",
+};
+
+const fieldLabelStyle: React.CSSProperties = {
+  fontFamily: V2.ui,
+  fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: V2.inkMute,
+  display: "block",
+  marginBottom: 4,
+};
+
+function FlashSaved({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        marginBottom: 20,
+        padding: "14px 20px",
+        background: "rgba(201,169,97,0.14)",
+        borderLeft: `2px solid ${V2.gold}`,
+        fontFamily: V2.body,
+        fontSize: 14,
+        color: V2.ink,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function FlashError({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        marginBottom: 20,
+        padding: "14px 20px",
+        background: "rgba(196,165,168,0.18)",
+        borderLeft: `2px solid ${V2.heart}`,
+        fontFamily: V2.body,
+        fontSize: 14,
+        color: V2.ink,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  if (status === "approved") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "5px 14px",
+          background: V2.paperDeep,
+          color: V2.ink,
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+        }}
+      >
+        <IconV2 name="check" size={12} color={V2.ink} /> Goedgekeurd
+      </span>
+    );
+  }
+  if (status === "suspended") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          padding: "5px 14px",
+          background: "rgba(196,165,168,0.2)",
+          color: V2.heart,
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+        }}
+      >
+        Opgeschort
+      </span>
+    );
+  }
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "5px 14px",
+        background: V2.goldSoft,
+        color: V2.goldDeep,
+        fontFamily: V2.ui,
+        fontSize: 11,
+        fontWeight: 500,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+      }}
+    >
+      Wacht op goedkeuring
+    </span>
+  );
+}
+
 export default async function AdminUserDetailPage({
   params,
   searchParams,
@@ -243,149 +403,272 @@ export default async function AdminUserDetailPage({
   );
 
   return (
-    <div className="space-y-8">
-      <div>
+    <div>
+      {/* Back link */}
+      <div
+        style={{
+          fontFamily: V2.ui,
+          fontSize: 13,
+          color: V2.inkMute,
+          marginBottom: 24,
+        }}
+      >
         <Link
           href="/admin/users"
-          className="text-sm text-muted-foreground hover:text-primary"
+          style={{ color: V2.inkMute, textDecoration: "none" }}
         >
           ← Terug naar gebruikers
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">{user.name}</h1>
-        <p className="text-sm text-muted-foreground">{user.email}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-              user.status === "approved"
-                ? "bg-green-100 text-green-800"
-                : user.status === "suspended"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-amber-100 text-amber-800"
-            }`}
-          >
-            {user.status === "approved"
-              ? "✓ Goedgekeurd"
-              : user.status === "suspended"
-                ? "🚫 Opgeschort"
-                : "⏳ Wacht op goedkeuring"}
-          </span>
+      </div>
+
+      {/* Header */}
+      <div style={{ marginBottom: 40 }}>
+        <Kicker>Admin · gebruiker</Kicker>
+        <h1
+          style={{
+            fontFamily: V2.display,
+            fontWeight: 300,
+            fontSize: "clamp(32px, 4.4vw, 44px)",
+            letterSpacing: -1.2,
+            margin: "10px 0 4px",
+            lineHeight: 1.05,
+          }}
+        >
+          {user.name}
+        </h1>
+        <p
+          style={{
+            fontFamily: V2.mono,
+            fontSize: 13,
+            color: V2.inkMute,
+            margin: 0,
+            letterSpacing: "0.02em",
+          }}
+        >
+          {user.email}
+        </p>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            marginTop: 20,
+          }}
+        >
+          <StatusPill status={user.status} />
           {user.role !== "admin" && (
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "5px 14px",
+                background: V2.goldSoft,
+                color: V2.goldDeep,
+                fontFamily: V2.ui,
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
               {user.storyCredits} verhalen beschikbaar
             </span>
           )}
           {user.role === "admin" && (
-            <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-800">
-              Admin (onbeperkt)
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                padding: "5px 14px",
+                background: V2.night,
+                color: V2.gold,
+                fontFamily: V2.ui,
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Admin · onbeperkt
             </span>
           )}
         </div>
       </div>
 
+      {/* Goedkeuring & tegoed */}
       {user.role !== "admin" && (
-        <section className="rounded-2xl border border-muted bg-white p-6">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Goedkeuring & verhalen-tegoed
-          </h2>
+        <section style={sectionStyle}>
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={sectionTitleStyle}>
+              Goedkeuring & <span style={{ fontStyle: "italic" }}>tegoed</span>
+            </h2>
+            <p style={sectionMetaStyle}>
+              Status wijzigen of verhalen-tegoed aanpassen
+            </p>
+          </div>
 
           {user.status === "pending" && (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <p className="mb-3 text-sm text-amber-900">
+            <div
+              style={{
+                marginBottom: 24,
+                padding: "20px 24px",
+                background: V2.goldSoft,
+                borderLeft: `3px solid ${V2.goldDeep}`,
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.ink,
+                  margin: "0 0 16px",
+                  lineHeight: 1.5,
+                }}
+              >
                 Deze gebruiker wacht op goedkeuring. Stel een startbedrag aan
                 verhalen in en keur goed.
               </p>
               <form
                 action={updateApprovalAction}
-                className="flex flex-wrap items-end gap-3"
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "flex-end",
+                  gap: 20,
+                }}
               >
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="action" value="approve" />
-                <label className="text-sm">
-                  <span className="block text-xs text-amber-900">
-                    Start-tegoed
-                  </span>
+                <div style={{ minWidth: 120 }}>
+                  <label style={fieldLabelStyle}>Start-tegoed</label>
                   <input
                     name="credits"
                     type="number"
                     min={0}
                     defaultValue={5}
-                    className="mt-1 w-24 rounded-lg border border-amber-300 px-3 py-2 text-sm"
+                    style={{
+                      ...inputStyle,
+                      borderBottomColor: V2.goldDeep,
+                    }}
                   />
-                </label>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
-                >
-                  ✓ Goedkeuren
-                </button>
+                </div>
+                <EBtn kind="primary" size="sm" type="submit">
+                  Goedkeuren →
+                </EBtn>
               </form>
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <form
-              action={updateApprovalAction}
-              className="rounded-lg border border-muted p-3"
-            >
+          <div
+            style={{
+              display: "grid",
+              gap: 32,
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            }}
+          >
+            <form action={updateApprovalAction}>
               <input type="hidden" name="userId" value={user.id} />
               <input type="hidden" name="action" value="setCredits" />
-              <p className="mb-2 text-xs text-muted-foreground">
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontStyle: "italic",
+                  fontSize: 13,
+                  color: V2.inkMute,
+                  margin: "0 0 12px",
+                }}
+              >
                 Zet verhalen-tegoed op exact dit getal.
               </p>
-              <div className="flex gap-2">
-                <input
-                  name="credits"
-                  type="number"
-                  min={0}
-                  defaultValue={user.storyCredits}
-                  className="flex-1 rounded-lg border border-muted px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-                >
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  alignItems: "flex-end",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <label style={fieldLabelStyle}>Tegoed</label>
+                  <input
+                    name="credits"
+                    type="number"
+                    min={0}
+                    defaultValue={user.storyCredits}
+                    style={inputStyle}
+                  />
+                </div>
+                <EBtn kind="primary" size="sm" type="submit">
                   Instellen
-                </button>
+                </EBtn>
               </div>
             </form>
 
-            <form
-              action={updateApprovalAction}
-              className="rounded-lg border border-muted p-3"
-            >
+            <form action={updateApprovalAction}>
               <input type="hidden" name="userId" value={user.id} />
               <input type="hidden" name="action" value="addCredits" />
-              <p className="mb-2 text-xs text-muted-foreground">
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontStyle: "italic",
+                  fontSize: 13,
+                  color: V2.inkMute,
+                  margin: "0 0 12px",
+                }}
+              >
                 Extra verhalen bij huidige tegoed optellen.
               </p>
-              <div className="flex gap-2">
-                <input
-                  name="credits"
-                  type="number"
-                  min={1}
-                  defaultValue={5}
-                  className="flex-1 rounded-lg border border-muted px-3 py-2 text-sm"
-                />
-                <button
-                  type="submit"
-                  className="rounded-lg border border-muted px-4 py-2 text-sm font-semibold transition-colors hover:bg-muted"
-                >
-                  + Toevoegen
-                </button>
+              <div
+                style={{
+                  display: "flex",
+                  gap: 16,
+                  alignItems: "flex-end",
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <label style={fieldLabelStyle}>Toevoegen</label>
+                  <input
+                    name="credits"
+                    type="number"
+                    min={1}
+                    defaultValue={5}
+                    style={inputStyle}
+                  />
+                </div>
+                <EBtn kind="ghost" size="sm" type="submit">
+                  <IconV2 name="plus" size={14} /> Toevoegen
+                </EBtn>
               </div>
             </form>
           </div>
 
-          <div className="mt-4 flex gap-2">
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
             {user.status === "approved" && (
               <form action={updateApprovalAction}>
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="action" value="suspend" />
                 <button
                   type="submit"
-                  className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                  style={{
+                    padding: "10px 18px",
+                    background: "transparent",
+                    color: V2.heart,
+                    border: `1px solid ${V2.heart}`,
+                    fontFamily: V2.ui,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    letterSpacing: 0.2,
+                    cursor: "pointer",
+                    borderRadius: 2,
+                  }}
                 >
-                  🚫 Opschorten
+                  Opschorten
                 </button>
               </form>
             )}
@@ -393,62 +676,48 @@ export default async function AdminUserDetailPage({
               <form action={updateApprovalAction}>
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="action" value="unsuspend" />
-                <button
-                  type="submit"
-                  className="rounded-lg border border-green-300 px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50"
-                >
-                  ✓ Opschorting opheffen
-                </button>
+                <EBtn kind="ghost" size="sm" type="submit">
+                  <IconV2 name="check" size={14} /> Opschorting opheffen
+                </EBtn>
               </form>
             )}
           </div>
         </section>
       )}
 
-      <section className="rounded-2xl border border-muted bg-white p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Accountgegevens
-        </h2>
-        <dl className="grid gap-4 text-sm md:grid-cols-2">
-          <div>
-            <dt className="text-xs text-muted-foreground">ID</dt>
-            <dd className="font-mono text-xs">{user.id}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Rol</dt>
-            <dd className="capitalize">{user.role}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Taal</dt>
-            <dd>{user.locale}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Aangemaakt</dt>
-            <dd>{formatDateTime(user.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Laatste update</dt>
-            <dd>{formatDateTime(user.updatedAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Laatste login</dt>
-            <dd>{formatDateTime(user.lastLoginAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Kindprofielen</dt>
-            <dd>{user.children.length}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Verhalen totaal</dt>
-            <dd>{totalStories}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Telefoon</dt>
-            <dd>{user.phone ?? "—"}</dd>
-          </div>
-          <div className="md:col-span-2">
-            <dt className="text-xs text-muted-foreground">Adres</dt>
-            <dd>
+      {/* Accountgegevens */}
+      <section style={sectionStyle}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={sectionTitleStyle}>Accountgegevens</h2>
+        </div>
+        <dl
+          style={{
+            display: "grid",
+            gap: 24,
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            margin: 0,
+          }}
+        >
+          <InfoRow label="ID" value={user.id} mono />
+          <InfoRow label="Rol" value={user.role} capitalize />
+          <InfoRow label="Taal" value={user.locale} />
+          <InfoRow label="Aangemaakt" value={formatDateTime(user.createdAt)} mono />
+          <InfoRow label="Laatste update" value={formatDateTime(user.updatedAt)} mono />
+          <InfoRow label="Laatste login" value={formatDateTime(user.lastLoginAt)} mono />
+          <InfoRow label="Kindprofielen" value={user.children.length} mono />
+          <InfoRow label="Verhalen totaal" value={totalStories} mono />
+          <InfoRow label="Telefoon" value={user.phone ?? "—"} />
+          <div style={{ gridColumn: "1 / -1" }}>
+            <dt style={fieldLabelStyle}>Adres</dt>
+            <dd
+              style={{
+                fontFamily: V2.body,
+                fontSize: 15,
+                color: V2.ink,
+                margin: "4px 0 0",
+                lineHeight: 1.5,
+              }}
+            >
               {user.street || user.city ? (
                 <>
                   {user.street} {user.houseNumber}
@@ -457,121 +726,194 @@ export default async function AdminUserDetailPage({
                   {user.country && <>, {user.country}</>}
                 </>
               ) : (
-                "—"
+                <span style={{ fontStyle: "italic", color: V2.inkMute }}>—</span>
               )}
             </dd>
           </div>
         </dl>
       </section>
 
-      <section className="rounded-2xl border border-muted bg-white p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Wachtwoord
-        </h2>
+      {/* Wachtwoord */}
+      <section style={sectionStyle}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={sectionTitleStyle}>Wachtwoord</h2>
+          <p style={sectionMetaStyle}>
+            Reset-link genereren of direct een wachtwoord instellen
+          </p>
+        </div>
 
         {query.pwSet === "1" && (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-            ✓ Wachtwoord ingesteld. Alle bestaande reset-links zijn
+          <FlashSaved>
+            Wachtwoord ingesteld. Alle bestaande reset-links zijn
             geïnvalideerd.
-          </div>
+          </FlashSaved>
         )}
         {query.pwError === "too_short" && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-            Wachtwoord moet minimaal 6 tekens zijn
-          </div>
+          <FlashError>Wachtwoord moet minimaal 6 tekens zijn</FlashError>
         )}
         {query.resetLink && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
-            <p className="font-medium text-blue-900">
-              Reset-link gegenereerd (24u geldig)
+          <div
+            style={{
+              marginBottom: 24,
+              padding: "20px 24px",
+              background: V2.paperDeep,
+              borderLeft: `2px solid ${V2.ink}`,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 12,
+                fontWeight: 500,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: V2.ink,
+                margin: "0 0 10px",
+              }}
+            >
+              Reset-link gegenereerd · 24u geldig
             </p>
-            <p className="mt-2 break-all rounded border border-blue-200 bg-white px-2 py-1.5 font-mono text-xs">
+            <p
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 12,
+                wordBreak: "break-all",
+                background: V2.paper,
+                border: `1px solid ${V2.paperShade}`,
+                padding: "10px 12px",
+                margin: "0 0 10px",
+                color: V2.ink,
+              }}
+            >
               {query.resetLink}
             </p>
-            <p className="mt-2 text-xs text-blue-800/80">
+            <p
+              style={{
+                fontFamily: V2.body,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: V2.inkMute,
+                margin: 0,
+              }}
+            >
               Stuur deze link handmatig naar de klant. Na gebruik of verval
               werkt hij niet meer.
             </p>
           </div>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div
+          style={{
+            display: "grid",
+            gap: 32,
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          }}
+        >
           <form action={generateResetLinkAction}>
             <input type="hidden" name="userId" value={user.id} />
-            <p className="mb-2 text-xs text-muted-foreground">
+            <p
+              style={{
+                fontFamily: V2.body,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: V2.inkMute,
+                margin: "0 0 16px",
+              }}
+            >
               Genereer een eenmalige reset-link voor de klant (aanbevolen).
             </p>
-            <button
-              type="submit"
-              className="w-full rounded-lg border border-muted px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
-            >
-              Reset-link genereren
-            </button>
+            <EBtn kind="ghost" size="md" type="submit">
+              Reset-link genereren →
+            </EBtn>
           </form>
 
-          <form action={setPasswordAction} className="space-y-2">
+          <form action={setPasswordAction}>
             <input type="hidden" name="userId" value={user.id} />
-            <p className="text-xs text-muted-foreground">
+            <p
+              style={{
+                fontFamily: V2.body,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: V2.inkMute,
+                margin: "0 0 12px",
+              }}
+            >
               Of stel direct een wachtwoord in (min. 6 tekens).
             </p>
-            <input
-              name="newPassword"
-              type="password"
-              required
-              minLength={6}
-              placeholder="Nieuw wachtwoord"
-              className="w-full rounded-lg border border-muted px-3 py-2 text-sm"
-            />
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-            >
-              Wachtwoord instellen
-            </button>
+            <div style={{ marginBottom: 16 }}>
+              <label style={fieldLabelStyle}>Nieuw wachtwoord</label>
+              <input
+                name="newPassword"
+                type="password"
+                required
+                minLength={6}
+                placeholder="••••••"
+                style={inputStyle}
+              />
+            </div>
+            <EBtn kind="primary" size="md" type="submit">
+              Wachtwoord instellen →
+            </EBtn>
           </form>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-muted bg-white p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Abonnement
-          </h2>
-          <span className="text-xs text-muted-foreground">
-            placeholder — geen betaalprovider
-          </span>
+      {/* Abonnement */}
+      <section style={sectionStyle}>
+        <div
+          style={{
+            marginBottom: 24,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <h2 style={sectionTitleStyle}>Abonnement</h2>
+            <p style={sectionMetaStyle}>
+              Placeholder — nog geen betaalprovider gekoppeld
+            </p>
+          </div>
         </div>
-        <form action={saveSubscriptionAction} className="grid gap-3 md:grid-cols-4">
+        <form
+          action={saveSubscriptionAction}
+          style={{
+            display: "grid",
+            gap: 24,
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            alignItems: "flex-end",
+          }}
+        >
           <input type="hidden" name="userId" value={user.id} />
-          <label className="text-sm">
-            <span className="block text-xs text-muted-foreground">Plan</span>
+          <div>
+            <label style={fieldLabelStyle}>Plan</label>
             <select
               name="plan"
               defaultValue={user.subscription?.plan ?? "free"}
-              className="mt-1 w-full rounded-lg border border-muted px-3 py-2"
+              style={selectStyle}
             >
               <option value="free">Free</option>
               <option value="basic">Basic</option>
               <option value="premium">Premium</option>
             </select>
-          </label>
-          <label className="text-sm">
-            <span className="block text-xs text-muted-foreground">Status</span>
+          </div>
+          <div>
+            <label style={fieldLabelStyle}>Status</label>
             <select
               name="status"
               defaultValue={user.subscription?.status ?? "active"}
-              className="mt-1 w-full rounded-lg border border-muted px-3 py-2"
+              style={selectStyle}
             >
               <option value="active">Active</option>
               <option value="trialing">Trialing</option>
               <option value="cancelled">Cancelled</option>
               <option value="expired">Expired</option>
             </select>
-          </label>
-          <label className="text-sm">
-            <span className="block text-xs text-muted-foreground">
-              Eindigt op
-            </span>
+          </div>
+          <div>
+            <label style={fieldLabelStyle}>Eindigt op</label>
             <input
               type="date"
               name="endsAt"
@@ -580,31 +922,46 @@ export default async function AdminUserDetailPage({
                   ? user.subscription.endsAt.toISOString().slice(0, 10)
                   : ""
               }
-              className="mt-1 w-full rounded-lg border border-muted px-3 py-2"
+              style={inputStyle}
             />
-          </label>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-            >
-              Opslaan
-            </button>
+          </div>
+          <div>
+            <EBtn kind="primary" size="md" type="submit">
+              Opslaan →
+            </EBtn>
           </div>
         </form>
         {user.subscription && (
-          <form action={deleteSubscriptionAction} className="mt-3">
+          <form action={deleteSubscriptionAction} style={{ marginTop: 16 }}>
             <input type="hidden" name="userId" value={user.id} />
             <button
               type="submit"
-              className="text-xs text-muted-foreground hover:text-red-600"
+              style={{
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                fontFamily: V2.ui,
+                fontSize: 13,
+                color: V2.inkMute,
+                cursor: "pointer",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
             >
               Abonnement verwijderen
             </button>
           </form>
         )}
         {user.subscription && (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p
+            style={{
+              marginTop: 16,
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 13,
+              color: V2.inkMute,
+            }}
+          >
             Gestart op {formatDate(user.subscription.startedAt)}
             {user.subscription.cancelledAt &&
               ` · geannuleerd op ${formatDate(user.subscription.cancelledAt)}`}
@@ -612,36 +969,96 @@ export default async function AdminUserDetailPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-muted bg-white p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Kindprofielen ({user.children.length})
-        </h2>
+      {/* Kindprofielen */}
+      <section style={sectionStyle}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={sectionTitleStyle}>
+            Kindprofielen{" "}
+            <span
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 16,
+                color: V2.inkMute,
+                letterSpacing: "0.08em",
+                marginLeft: 8,
+              }}
+            >
+              · {user.children.length}
+            </span>
+          </h2>
+        </div>
         {user.children.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Geen kindprofielen.</p>
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: V2.inkMute,
+            }}
+          >
+            Geen kindprofielen.
+          </p>
         ) : (
-          <div className="space-y-6">
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {user.children.map((child) => (
               <div
                 key={child.id}
-                className="rounded-xl border border-muted p-4"
+                style={{
+                  background: V2.paper,
+                  border: `1px solid ${V2.paperShade}`,
+                  padding: "20px 24px",
+                }}
               >
-                <div className="mb-3 flex items-start justify-between">
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: 16,
+                    marginBottom: 12,
+                  }}
+                >
                   <div>
-                    <h3 className="font-semibold">
-                      {child.gender === "boy"
-                        ? "👦"
-                        : child.gender === "girl"
-                          ? "👧"
-                          : "🧒"}{" "}
-                      {child.name}
+                    <h3
+                      style={{
+                        fontFamily: V2.display,
+                        fontWeight: 300,
+                        fontSize: 22,
+                        letterSpacing: -0.3,
+                        margin: 0,
+                        color: V2.ink,
+                      }}
+                    >
+                      <span style={{ fontStyle: "italic" }}>{child.name}</span>
                     </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {calculateAge(child.dateOfBirth)} jaar · geboren{" "}
-                      {formatDate(child.dateOfBirth)} · {child.stories.length}{" "}
-                      verhalen
+                    <p
+                      style={{
+                        fontFamily: V2.mono,
+                        fontSize: 12,
+                        color: V2.inkMute,
+                        letterSpacing: "0.04em",
+                        margin: "6px 0 0",
+                      }}
+                    >
+                      {calculateAge(child.dateOfBirth)} jaar ·{" "}
+                      {child.gender === "boy"
+                        ? "jongen"
+                        : child.gender === "girl"
+                          ? "meisje"
+                          : "kind"}{" "}
+                      · geboren {formatDate(child.dateOfBirth)} ·{" "}
+                      {child.stories.length} verhalen
                     </p>
                     {child.interests.length > 0 && (
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p
+                        style={{
+                          fontFamily: V2.body,
+                          fontStyle: "italic",
+                          fontSize: 13,
+                          color: V2.inkSoft,
+                          margin: "6px 0 0",
+                        }}
+                      >
                         Interesses: {child.interests.join(", ")}
                       </p>
                     )}
@@ -651,26 +1068,70 @@ export default async function AdminUserDetailPage({
                     <img
                       src={child.approvedPreviewUrl}
                       alt={`Character ${child.name}`}
-                      className="h-16 w-16 rounded-lg object-cover"
+                      style={{
+                        height: 64,
+                        width: 64,
+                        objectFit: "cover",
+                        border: `1px solid ${V2.paperShade}`,
+                      }}
                     />
                   )}
                 </div>
                 {child.stories.length > 0 && (
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-xs text-muted-foreground hover:text-primary">
+                  <details style={{ marginTop: 12 }}>
+                    <summary
+                      style={{
+                        cursor: "pointer",
+                        fontFamily: V2.ui,
+                        fontSize: 12,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: V2.inkMute,
+                      }}
+                    >
                       Verhalen ({child.stories.length})
                     </summary>
-                    <ul className="mt-2 space-y-1">
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: "12px 0 0",
+                      }}
+                    >
                       {child.stories.map((s) => (
                         <li
                           key={s.id}
-                          className="flex items-center justify-between border-b border-muted py-1 last:border-0"
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "10px 0",
+                            borderBottom: `1px solid ${V2.paperShade}`,
+                            fontFamily: V2.body,
+                            fontSize: 14,
+                          }}
                         >
                           <span>
-                            {s.isFavorite && "⭐ "}
+                            {s.isFavorite && (
+                              <IconV2
+                                name="heart"
+                                size={12}
+                                color={V2.heart}
+                                filled
+                              />
+                            )}{" "}
                             {s.title}
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {s.setting} · {s.status} · {formatDate(s.createdAt)}
+                            <span
+                              style={{
+                                fontFamily: V2.mono,
+                                fontSize: 12,
+                                color: V2.inkMute,
+                                marginLeft: 8,
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              · {s.setting} · {s.status} ·{" "}
+                              {formatDate(s.createdAt)}
                             </span>
                           </span>
                         </li>
@@ -684,37 +1145,103 @@ export default async function AdminUserDetailPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-muted bg-white p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Admin-notities ({user.adminNotes.length})
-        </h2>
-        <form action={addNoteAction} className="mb-4 flex gap-2">
+      {/* Admin-notities */}
+      <section style={sectionStyle}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={sectionTitleStyle}>
+            Admin-notities{" "}
+            <span
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 16,
+                color: V2.inkMute,
+                letterSpacing: "0.08em",
+                marginLeft: 8,
+              }}
+            >
+              · {user.adminNotes.length}
+            </span>
+          </h2>
+        </div>
+        <form
+          action={addNoteAction}
+          style={{
+            display: "flex",
+            gap: 16,
+            alignItems: "flex-end",
+            marginBottom: 24,
+          }}
+        >
           <input type="hidden" name="userId" value={user.id} />
-          <input
-            name="content"
-            required
-            placeholder="Nieuwe notitie..."
-            className="flex-1 rounded-lg border border-muted px-3 py-2 text-sm"
-          />
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-light"
-          >
-            Toevoegen
-          </button>
+          <div style={{ flex: 1 }}>
+            <label style={fieldLabelStyle}>Nieuwe notitie</label>
+            <input
+              name="content"
+              required
+              placeholder="Notitie toevoegen..."
+              style={inputStyle}
+            />
+          </div>
+          <EBtn kind="primary" size="sm" type="submit">
+            <IconV2 name="plus" size={14} /> Toevoegen
+          </EBtn>
         </form>
         {user.adminNotes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nog geen notities.</p>
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: V2.inkMute,
+            }}
+          >
+            Nog geen notities.
+          </p>
         ) : (
-          <ul className="space-y-3">
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
             {user.adminNotes.map((note) => (
               <li
                 key={note.id}
-                className="flex items-start justify-between gap-3 rounded-lg border border-muted p-3"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: 16,
+                  padding: "16px 20px",
+                  background: V2.paper,
+                  border: `1px solid ${V2.paperShade}`,
+                }}
               >
-                <div className="flex-1">
-                  <p className="text-sm">{note.content}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      fontFamily: V2.body,
+                      fontSize: 15,
+                      color: V2.ink,
+                      margin: 0,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {note.content}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: V2.mono,
+                      fontSize: 11,
+                      color: V2.inkMute,
+                      margin: "8px 0 0",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
                     {note.author.name} · {formatDateTime(note.createdAt)}
                   </p>
                 </div>
@@ -723,7 +1250,17 @@ export default async function AdminUserDetailPage({
                   <input type="hidden" name="userId" value={user.id} />
                   <button
                     type="submit"
-                    className="text-xs text-muted-foreground hover:text-red-600"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      fontFamily: V2.ui,
+                      fontSize: 12,
+                      color: V2.inkMute,
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                    }}
                   >
                     verwijder
                   </button>
@@ -734,70 +1271,189 @@ export default async function AdminUserDetailPage({
         )}
       </section>
 
-      <section className="rounded-2xl border border-red-200 bg-red-50/40 p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-red-900">
-          Gevarenzone
+      {/* Gevarenzone */}
+      <section
+        style={{
+          marginTop: 64,
+          padding: 32,
+          background: "rgba(196,165,168,0.08)",
+          border: `1px solid rgba(176, 74, 65, 0.25)`,
+        }}
+      >
+        <Kicker color={V2.heart}>Gevarenzone</Kicker>
+        <h2
+          style={{
+            fontFamily: V2.display,
+            fontWeight: 300,
+            fontSize: 26,
+            margin: "12px 0 10px",
+            letterSpacing: -0.5,
+            color: V2.ink,
+          }}
+        >
+          Account <span style={{ fontStyle: "italic" }}>verwijderen.</span>
         </h2>
-        <p className="mt-1 text-sm text-red-800/80">
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontSize: 14,
+            lineHeight: 1.6,
+            color: V2.inkSoft,
+            margin: "0 0 20px",
+            maxWidth: "60ch",
+          }}
+        >
           Account permanent verwijderen. Alle kindprofielen, verhalen, boeken
           en illustratiebestanden worden opgeruimd. Dit kan niet ongedaan
           gemaakt worden.
         </p>
 
         {query.delError === "self" && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-800">
+          <FlashError>
             Je kunt je eigen account niet via deze pagina verwijderen.
-          </div>
+          </FlashError>
         )}
         {query.delError === "admin_blocked" && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-800">
+          <FlashError>
             Admin-accounts kunnen niet verwijderd worden. Degradeer eerst de
             rol via de database.
-          </div>
+          </FlashError>
         )}
         {query.delError === "email_mismatch" && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-800">
-            Het ingevulde email komt niet overeen.
-          </div>
+          <FlashError>Het ingevulde email komt niet overeen.</FlashError>
         )}
 
         {user.role === "admin" ? (
-          <p className="mt-4 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-red-800">
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: V2.heart,
+              background: V2.paper,
+              padding: "12px 16px",
+              border: `1px solid rgba(176, 74, 65, 0.3)`,
+            }}
+          >
             Admin-accounts kunnen niet via deze pagina verwijderd worden.
           </p>
         ) : (
-          <details className="mt-4">
-            <summary className="inline-block cursor-pointer rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100">
+          <details>
+            <summary
+              style={{
+                display: "inline-block",
+                cursor: "pointer",
+                padding: "10px 18px",
+                background: "transparent",
+                color: V2.heart,
+                border: `1px solid ${V2.heart}`,
+                fontFamily: V2.ui,
+                fontSize: 14,
+                fontWeight: 500,
+                listStyle: "none",
+              }}
+            >
               Deze gebruiker verwijderen
             </summary>
             <form
               action={deleteUserAction}
-              className="mt-4 grid gap-3 rounded-xl border border-red-200 bg-white p-4"
+              style={{
+                marginTop: 20,
+                padding: 24,
+                background: V2.paper,
+                border: `1px solid rgba(176, 74, 65, 0.25)`,
+              }}
             >
               <input type="hidden" name="userId" value={user.id} />
-              <p className="text-sm text-red-800">
-                Typ <strong>{user.email}</strong> om te bevestigen.
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.inkSoft,
+                  margin: "0 0 20px",
+                  lineHeight: 1.6,
+                }}
+              >
+                Typ{" "}
+                <strong style={{ color: V2.ink }}>{user.email}</strong> om te
+                bevestigen.
               </p>
-              <input
-                name="emailConfirm"
-                type="email"
-                required
-                autoComplete="off"
-                placeholder={user.email}
-                className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm"
-              />
-              <div>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700"
-                >
-                  Account definitief verwijderen
-                </button>
+              <div style={{ marginBottom: 16 }}>
+                <label style={fieldLabelStyle}>Email ter bevestiging</label>
+                <input
+                  name="emailConfirm"
+                  type="email"
+                  required
+                  autoComplete="off"
+                  placeholder={user.email}
+                  style={inputStyle}
+                />
               </div>
+              <button
+                type="submit"
+                style={{
+                  padding: "12px 24px",
+                  background: V2.heart,
+                  color: V2.paper,
+                  border: "none",
+                  fontFamily: V2.ui,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: 0.2,
+                  cursor: "pointer",
+                  borderRadius: 2,
+                }}
+              >
+                Account definitief verwijderen
+              </button>
             </form>
           </details>
         )}
       </section>
+    </div>
+  );
+}
+
+// ── Info row for definition list ────────────────────────────
+function InfoRow({
+  label,
+  value,
+  mono,
+  capitalize,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+  capitalize?: boolean;
+}) {
+  return (
+    <div>
+      <dt
+        style={{
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: V2.inkMute,
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </dt>
+      <dd
+        style={{
+          fontFamily: mono ? V2.mono : V2.body,
+          fontSize: mono ? 13 : 15,
+          color: V2.ink,
+          margin: 0,
+          textTransform: capitalize ? "capitalize" : undefined,
+          letterSpacing: mono ? "0.02em" : undefined,
+          wordBreak: mono ? "break-all" : undefined,
+        }}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

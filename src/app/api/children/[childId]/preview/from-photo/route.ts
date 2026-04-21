@@ -93,7 +93,7 @@ Only output the description, nothing else.`,
     }
 
     // Clean up the description (remove quotes if present)
-    let characterPrompt = descriptionText.text.trim().replace(/^["']|["']$/g, "");
+    const characterPrompt = descriptionText.text.trim().replace(/^["']|["']$/g, "");
 
     // 3. Generate illustration with FLUX Schnell using the description (same model as stories)
     const bible = {

@@ -1,17 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import BookViewer, { type Spread } from "@/components/story/BookViewer";
+import type { Spread } from "@/lib/story/spread-types";
+import { BookViewerV2 } from "@/components/v2/story/BookViewerV2";
 
 interface Props {
   storyId: string;
   childId: string;
   childName: string;
+  storyTitle: string;
   spreads: Spread[];
   isFavorite: boolean;
 }
 
-export function StoryPageClient({ storyId, childId, childName, spreads, isFavorite: initialFavorite }: Props) {
+export function StoryPageClient({
+  storyId,
+  childId,
+  childName,
+  storyTitle,
+  spreads,
+  isFavorite: initialFavorite,
+}: Props) {
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
 
   async function toggleFavorite() {
@@ -29,11 +38,12 @@ export function StoryPageClient({ storyId, childId, childName, spreads, isFavori
   }
 
   return (
-    <BookViewer
+    <BookViewerV2
       spreads={spreads}
       childName={childName}
       childId={childId}
       storyId={storyId}
+      storyTitle={storyTitle}
       isFavorite={isFavorite}
       onToggleFavorite={toggleFavorite}
     />
