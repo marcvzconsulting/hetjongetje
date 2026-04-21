@@ -46,8 +46,8 @@ next-env.d.ts
 /graphify-out/
 .graphify_python
 
-# claude code local settings
-.claude/settings.local.json
+# claude code local settings + runtime locks
+.claude/
 
 # design exploration (not for production)
 /src/app/design-exploration/
