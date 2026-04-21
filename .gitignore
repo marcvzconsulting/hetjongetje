@@ -53,3 +53,6 @@ next-env.d.ts
 /src/app/design-exploration/
 /src/design-exploration/
 /public/design-exploration/
+
+# fal.ai spot variant candidates — regenerate with `pnpm gen:spots`
+/public/images/spot-candidates/

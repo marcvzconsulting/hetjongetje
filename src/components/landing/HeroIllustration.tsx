@@ -9,7 +9,7 @@ type Props = {
 export function HeroIllustration({
   alt,
   caption,
-  src = "/design-exploration/hero-illustration.png",
+  src = "/images/hero-illustration.png",
 }: Props) {
   const vignette =
     "radial-gradient(ellipse 68% 74% at 50% 47%, black 52%, transparent 92%)";

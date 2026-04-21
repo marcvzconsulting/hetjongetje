@@ -141,16 +141,22 @@ function HowItWorks() {
       n: "01",
       title: "Vertel wie je kind is.",
       body: "Naam, leeftijd, knuffel, de mensen om hen heen. Wat ze leuk vinden, waar ze bang voor zijn, de grap die elke avond terugkomt.",
+      image: "/images/spots/vertellen.png",
+      alt: "Jongetje op een kleed met een knuffelkonijn tegen zijn schouder",
     },
     {
       n: "02",
       title: "Wij schrijven het verhaal.",
       body: "In een paar minuten maken we een voorleesverhaal met aquarel-illustraties. Een echt verhaal. Geen sjabloon met naam ingevuld.",
+      image: "/images/spots/schrijven.png",
+      alt: "Werktafel met beschreven vel, schetsboek, penseel en theekop",
     },
     {
       n: "03",
       title: "Voorlezen vanavond.",
       body: "Op de tablet, of uitgeprint. En op het einde van het jaar bundel je de mooiste tot een echt kinderboek.",
+      image: "/images/spots/voorlezen.png",
+      alt: "Meisje in bed met een prentenboek op het dekbed en een teddybeer",
     },
   ];
 
@@ -168,6 +174,8 @@ function HowItWorks() {
             n={step.n}
             title={step.title}
             body={step.body}
+            image={step.image}
+            alt={step.alt}
             flip={i % 2 === 1}
           />
         ))}
@@ -180,11 +188,15 @@ function Step({
   n,
   title,
   body,
+  image,
+  alt,
   flip,
 }: {
   n: string;
   title: string;
   body: string;
+  image: string;
+  alt: string;
   flip: boolean;
 }) {
   return (
@@ -214,27 +226,31 @@ function Step({
         </p>
       </div>
       <div className="md:basis-5/12">
-        <SpotPlaceholder />
+        <SpotImage src={image} alt={alt} />
       </div>
     </div>
   );
 }
 
-function SpotPlaceholder() {
+function SpotImage({ src, alt }: { src: string; alt: string }) {
+  const vignette =
+    "radial-gradient(ellipse 70% 74% at 50% 50%, black 50%, transparent 92%)";
   return (
     <div
-      className="mx-auto flex aspect-square w-full max-w-[260px] flex-col items-center justify-center gap-2 rounded-[1px]"
+      className="mx-auto aspect-square w-full max-w-[320px]"
       style={{
-        border: `1px dashed rgba(${INK_RGB},0.25)`,
-        color: `rgba(${INK_RGB},0.5)`,
+        maskImage: vignette,
+        WebkitMaskImage: vignette,
       }}
     >
-      <span className="text-[10px] uppercase tracking-[0.22em]">
-        aquarel-spot
-      </span>
-      <span className="text-[11px] italic" style={{ fontFamily: DISPLAY }}>
-        [illustratie volgt]
-      </span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className="block h-full w-full object-cover select-none"
+        draggable={false}
+        loading="lazy"
+      />
     </div>
   );
 }
