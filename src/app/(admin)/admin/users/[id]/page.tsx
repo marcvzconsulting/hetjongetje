@@ -150,6 +150,34 @@ async function updateApprovalAction(formData: FormData) {
   revalidatePath(`/admin/users/${userId}`);
 }
 
+async function setLandingPreviewSlotAction(formData: FormData) {
+  "use server";
+  await requireAdmin();
+  const storyId = String(formData.get("storyId") ?? "");
+  const userId = String(formData.get("userId") ?? "");
+  const raw = String(formData.get("slot") ?? "");
+  if (!storyId || !userId) return;
+
+  const VALID = ["girl-2", "girl-4", "boy-2", "boy-4"] as const;
+  const slot = (VALID as readonly string[]).includes(raw) ? raw : null;
+
+  // Only one story per slot — clear any other story holding this slot first.
+  if (slot) {
+    await prisma.story.updateMany({
+      where: { landingPreviewSlot: slot, NOT: { id: storyId } },
+      data: { landingPreviewSlot: null },
+    });
+  }
+
+  await prisma.story.update({
+    where: { id: storyId },
+    data: { landingPreviewSlot: slot },
+  });
+
+  revalidatePath(`/admin/users/${userId}`);
+  revalidatePath("/");
+}
+
 async function deleteUserAction(formData: FormData) {
   "use server";
   const session = await requireAdmin();
@@ -383,6 +411,7 @@ export default async function AdminUserDetailPage({
               isFavorite: true,
               language: true,
               createdAt: true,
+              landingPreviewSlot: true,
             },
           },
         },
@@ -1105,13 +1134,15 @@ export default async function AdminUserDetailPage({
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center",
+                            gap: 12,
                             padding: "10px 0",
                             borderBottom: `1px solid ${V2.paperShade}`,
                             fontFamily: V2.body,
                             fontSize: 14,
+                            flexWrap: "wrap",
                           }}
                         >
-                          <span>
+                          <span style={{ flex: "1 1 260px", minWidth: 0 }}>
                             {s.isFavorite && (
                               <IconV2
                                 name="heart"
@@ -1134,6 +1165,51 @@ export default async function AdminUserDetailPage({
                               {formatDate(s.createdAt)}
                             </span>
                           </span>
+                          <form
+                            action={setLandingPreviewSlotAction}
+                            style={{
+                              display: "flex",
+                              gap: 6,
+                              alignItems: "center",
+                            }}
+                          >
+                            <input type="hidden" name="storyId" value={s.id} />
+                            <input type="hidden" name="userId" value={user.id} />
+                            <select
+                              name="slot"
+                              defaultValue={s.landingPreviewSlot ?? ""}
+                              style={{
+                                fontFamily: V2.ui,
+                                fontSize: 12,
+                                padding: "4px 6px",
+                                background: V2.paper,
+                                border: `1px solid ${V2.paperShade}`,
+                                color: V2.ink,
+                              }}
+                              aria-label="Landing preview slot"
+                            >
+                              <option value="">Geen preview</option>
+                              <option value="girl-2">Landing · meisje 2</option>
+                              <option value="girl-4">Landing · meisje 4</option>
+                              <option value="boy-2">Landing · jongen 2</option>
+                              <option value="boy-4">Landing · jongen 4</option>
+                            </select>
+                            <button
+                              type="submit"
+                              style={{
+                                fontFamily: V2.ui,
+                                fontSize: 11,
+                                padding: "5px 10px",
+                                background: V2.ink,
+                                color: V2.paper,
+                                border: "none",
+                                cursor: "pointer",
+                                letterSpacing: "0.04em",
+                              }}
+                            >
+                              Zet
+                            </button>
+                          </form>
                         </li>
                       ))}
                     </ul>
