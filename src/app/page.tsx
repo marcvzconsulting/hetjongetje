@@ -5,6 +5,7 @@ import { StarField } from "@/components/v2/StarField";
 import { StoryPreviewV2 } from "@/components/v2/landing/StoryPreviewV2";
 import { LandingFooter } from "@/components/v2/landing/LandingFooter";
 import { RotatingName } from "@/components/v2/landing/RotatingName";
+import { fetchLandingPreviews } from "@/lib/story/landing-previews";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
@@ -194,7 +195,8 @@ function Hero() {
 
 // ── Voorbeeld-spread ────────────────────────────────────────────────
 
-function StoryPreviewSection() {
+async function StoryPreviewSection() {
+  const previews = await fetchLandingPreviews();
   return (
     <section
       id="voorbeeld"
@@ -236,7 +238,7 @@ function StoryPreviewSection() {
             zinnen voor een tweejarige, meer beeld en verhaal voor vier.
           </p>
         </div>
-        <StoryPreviewV2 />
+        <StoryPreviewV2 previews={previews} />
       </div>
     </section>
   );

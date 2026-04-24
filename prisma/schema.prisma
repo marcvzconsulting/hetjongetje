@@ -146,23 +146,28 @@ model ChildProfile {
 }
 
 model Story {
-  id               String      @id @default(uuid())
-  childProfileId   String      @map("child_profile_id")
-  title            String
-  subtitle         String?
-  language         String      @default("nl") // "nl" | "en"
-  setting          String      // e.g. "fantasy_forest", "space_adventure"
-  status           String      @default("generating") // "generating" | "ready" | "error"
-  generationParams Json?       @map("generation_params") // questions/answers for this story
-  isFavorite       Boolean     @default(false) @map("is_favorite")
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
+  id                  String      @id @default(uuid())
+  childProfileId      String      @map("child_profile_id")
+  title               String
+  subtitle            String?
+  language            String      @default("nl") // "nl" | "en"
+  setting             String      // e.g. "fantasy_forest", "space_adventure"
+  status              String      @default("generating") // "generating" | "ready" | "error"
+  generationParams    Json?       @map("generation_params") // questions/answers for this story
+  isFavorite          Boolean     @default(false) @map("is_favorite")
+  // Optional marker for landing-page previews. One of: "girl-2" | "girl-4"
+  // | "boy-2" | "boy-4" — null = not a preview. Only one story per slot is
+  // shown (most recent wins if somehow duplicated).
+  landingPreviewSlot  String?     @map("landing_preview_slot")
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
 
   childProfile ChildProfile @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
   pages        StoryPage[]
   jobs         GenerationJob[]
   bookStories  BookStory[]
 
+  @@index([landingPreviewSlot])
   @@map("stories")
 }
 
