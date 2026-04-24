@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { Logo } from "@/components/v2";
+import { FooterNewsletter } from "./FooterNewsletter";
 
 export function LandingFooter() {
   return (
@@ -17,20 +18,25 @@ export function LandingFooter() {
         style={{
           maxWidth: 1200,
           margin: "0 auto",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 24,
-          flexWrap: "wrap",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, auto)",
+          gap: 32,
+          alignItems: "start",
         }}
       >
-        <Logo size={16} />
+        <div>
+          <Logo size={16} />
+          <div style={{ height: 24 }} />
+          <FooterNewsletter />
+        </div>
         <div
           style={{
             display: "flex",
             gap: 32,
             color: V2.inkMute,
             flexWrap: "wrap",
+            justifyContent: "flex-end",
+            alignSelf: "center",
           }}
         >
           <Link
@@ -64,10 +70,10 @@ export function LandingFooter() {
             Contact
           </Link>
           <a
-            href="mailto:hallo@onsverhaaltje.nl"
+            href="mailto:info@onsverhaaltje.nl"
             style={{ color: "inherit", textDecoration: "none" }}
           >
-            hallo@onsverhaaltje.nl
+            info@onsverhaaltje.nl
           </a>
         </div>
       </div>

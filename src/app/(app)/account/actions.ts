@@ -6,6 +6,14 @@ import bcrypt from "bcryptjs";
 import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
+import { buildAppUrl } from "@/lib/url";
+import { sendMail } from "@/lib/email/client";
+import { buildPasswordChangedMail } from "@/lib/email/templates/password-changed";
+import {
+  changeContactEmail,
+  deleteContact,
+  subscribeToNewsletter,
+} from "@/lib/email/brevo-contacts";
 
 async function requireUser() {
   const session = await auth();
@@ -42,6 +50,11 @@ export async function updateProfileAction(formData: FormData) {
     redirect("/account?error=profile_email_taken");
   }
 
+  const before = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, newsletterOptIn: true },
+  });
+
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -52,8 +65,70 @@ export async function updateProfileAction(formData: FormData) {
     },
   });
 
+  // Sync to Brevo when an opted-in user changes their email or name.
+  if (before?.newsletterOptIn) {
+    try {
+      if (before.email !== email) {
+        await changeContactEmail(before.email, email);
+      }
+      await subscribeToNewsletter({ email, name });
+    } catch (err) {
+      console.error("[account] newsletter sync after profile update failed", err);
+    }
+  }
+
   revalidatePath("/account");
   redirect("/account?saved=profile");
+}
+
+export async function toggleNewsletterAction(formData: FormData) {
+  const userId = await requireUser();
+  const optIn = formData.get("optIn") === "1";
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true, newsletterOptIn: true },
+  });
+  if (!user) redirect("/login");
+
+  // No-op if state already matches what was requested.
+  if (user.newsletterOptIn === optIn) {
+    revalidatePath("/account");
+    redirect(optIn ? "/account?saved=newsletter_on" : "/account?saved=newsletter_off");
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      newsletterOptIn: optIn,
+      newsletterOptInAt: optIn ? new Date() : null,
+    },
+  });
+
+  // Also sync the standalone NewsletterSignup row, if any (e.g. user
+  // signed up via the footer with the same email and now toggles off
+  // from /account — both records must reflect the same state).
+  if (!optIn) {
+    await prisma.newsletterSignup.updateMany({
+      where: { email: user.email, unsubscribedAt: null },
+      data: { unsubscribedAt: new Date() },
+    });
+  }
+
+  try {
+    if (optIn) {
+      await subscribeToNewsletter({ email: user.email, name: user.name });
+    } else {
+      // Fully delete the contact so they no longer appear in Brevo at all,
+      // not just removed from the list.
+      await deleteContact(user.email);
+    }
+  } catch (err) {
+    console.error("[account] newsletter toggle sync failed", err);
+  }
+
+  revalidatePath("/account");
+  redirect(optIn ? "/account?saved=newsletter_on" : "/account?saved=newsletter_off");
 }
 
 export async function updateAddressAction(formData: FormData) {
@@ -111,6 +186,25 @@ export async function changePasswordAction(formData: FormData) {
     data: { passwordHash },
   });
 
+  try {
+    const loginUrl = await buildAppUrl("/login");
+    const mail = buildPasswordChangedMail({
+      name: user.name,
+      loginUrl,
+      source: "account",
+    });
+    await sendMail({
+      to: user.email,
+      toName: user.name,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+      tags: ["password-changed"],
+    });
+  } catch (mailError) {
+    console.error("[account] password-changed mail failed", mailError);
+  }
+
   revalidatePath("/account");
   redirect("/account?saved=password");
 }
@@ -159,6 +253,13 @@ export async function deleteAccountAction(formData: FormData) {
 
   // Prisma cascade deletes children, stories, pages, books, rate limits.
   await prisma.user.delete({ where: { id: userId } });
+
+  // AVG: also wipe the newsletter contact in Brevo. Best-effort.
+  try {
+    await deleteContact(user.email);
+  } catch (err) {
+    console.error("[account-delete] Brevo contact deletion failed", err);
+  }
 
   await signOut({ redirectTo: "/?deleted=1" });
 }

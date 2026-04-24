@@ -3,6 +3,7 @@ import { V2 } from "@/components/v2/tokens";
 import { Logo, EBtn, Kicker, IconV2 } from "@/components/v2";
 import { StarField } from "@/components/v2/StarField";
 import { StoryPreviewV2 } from "@/components/v2/landing/StoryPreviewV2";
+import { LandingFooter } from "@/components/v2/landing/LandingFooter";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
@@ -26,7 +27,7 @@ export default function Home() {
       <Pricing />
       <Testimonial />
       <SlotCTA />
-      <Footer />
+      <LandingFooter />
     </div>
   );
 }
@@ -934,70 +935,3 @@ function SlotCTA() {
   );
 }
 
-// ── Footer ─────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer
-      style={{
-        padding: "48px 48px",
-        borderTop: `1px solid ${V2.paperShade}`,
-        fontFamily: V2.ui,
-        fontSize: 13,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: "0 auto",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 24,
-          flexWrap: "wrap",
-        }}
-      >
-        <Logo size={16} />
-        <div
-          style={{
-            display: "flex",
-            gap: 32,
-            color: V2.inkMute,
-            flexWrap: "wrap",
-          }}
-        >
-          <Link
-            href="/privacy"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            Privacy
-          </Link>
-          <Link
-            href="/voorwaarden"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            Voorwaarden
-          </Link>
-          <Link
-            href="/veelgestelde-vragen"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            FAQ
-          </Link>
-          <Link
-            href="/over-ons"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            Over ons
-          </Link>
-          <a
-            href="mailto:hallo@onsverhaaltje.nl"
-            style={{ color: "inherit", textDecoration: "none" }}
-          >
-            hallo@onsverhaaltje.nl
-          </a>
-        </div>
-      </div>
-    </footer>
-  );
-}

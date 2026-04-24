@@ -12,6 +12,7 @@ import {
   updateAddressAction,
   changePasswordAction,
   deleteAccountAction,
+  toggleNewsletterAction,
 } from "./actions";
 
 type SearchParams = Promise<{ saved?: string; error?: string }>;
@@ -20,6 +21,8 @@ const SAVED_MESSAGES: Record<string, string> = {
   profile: "Persoonsgegevens opgeslagen",
   address: "Adres opgeslagen",
   password: "Wachtwoord gewijzigd",
+  newsletter_on: "Je staat op de nieuwsbrief",
+  newsletter_off: "Je bent uitgeschreven van de nieuwsbrief",
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -239,10 +242,59 @@ export default async function AccountPage({
           </form>
         </Section>
 
+        {/* Newsletter */}
+        <Section
+          title="Nieuwsbrief"
+          meta="Af en toe een mailtje. Geen spam, beloofd."
+        >
+          <form action={toggleNewsletterAction}>
+            <input
+              type="hidden"
+              name="optIn"
+              value={user.newsletterOptIn ? "0" : "1"}
+            />
+            <p
+              style={{
+                fontFamily: V2.body,
+                fontSize: 15,
+                color: V2.inkSoft,
+                margin: "0 0 18px",
+                lineHeight: 1.6,
+                maxWidth: "60ch",
+              }}
+            >
+              {user.newsletterOptIn ? (
+                <>
+                  Je staat momenteel{" "}
+                  <strong style={{ color: V2.ink }}>aangemeld</strong> voor
+                  de nieuwsbrief. Je ontvangt af en toe een update over
+                  nieuwe functies en seizoens-tips voor het voorlezen.
+                </>
+              ) : (
+                <>
+                  Je staat momenteel{" "}
+                  <strong style={{ color: V2.ink }}>niet aangemeld</strong>.
+                  Aanmelden kun je altijd uitzetten via deze pagina of via
+                  de afmeldlink onderaan elke nieuwsbrief.
+                </>
+              )}
+            </p>
+            <EBtn
+              kind={user.newsletterOptIn ? "ghost" : "primary"}
+              size="md"
+              type="submit"
+            >
+              {user.newsletterOptIn
+                ? "Uitschrijven"
+                : "Aanmelden voor de nieuwsbrief →"}
+            </EBtn>
+          </form>
+        </Section>
+
         {/* Password */}
         <Section
           title="Wachtwoord wijzigen"
-          meta="Minimaal 6 tekens — kies iets dat je niet vergeet"
+          meta="Minimaal 6 tekens, kies iets dat je niet vergeet"
         >
           <form action={changePasswordAction}>
             <div>

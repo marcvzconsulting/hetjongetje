@@ -7,30 +7,49 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  passwordHash  String         @map("password_hash")
-  name          String
-  locale        String         @default("nl")
-  role          String         @default("user") // "user" | "admin"
-  status        String         @default("pending") // "pending" | "approved" | "suspended"
-  storyCredits  Int            @default(0) @map("story_credits")
-  lastLoginAt   DateTime?      @map("last_login_at")
-  phone         String?
-  street        String?
-  houseNumber   String?        @map("house_number")
-  postalCode    String?        @map("postal_code")
-  city          String?
-  country       String?
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  children      ChildProfile[]
-  subscription  Subscription?
-  adminNotes    AdminNote[]    @relation("NotesAboutUser")
-  authoredNotes AdminNote[]    @relation("NotesByAdmin")
-  resetTokens   PasswordResetToken[]
+  id                 String         @id @default(uuid())
+  email              String         @unique
+  passwordHash       String         @map("password_hash")
+  name               String
+  locale             String         @default("nl")
+  role               String         @default("user") // "user" | "admin"
+  status             String         @default("pending") // "pending" | "approved" | "suspended"
+  storyCredits       Int            @default(0) @map("story_credits")
+  lastLoginAt        DateTime?      @map("last_login_at")
+  phone              String?
+  street             String?
+  houseNumber        String?        @map("house_number")
+  postalCode         String?        @map("postal_code")
+  city               String?
+  country            String?
+  newsletterOptIn    Boolean        @default(false) @map("newsletter_opt_in")
+  newsletterOptInAt  DateTime?      @map("newsletter_opt_in_at") // AVG-bewijs van consent
+  firstStoryEmailSentAt DateTime?   @map("first_story_email_sent_at") // idempotency-flag
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  children           ChildProfile[]
+  subscription       Subscription?
+  adminNotes         AdminNote[]    @relation("NotesAboutUser")
+  authoredNotes      AdminNote[]    @relation("NotesByAdmin")
+  resetTokens        PasswordResetToken[]
 
   @@map("users")
+}
+
+/// Nieuwsbrief-aanmeldingen van bezoekers zonder account (footer-formulier).
+/// Account-houders staan in `users.newsletter_opt_in` en hoeven hier niet in.
+model NewsletterSignup {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  name           String?
+  source         String    @default("footer") // "footer" | "register" | "manual"
+  ip             String?
+  optInAt        DateTime  @default(now()) @map("opt_in_at") // AVG
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("newsletter_signups")
 }
 
 /// Tokens for password-reset flow (self-service or admin-initiated).
