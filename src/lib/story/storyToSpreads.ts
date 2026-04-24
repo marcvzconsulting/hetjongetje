@@ -14,7 +14,18 @@ export interface StoryForSpreads {
   subtitle: string | null;
   setting: string;
   childName: string;
+  createdAt: Date;
   pages: StoryPageData[];
+}
+
+function formatDateLabel(date: Date): string {
+  // "3 mei 2026" → "3 MEI 2026", past bij mono/letterSpacing van het label
+  const human = date.toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return `ONS VERHAALTJE · ${human.toUpperCase()}`;
 }
 
 const THEMES: IllustrationTheme[] = ["forest", "warm", "soft", "dusk", "sunset", "night"];
@@ -26,8 +37,8 @@ export function storyToSpreads(story: StoryForSpreads): Spread[] {
 
   const settingInfo = STORY_SETTINGS[story.setting as keyof typeof STORY_SETTINGS];
   const tag = settingInfo
-    ? `${settingInfo.emoji} ${settingInfo.label}`
-    : story.subtitle || "✨ Verhaal";
+    ? settingInfo.label
+    : story.subtitle || "Verhaal";
 
   // Each DB page now has BOTH text and illustration (they belong together).
   // Content pages = pages with text, ending page = page without text (just illustration).
@@ -48,6 +59,7 @@ export function storyToSpreads(story: StoryForSpreads): Spread[] {
       tag,
       title: story.title,
       subtitle: `Een verhaal voor ${story.childName}`,
+      dateLabel: formatDateLabel(story.createdAt),
     },
     pageNumbers: [pageNumber++, pageNumber++],
   });

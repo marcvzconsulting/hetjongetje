@@ -419,7 +419,7 @@ function TitlePage({
           color: V2.inkMute,
         }}
       >
-        ONS VERHAALTJE · MMXXVI
+        {page.dateLabel ?? "ONS VERHAALTJE · 2026"}
       </span>
     </div>
   );

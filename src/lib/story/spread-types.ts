@@ -19,6 +19,8 @@ export type PageType =
       subtitle?: string;
       tag: string;
       meta?: string;
+      /** Editorial footer on the title page, e.g. "ONS VERHAALTJE · 3 MEI 2026" */
+      dateLabel?: string;
     }
   | { type: "text"; content: string; layout?: "default" | "dropcap" }
   | {

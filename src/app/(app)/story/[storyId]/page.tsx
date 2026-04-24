@@ -32,6 +32,7 @@ export default async function StoryPage({ params }: Props) {
     subtitle: story.subtitle,
     setting: story.setting,
     childName: story.childProfile.name,
+    createdAt: story.createdAt,
     pages: story.pages.map((p) => ({
       pageNumber: p.pageNumber,
       text: p.text,
