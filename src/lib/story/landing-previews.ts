@@ -27,22 +27,40 @@ export type LandingPreview = {
   } | null;
 };
 
+function emptyPreviews(): LandingPreview[] {
+  return PREVIEW_SLOTS.map((s) => ({
+    slot: s.id,
+    label: s.label,
+    readTime: s.readTime,
+    data: null,
+  }));
+}
+
 /**
  * Load the 4 landing-page previews. For slots without a marked story the
  * data is null, so the component can fall back to the editorial CSS scene.
+ *
+ * Defensive: DB/schema errors (e.g. a missing migration during a new
+ * deploy) return empty previews instead of crashing the homepage build.
  */
 export async function fetchLandingPreviews(): Promise<LandingPreview[]> {
-  const stories = await prisma.story.findMany({
-    where: {
-      landingPreviewSlot: { not: null },
-      status: "ready",
-    },
-    include: {
-      pages: { orderBy: { pageNumber: "asc" } },
-      childProfile: { select: { name: true } },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+  let stories: Awaited<ReturnType<typeof prisma.story.findMany>> = [];
+  try {
+    stories = await prisma.story.findMany({
+      where: {
+        landingPreviewSlot: { not: null },
+        status: "ready",
+      },
+      include: {
+        pages: { orderBy: { pageNumber: "asc" } },
+        childProfile: { select: { name: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+  } catch (err) {
+    console.error("[landing-previews] fetch failed, falling back", err);
+    return emptyPreviews();
+  }
 
   // Pick the most recent story per slot (orderBy desc + first wins).
   const bySlot = new Map<LandingPreviewSlot, (typeof stories)[number]>();
