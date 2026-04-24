@@ -44,9 +44,8 @@ function emptyPreviews(): LandingPreview[] {
  * deploy) return empty previews instead of crashing the homepage build.
  */
 export async function fetchLandingPreviews(): Promise<LandingPreview[]> {
-  let stories: Awaited<ReturnType<typeof prisma.story.findMany>> = [];
   try {
-    stories = await prisma.story.findMany({
+    const stories = await prisma.story.findMany({
       where: {
         landingPreviewSlot: { not: null },
         status: "ready",
@@ -57,47 +56,47 @@ export async function fetchLandingPreviews(): Promise<LandingPreview[]> {
       },
       orderBy: { updatedAt: "desc" },
     });
+
+    // Pick the most recent story per slot (orderBy desc + first wins).
+    const bySlot = new Map<LandingPreviewSlot, (typeof stories)[number]>();
+    for (const story of stories) {
+      const slot = story.landingPreviewSlot as LandingPreviewSlot | null;
+      if (!slot) continue;
+      if (!bySlot.has(slot)) bySlot.set(slot, story);
+    }
+
+    return PREVIEW_SLOTS.map((s) => {
+      const story = bySlot.get(s.id);
+      if (!story) {
+        return { slot: s.id, label: s.label, readTime: s.readTime, data: null };
+      }
+      const spreads = storyToSpreads({
+        title: story.title,
+        subtitle: story.subtitle,
+        setting: story.setting,
+        childName: story.childProfile.name,
+        createdAt: story.createdAt,
+        pages: story.pages.map((p) => ({
+          pageNumber: p.pageNumber,
+          text: p.text,
+          illustrationUrl: p.illustrationUrl,
+          illustrationDescription: p.illustrationDescription,
+          illustrationPrompt: p.illustrationPrompt,
+        })),
+      });
+      return {
+        slot: s.id,
+        label: s.label,
+        readTime: s.readTime,
+        data: {
+          title: story.title,
+          childName: story.childProfile.name,
+          spreads,
+        },
+      };
+    });
   } catch (err) {
     console.error("[landing-previews] fetch failed, falling back", err);
     return emptyPreviews();
   }
-
-  // Pick the most recent story per slot (orderBy desc + first wins).
-  const bySlot = new Map<LandingPreviewSlot, (typeof stories)[number]>();
-  for (const story of stories) {
-    const slot = story.landingPreviewSlot as LandingPreviewSlot | null;
-    if (!slot) continue;
-    if (!bySlot.has(slot)) bySlot.set(slot, story);
-  }
-
-  return PREVIEW_SLOTS.map((s) => {
-    const story = bySlot.get(s.id);
-    if (!story) {
-      return { slot: s.id, label: s.label, readTime: s.readTime, data: null };
-    }
-    const spreads = storyToSpreads({
-      title: story.title,
-      subtitle: story.subtitle,
-      setting: story.setting,
-      childName: story.childProfile.name,
-      createdAt: story.createdAt,
-      pages: story.pages.map((p) => ({
-        pageNumber: p.pageNumber,
-        text: p.text,
-        illustrationUrl: p.illustrationUrl,
-        illustrationDescription: p.illustrationDescription,
-        illustrationPrompt: p.illustrationPrompt,
-      })),
-    });
-    return {
-      slot: s.id,
-      label: s.label,
-      readTime: s.readTime,
-      data: {
-        title: story.title,
-        childName: story.childProfile.name,
-        spreads,
-      },
-    };
-  });
 }
