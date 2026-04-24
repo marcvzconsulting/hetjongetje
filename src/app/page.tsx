@@ -4,6 +4,7 @@ import { Logo, EBtn, Kicker, IconV2 } from "@/components/v2";
 import { StarField } from "@/components/v2/StarField";
 import { StoryPreviewV2 } from "@/components/v2/landing/StoryPreviewV2";
 import { LandingFooter } from "@/components/v2/landing/LandingFooter";
+import { RotatingName } from "@/components/v2/landing/RotatingName";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
@@ -109,7 +110,7 @@ function Hero() {
               Een verhaaltje<br />
               waarin{" "}
               <span style={{ fontStyle: "italic", fontWeight: 400 }}>
-                {SAMPLE_NAME}
+                <RotatingName />
               </span>
               <br />
               zichzelf{" "}
