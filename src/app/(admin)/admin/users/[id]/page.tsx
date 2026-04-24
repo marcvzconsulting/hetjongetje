@@ -317,7 +317,28 @@ function FlashError({ children }: { children: React.ReactNode }) {
   );
 }
 
-function StatusPill({ status }: { status: string }) {
+function StatusPill({ status, role }: { status: string; role: string }) {
+  if (role === "admin") {
+    return (
+      <span
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "5px 14px",
+          background: V2.ink,
+          color: V2.paper,
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+        }}
+      >
+        Admin
+      </span>
+    );
+  }
   if (status === "approved") {
     return (
       <span
@@ -484,7 +505,7 @@ export default async function AdminUserDetailPage({
             marginTop: 20,
           }}
         >
-          <StatusPill status={user.status} />
+          <StatusPill status={user.status} role={user.role} />
           {user.role !== "admin" && (
             <span
               style={{
@@ -536,7 +557,7 @@ export default async function AdminUserDetailPage({
             </p>
           </div>
 
-          {user.status === "pending" && (
+          {user.status === "pending" && user.role !== "admin" && (
             <div
               style={{
                 marginBottom: 24,

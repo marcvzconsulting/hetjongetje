@@ -29,7 +29,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         await prisma.user.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() },
+          data: {
+            lastLoginAt: new Date(),
+            // Admins bypass the pending-approval gate. Self-heal any admin
+            // account whose status was left at the default "pending".
+            ...(user.role === "admin" && user.status !== "approved"
+              ? { status: "approved" }
+              : {}),
+          },
         });
 
         return {
