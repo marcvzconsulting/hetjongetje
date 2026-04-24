@@ -18,7 +18,6 @@ export default async function UnsubscribePage({
   if (!valid) {
     return (
       <ContentPage
-        number="A5"
         eyebrow="Uitschrijven"
         title={
           <>
@@ -61,7 +60,6 @@ export default async function UnsubscribePage({
 
   return (
     <ContentPage
-      number="A5"
       eyebrow="Uitschrijven"
       title={
         <>

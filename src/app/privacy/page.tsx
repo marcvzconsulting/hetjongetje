@@ -14,7 +14,6 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <ContentPage
-      number="A5"
       eyebrow="Privacy"
       title={
         <>

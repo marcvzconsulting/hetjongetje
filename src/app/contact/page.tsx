@@ -48,7 +48,6 @@ export default async function ContactPage({
 
   return (
     <ContentPage
-      number="A4"
       eyebrow="Contact"
       title={
         <>

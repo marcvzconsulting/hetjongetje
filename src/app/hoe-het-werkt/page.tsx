@@ -7,7 +7,6 @@ import {
 export default function HoeHetWerktPage() {
   return (
     <ContentPage
-      number="A2"
       eyebrow="Hoe het werkt"
       title={
         <>

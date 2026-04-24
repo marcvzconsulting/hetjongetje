@@ -7,7 +7,6 @@ import {
 export default function VeelgesteldeVragenPage() {
   return (
     <ContentPage
-      number="A3"
       eyebrow="Veelgestelde vragen"
       title={
         <>

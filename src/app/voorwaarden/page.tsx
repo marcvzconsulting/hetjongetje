@@ -7,7 +7,6 @@ import {
 export default function VoorwaardenPage() {
   return (
     <ContentPage
-      number="A6"
       eyebrow="Voorwaarden"
       title={
         <>

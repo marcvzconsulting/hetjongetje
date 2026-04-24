@@ -8,7 +8,6 @@ import { V2 } from "@/components/v2/tokens";
 export default function OverOnsPage() {
   return (
     <ContentPage
-      number="A1"
       eyebrow="Over ons"
       title={
         <>
