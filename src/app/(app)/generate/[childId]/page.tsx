@@ -88,6 +88,9 @@ export default async function GeneratePage({ params }: Props) {
             mainCharacterType: child.mainCharacterType,
             mainCharacterDescription: child.mainCharacterDescription,
             approvedCharacterPrompt: child.approvedCharacterPrompt,
+            loraUrl: child.loraStatus === "ready" ? child.loraUrl : null,
+            loraTriggerWord:
+              child.loraStatus === "ready" ? child.loraTriggerWord : null,
           }}
         />
       </div>

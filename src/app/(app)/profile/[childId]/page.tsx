@@ -8,6 +8,7 @@ import { V2 } from "@/components/v2/tokens";
 import { Kicker } from "@/components/v2";
 import { Avatar } from "@/components/v2/Avatar";
 import { AppShell } from "@/components/v2/app/AppShell";
+import { LoraTrainer } from "@/components/v2/lora/LoraTrainer";
 import { ProfileEditor } from "./client";
 
 interface Props {
@@ -146,6 +147,24 @@ export default async function ProfilePage({ params }: Props) {
             }}
           />
         </div>
+
+        {/* Character LoRA training (optional, GDPR-gated) */}
+        <LoraTrainer
+          childId={child.id}
+          childName={child.name}
+          initialStatus={
+            (child.loraStatus as
+              | "none"
+              | "training"
+              | "ready"
+              | "failed"
+              | "uploaded") ?? "none"
+          }
+          initialTrainedAt={
+            child.loraTrainedAt ? child.loraTrainedAt.toISOString() : null
+          }
+          initialFailureReason={child.loraFailureReason}
+        />
       </div>
     </AppShell>
   );

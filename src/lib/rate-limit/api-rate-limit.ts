@@ -13,6 +13,9 @@ export const RATE_LIMITS = {
   storyCreate: { limit: 5, windowSeconds: 60 * 60 }, // 5 per hour
   previewGenerate: { limit: 10, windowSeconds: 60 * 60 }, // 10 per hour
   photoUpload: { limit: 3, windowSeconds: 15 * 60 }, // 3 per 15 min
+  // LoRA training costs ~€2-3 per run. Tight limit; will become a paid
+  // one-time unlock in the future.
+  loraTrain: { limit: 2, windowSeconds: 24 * 60 * 60 }, // 2 per 24 hours
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
@@ -29,6 +32,7 @@ const FRIENDLY_LABELS: Record<RateLimitAction, string> = {
   storyCreate: "verhalen",
   previewGenerate: "karakter-previews",
   photoUpload: "foto-uploads",
+  loraTrain: "character-trainingen",
 };
 
 /**

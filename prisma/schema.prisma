@@ -105,7 +105,17 @@ model ChildProfile {
   approvedCharacterPrompt  String?  @map("approved_character_prompt") // locked prompt after parent approval
   approvedPreviewUrl       String?  @map("approved_preview_url")      // the approved preview image URL
   characterBible           Json?    @map("character_bible") // grows over time with story summaries
-  referenceImages          String[] @map("reference_images") // S3/R2 URLs
+  referenceImages          String[] @map("reference_images") // S3/R2 URLs — raw uploads
+  // ── Character LoRA (fal.ai flux-lora-fast-training) ──
+  // Status flow: none → uploaded → training → ready | failed
+  loraStatus               String   @default("none") @map("lora_status")
+  loraUrl                  String?  @map("lora_url")          // diffusers_lora_file URL
+  loraTrainingRequestId    String?  @map("lora_training_request_id") // fal request_id for polling
+  loraTriggerWord          String?  @map("lora_trigger_word") // unique per child, must appear in prompt
+  loraTrainedAt            DateTime? @map("lora_trained_at")
+  loraConsentAt            DateTime? @map("lora_consent_at")  // GDPR audit trail
+  loraFailureReason        String?  @map("lora_failure_reason")
+  loraReadyEmailSentAt     DateTime? @map("lora_ready_email_sent_at") // idempotency-flag
   createdAt                DateTime @default(now()) @map("created_at")
   updatedAt                DateTime @updatedAt @map("updated_at")
 
