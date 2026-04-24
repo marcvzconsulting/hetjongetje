@@ -1165,51 +1165,61 @@ export default async function AdminUserDetailPage({
                               {formatDate(s.createdAt)}
                             </span>
                           </span>
-                          <form
-                            action={setLandingPreviewSlotAction}
-                            style={{
-                              display: "flex",
-                              gap: 6,
-                              alignItems: "center",
-                            }}
-                          >
-                            <input type="hidden" name="storyId" value={s.id} />
-                            <input type="hidden" name="userId" value={user.id} />
-                            <select
-                              name="slot"
-                              defaultValue={s.landingPreviewSlot ?? ""}
+                          {user.role === "admin" && (
+                            <form
+                              action={setLandingPreviewSlotAction}
                               style={{
-                                fontFamily: V2.ui,
-                                fontSize: 12,
-                                padding: "4px 6px",
-                                background: V2.paper,
-                                border: `1px solid ${V2.paperShade}`,
-                                color: V2.ink,
-                              }}
-                              aria-label="Landing preview slot"
-                            >
-                              <option value="">Geen preview</option>
-                              <option value="girl-2">Landing · meisje 2</option>
-                              <option value="girl-4">Landing · meisje 4</option>
-                              <option value="boy-2">Landing · jongen 2</option>
-                              <option value="boy-4">Landing · jongen 4</option>
-                            </select>
-                            <button
-                              type="submit"
-                              style={{
-                                fontFamily: V2.ui,
-                                fontSize: 11,
-                                padding: "5px 10px",
-                                background: V2.ink,
-                                color: V2.paper,
-                                border: "none",
-                                cursor: "pointer",
-                                letterSpacing: "0.04em",
+                                display: "flex",
+                                gap: 6,
+                                alignItems: "center",
                               }}
                             >
-                              Zet
-                            </button>
-                          </form>
+                              <input
+                                type="hidden"
+                                name="storyId"
+                                value={s.id}
+                              />
+                              <input
+                                type="hidden"
+                                name="userId"
+                                value={user.id}
+                              />
+                              <select
+                                name="slot"
+                                defaultValue={s.landingPreviewSlot ?? ""}
+                                style={{
+                                  fontFamily: V2.ui,
+                                  fontSize: 12,
+                                  padding: "4px 6px",
+                                  background: V2.paper,
+                                  border: `1px solid ${V2.paperShade}`,
+                                  color: V2.ink,
+                                }}
+                                aria-label="Landing preview slot"
+                              >
+                                <option value="">Geen preview</option>
+                                <option value="girl-2">Landing · meisje 2</option>
+                                <option value="girl-4">Landing · meisje 4</option>
+                                <option value="boy-2">Landing · jongen 2</option>
+                                <option value="boy-4">Landing · jongen 4</option>
+                              </select>
+                              <button
+                                type="submit"
+                                style={{
+                                  fontFamily: V2.ui,
+                                  fontSize: 11,
+                                  padding: "5px 10px",
+                                  background: V2.ink,
+                                  color: V2.paper,
+                                  border: "none",
+                                  cursor: "pointer",
+                                  letterSpacing: "0.04em",
+                                }}
+                              >
+                                Zet
+                              </button>
+                            </form>
+                          )}
                         </li>
                       ))}
                     </ul>

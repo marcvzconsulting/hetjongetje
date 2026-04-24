@@ -182,7 +182,7 @@ export default async function AdminUsersPage({
   const deletedEmail = params.deleted ?? "";
   const nowMs = new Date().getTime();
 
-  const where: Prisma.UserWhereInput = { role: "user" };
+  const where: Prisma.UserWhereInput = {};
   if (status) where.status = status;
   if (q) {
     where.OR = [
