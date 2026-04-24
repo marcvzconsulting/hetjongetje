@@ -316,7 +316,7 @@ function EmptyChildren() {
           lineHeight: 1.55,
         }}
       >
-        Eén keer de basics invullen — naam, leeftijd, knuffel, de mensen
+        Eén keer de basics invullen: naam, leeftijd, knuffel, de mensen
         eromheen. Daarna weten wij genoeg om elke avond een nieuw verhaal
         te maken.
       </p>
@@ -380,10 +380,10 @@ function WaitingCard({
       >
         Vragen? Mail ons op{" "}
         <a
-          href="mailto:hallo@onsverhaaltje.nl"
+          href="mailto:info@onsverhaaltje.nl"
           style={{ color: V2.ink, textDecoration: "underline" }}
         >
-          hallo@onsverhaaltje.nl
+          info@onsverhaaltje.nl
         </a>
       </p>
     </div>

@@ -137,12 +137,12 @@ export function StepBasicInfo({ data, onChange, onNext }: Props) {
                 <>
                   {data.name || "Je kind"} is <strong style={{ color: V2.ink, fontStyle: "normal" }}>{age} jaar</strong>
                   {age <= 1
-                    ? " — verhalen worden heel kort en zacht"
+                    ? ", verhalen worden heel kort en zacht"
                     : age <= 4
-                      ? " — verhalen worden extra simpel en lief"
+                      ? ", verhalen worden extra simpel en lief"
                       : age <= 7
-                        ? " — verhalen met duidelijke emoties en humor"
-                        : " — verhalen met meer avontuur en spanning"}
+                        ? ", verhalen met duidelijke emoties en humor"
+                        : ", verhalen met meer avontuur en spanning"}
                 </>
               ) : (
                 <>Ons Verhaaltje is bedoeld voor kinderen van 0 tot 10 jaar.</>

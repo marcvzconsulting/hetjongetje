@@ -72,7 +72,7 @@ export default async function NewProfilePage() {
             }}
           >
             Naam, leeftijd, knuffel, de mensen om hen heen. Dit doe je maar
-            één keer — daarna weten wij genoeg om elke avond een nieuw verhaal
+            één keer, daarna weten wij genoeg om elke avond een nieuw verhaal
             te maken.
           </p>
         </div>

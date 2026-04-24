@@ -21,7 +21,7 @@ const PROFILES: Profile[] = [
     name: "Noor",
     readTime: "~ 1 MIN VOORLEZEN",
     paragraph:
-      "Noor kon niet slapen. Ze keek naar de maan door het raam. De maan keek terug. 'Slaap lekker, Noor,' fluisterde de maan zachtjes. En toen — héél langzaam — vielen Noors ogen dicht.",
+      "Noor kon niet slapen. Ze keek naar de maan door het raam. De maan keek terug. 'Slaap lekker, Noor,' fluisterde de maan zachtjes. En toen, héél langzaam, vielen Noors ogen dicht.",
   },
   {
     id: "girl-4",
@@ -45,7 +45,7 @@ const PROFILES: Profile[] = [
     name: "Daan",
     readTime: "~ 2 MIN VOORLEZEN",
     paragraph:
-      "In Daans kamer was vanavond iets bijzonders: de maan was op bezoek. Hij zat gewoon op de vensterbank, zoals een kat. 'Mag ik iets vragen?' zei Daan. De maan knikte plechtig — zoals alleen manen dat kunnen.",
+      "In Daans kamer was vanavond iets bijzonders: de maan was op bezoek. Hij zat gewoon op de vensterbank, zoals een kat. 'Mag ik iets vragen?' zei Daan. De maan knikte plechtig, zoals alleen manen dat kunnen.",
   },
 ];
 
@@ -172,7 +172,7 @@ export function StoryPreviewV2() {
                 opacity: 0.7,
               }}
             >
-              ILLUSTRATIE — BLZ 1
+              ILLUSTRATIE · BLZ 1
             </span>
           </div>
 

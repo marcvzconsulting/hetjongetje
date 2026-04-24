@@ -14,12 +14,12 @@ import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn, IconV2 } from "@/components/v2";
 
 function formatDateTime(date: Date | null | undefined): string {
-  if (!date) return "—";
+  if (!date) return "-";
   return date.toISOString().replace("T", " ").slice(0, 16);
 }
 
 function formatDate(date: Date | null | undefined): string {
-  if (!date) return "—";
+  if (!date) return "-";
   return date.toISOString().slice(0, 10);
 }
 
@@ -706,7 +706,7 @@ export default async function AdminUserDetailPage({
           <InfoRow label="Laatste login" value={formatDateTime(user.lastLoginAt)} mono />
           <InfoRow label="Kindprofielen" value={user.children.length} mono />
           <InfoRow label="Verhalen totaal" value={totalStories} mono />
-          <InfoRow label="Telefoon" value={user.phone ?? "—"} />
+          <InfoRow label="Telefoon" value={user.phone ?? "-"} />
           <div style={{ gridColumn: "1 / -1" }}>
             <dt style={fieldLabelStyle}>Adres</dt>
             <dd
@@ -726,7 +726,7 @@ export default async function AdminUserDetailPage({
                   {user.country && <>, {user.country}</>}
                 </>
               ) : (
-                <span style={{ fontStyle: "italic", color: V2.inkMute }}>—</span>
+                <span style={{ fontStyle: "italic", color: V2.inkMute }}>-</span>
               )}
             </dd>
           </div>
@@ -873,7 +873,7 @@ export default async function AdminUserDetailPage({
           <div>
             <h2 style={sectionTitleStyle}>Abonnement</h2>
             <p style={sectionMetaStyle}>
-              Placeholder — nog geen betaalprovider gekoppeld
+              Placeholder: nog geen betaalprovider gekoppeld
             </p>
           </div>
         </div>

@@ -25,6 +25,10 @@ export interface CharacterBible {
   mainCharacterDescription?: string;
   approvedCharacterPrompt?: string; // locked prompt after parent approval
   previousAdventures?: { title: string; setting: string; summary: string }[];
+  /** Trained LoRA URL — activates personalised character model when present */
+  loraUrl?: string;
+  /** Unique trigger word baked into the LoRA; must appear in every prompt */
+  loraTriggerWord?: string;
 }
 
 export interface StoryRequest {
@@ -190,7 +194,6 @@ export async function generateStory(
   const occasionInfo = request.occasion && request.occasion !== "none" ? OCCASIONS[request.occasion] : null;
 
   const settingLabel = settingInfo?.label ?? request.setting;
-  const settingEmoji = settingInfo?.emoji ?? "✨";
   const adventureLabel = adventureInfo?.label ?? request.adventureType;
 
   // Character description
@@ -345,7 +348,7 @@ Regels:
 
   return {
     title: parsed.title,
-    tag: `${settingEmoji} ${settingLabel} · ${adventureInfo?.emoji ?? "✨"} ${adventureLabel}`,
+    tag: `${settingLabel} · ${adventureLabel}`,
     endingText: parsed.endingText,
     endingSign: parsed.endingSign,
     endingIllustrationPrompt: parsed.endingIllustrationPrompt || "",

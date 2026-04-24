@@ -19,7 +19,7 @@ export function LandingNav() {
         flexWrap: "wrap",
       }}
     >
-      <Link href="/" aria-label="Ons Verhaaltje — home">
+      <Link href="/" aria-label="Ons Verhaaltje, home">
         <Logo size={22} />
       </Link>
       <div

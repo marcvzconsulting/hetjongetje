@@ -19,7 +19,7 @@ function daysSince(date: Date | null, now: number): number | null {
 }
 
 function formatDate(date: Date | null): string {
-  if (!date) return "—";
+  if (!date) return "-";
   return date.toISOString().slice(0, 10);
 }
 

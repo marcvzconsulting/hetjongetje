@@ -94,7 +94,7 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
           maxWidth: 560,
         }}
       >
-        Kies er zoveel als je wilt — dit maakt de verhalen persoonlijker.
+        Kies er zoveel als je wilt, dit maakt de verhalen persoonlijker.
       </p>
 
       {/* Interests grid */}
@@ -151,7 +151,7 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
             margin: "10px 0 24px",
           }}
         >
-          Optioneel — wij weven deze details door de verhalen.
+          Optioneel, wij weven deze details door de verhalen.
         </p>
 
         <div

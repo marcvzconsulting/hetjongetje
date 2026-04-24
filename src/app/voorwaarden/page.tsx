@@ -17,7 +17,7 @@ export default function VoorwaardenPage() {
       }
     >
       <Lead>
-        Eerst de mensentaal-versie. Daaronder de juridische — voor wie het
+        Eerst de mensentaal-versie. Daaronder de juridische, voor wie het
         precies wil weten.
       </Lead>
       <StubNote>

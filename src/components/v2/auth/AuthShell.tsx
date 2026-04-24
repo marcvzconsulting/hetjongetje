@@ -32,7 +32,7 @@ export function AuthShell({
   footer,
   rightKicker = "Vanavond",
   rightTitle = "Noor en het maanlicht",
-  rightMeta = "BLZ 6 / 6 — UITGELEZEN",
+  rightMeta = "BLZ 6 / 6 · UITGELEZEN",
 }: Props) {
   return (
     <div
@@ -68,7 +68,7 @@ export function AuthShell({
             flexDirection: "column",
           }}
         >
-          <Link href="/" aria-label="Ons Verhaaltje — home">
+          <Link href="/" aria-label="Ons Verhaaltje, home">
             <Logo size={20} />
           </Link>
           <div

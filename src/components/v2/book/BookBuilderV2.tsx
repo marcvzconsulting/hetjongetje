@@ -77,7 +77,7 @@ export function BookBuilderV2({
   );
   const [dedication, setDedication] = useState(
     initialDraft?.dedication ||
-      `Voor ${childName},\nzodat je later, veel later,\nnog weet wat je vroeg aan de maan.\n\n— mama & papa, 2026`
+      `Voor ${childName},\nzodat je later, veel later,\nnog weet wat je vroeg aan de maan.\n\nmama & papa, 2026`
   );
   const [format, setFormat] = useState<Format["id"]>(
     initialDraft?.format ?? "hard"
@@ -221,7 +221,7 @@ export function BookBuilderV2({
           {/* Story selector */}
           <section style={{ marginBottom: 56 }}>
             <SectionHeader
-              kicker="Stap I — De inhoud"
+              kicker="Stap I · De inhoud"
               title="Welke verhalen mogen mee?"
               meta={`${selected.size} VAN ${stories.length} GEKOZEN`}
             />
@@ -351,7 +351,7 @@ export function BookBuilderV2({
           {selectedStories.length > 0 && (
             <section style={{ marginBottom: 56 }}>
               <SectionHeader
-                kicker="Voorproef — zo wordt je boek"
+                kicker="Voorproef · zo wordt je boek"
                 title="Blader er alvast doorheen"
               />
               <BookMiniPreview spreads={miniSpreads} />
@@ -361,7 +361,7 @@ export function BookBuilderV2({
           {/* Cover */}
           <section style={{ marginBottom: 56 }}>
             <SectionHeader
-              kicker="Stap II — De kaft"
+              kicker="Stap II · De kaft"
               title="Wat komt er op de voorkant?"
             />
             <div
@@ -449,7 +449,7 @@ export function BookBuilderV2({
           {/* Dedication */}
           <section style={{ marginBottom: 56 }}>
             <SectionHeader
-              kicker="Stap III — Voor in het boek"
+              kicker="Stap III · Voor in het boek"
               title="Schrijf een opdracht"
             />
             <div
@@ -483,7 +483,7 @@ export function BookBuilderV2({
           {/* Format */}
           <section>
             <SectionHeader
-              kicker="Stap IV — Formaat"
+              kicker="Stap IV · Formaat"
               title="Hoe groot moet het boek worden?"
             />
             <div
@@ -712,10 +712,10 @@ export function BookBuilderV2({
                 marginBottom: 8,
               }}
             >
-              — TIP —
+              TIP
             </div>
             <div style={{ fontStyle: "italic" }}>
-              Maak een exemplaar voor oma en opa — dezelfde bestelling,
+              Maak een exemplaar voor oma en opa, dezelfde bestelling,
               ander adres. Bij de tweede geven we 20% korting.
             </div>
           </div>
@@ -940,7 +940,7 @@ function CoverPreview({
             opacity: 0.85,
           }}
         >
-          — VERZAMELD MMXXVI —
+          VERZAMELD 2026
         </div>
         <div
           style={{

@@ -7,7 +7,7 @@ import { Kicker, IconV2 } from "@/components/v2";
 type SearchParams = Promise<{ status?: string; type?: string }>;
 
 function formatDateTime(date: Date | null | undefined): string {
-  if (!date) return "—";
+  if (!date) return "-";
   return date.toISOString().replace("T", " ").slice(0, 19);
 }
 
@@ -389,7 +389,7 @@ export default async function AdminJobsPage({
                         fontSize: 13,
                       }}
                     >
-                      —
+                      -
                     </span>
                   )}
                 </td>

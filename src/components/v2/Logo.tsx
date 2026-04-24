@@ -13,7 +13,7 @@ type Props = {
 /**
  * v2 Logo — gestapelde wordmark (richting #02).
  *   variant="inline" — horizontaal, voor nav/footer
- *   variant="mark"   — gestapeld, voor hero/covers (met optionele MMXXVI-regel)
+ *   variant="mark"   — gestapeld, voor hero/covers (met optionele jaartal-regel)
  *   variant="icon"   — "ov" monogram in cirkel voor favicons / tight spots
  */
 export function Logo({
@@ -77,7 +77,7 @@ export function Logo({
               fontWeight: 400,
             }}
           >
-            — SINDS MMXXVI —
+            SINDS 2026
           </span>
         )}
       </span>

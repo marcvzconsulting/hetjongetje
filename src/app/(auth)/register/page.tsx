@@ -73,7 +73,7 @@ export default function RegisterPage() {
       }
       rightKicker="Vanavond"
       rightTitle="Jullie eerste verhaal"
-      rightMeta="BLZ 1 / 6 — WACHT OP JULLIE"
+      rightMeta="BLZ 1 / 6 · WACHT OP JULLIE"
       footer={
         <>
           Al een account?{" "}

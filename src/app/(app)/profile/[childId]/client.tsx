@@ -380,7 +380,7 @@ export function ProfileEditor({ child }: Props) {
                       Huisdier
                     </span>
                     <span style={{ fontStyle: "italic" }}>{pet.name}</span>
-                    <span style={{ color: V2.inkMute }}> — {pet.type}</span>
+                    <span style={{ color: V2.inkMute }}> · {pet.type}</span>
                   </div>
                 ))}
                 {child.friends.map((friend, i) => (
@@ -406,7 +406,7 @@ export function ProfileEditor({ child }: Props) {
                     </span>
                     <span style={{ fontStyle: "italic" }}>{friend.name}</span>
                     {friend.relationship && (
-                      <span style={{ color: V2.inkMute }}> — {friend.relationship}</span>
+                      <span style={{ color: V2.inkMute }}> · {friend.relationship}</span>
                     )}
                   </div>
                 ))}

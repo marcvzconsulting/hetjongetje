@@ -91,7 +91,7 @@ export function StepCharacter({
           maxWidth: 560,
         }}
       >
-        De rode draad door elk verhaal — wie beleeft het avontuur?
+        De rode draad door elk verhaal: wie beleeft het avontuur?
       </p>
 
       {/* Character type tiles */}
@@ -194,7 +194,7 @@ export function StepCharacter({
         >
           <SummaryRow
             term="Naam"
-            value={data.name || <em style={{ color: V2.inkMute }}>—</em>}
+            value={data.name || <em style={{ color: V2.inkMute }}>-</em>}
           />
           <SummaryRow
             term="Geboortedatum"
@@ -206,7 +206,7 @@ export function StepCharacter({
                   year: "numeric",
                 })
               ) : (
-                <em style={{ color: V2.inkMute }}>—</em>
+                <em style={{ color: V2.inkMute }}>-</em>
               )
             }
           />

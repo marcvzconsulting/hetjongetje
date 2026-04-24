@@ -301,7 +301,7 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
               lineHeight: 1.5,
             }}
           >
-            Nog geen portret — upload een foto of genereer vanuit het profiel.
+            Nog geen portret. Upload een foto of genereer vanuit het profiel.
           </p>
         </div>
       )}

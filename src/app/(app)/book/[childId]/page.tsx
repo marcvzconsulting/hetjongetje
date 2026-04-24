@@ -158,7 +158,7 @@ export default async function BookPage({ params }: Props) {
             }}
           >
             Gedrukt op stevig papier. Harde kaft, zachte rug. Een boek dat
-            jullie — over tien jaar — nog steeds uit de kast halen.
+            jullie, over tien jaar, nog steeds uit de kast halen.
           </p>
         </div>
       </section>

@@ -298,7 +298,7 @@ export default async function AdminDashboardPage() {
           <Stat
             label="Actieve betaalde abo's"
             value={activeSubs}
-            sub="placeholder — nog geen betaalprovider gekoppeld"
+            sub="placeholder: nog geen betaalprovider gekoppeld"
           />
         </div>
       </div>

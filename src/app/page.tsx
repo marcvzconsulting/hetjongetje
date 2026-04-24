@@ -44,7 +44,7 @@ function Nav() {
         borderBottom: `1px solid ${V2.paperShade}`,
       }}
     >
-      <Link href="/" aria-label="Ons Verhaaltje — home">
+      <Link href="/" aria-label="Ons Verhaaltje, home">
         <Logo size={22} />
       </Link>
       <div
@@ -95,7 +95,6 @@ function Hero() {
         >
           {/* Left: typography + CTA */}
           <div>
-            <Kicker>Nr. 001 — een persoonlijk kinderboek</Kicker>
             <h1
               style={{
                 fontFamily: V2.display,
@@ -127,7 +126,7 @@ function Hero() {
                 maxWidth: 520,
               }}
             >
-              Jullie vertellen ons wie ze is — de knuffel op het bed, het
+              Jullie vertellen ons wie ze is: de knuffel op het bed, het
               katje van de buren, het broertje dat eraan komt. Wij maken
               er een voorleesverhaal van, met een illustratie, klaar om
               voor te lezen. Elke avond anders.
@@ -145,7 +144,7 @@ function Hero() {
                   marginTop: 14,
                 }}
               >
-                Geen creditcard nodig · klaar in 3 minuten
+                Klaar in 3 minuten
               </div>
             </div>
           </div>
@@ -231,7 +230,7 @@ function StoryPreviewSection() {
             }}
           >
             Kies leeftijd en geslacht, en zie hoe een verhaal eruit ziet
-            voor iemand van die leeftijd. De taal past zich aan — korte
+            voor iemand van die leeftijd. De taal past zich aan: korte
             zinnen voor een tweejarige, meer beeld en verhaal voor vier.
           </p>
         </div>
@@ -248,7 +247,7 @@ function HowItGoes() {
     {
       n: "I",
       t: "Jullie vullen het profiel in",
-      b: "Naam, leeftijd, de knuffel, de mensen, de grapjes die thuis terugkomen. Dit doe je maar één keer — daarna weten wij genoeg.",
+      b: "Naam, leeftijd, de knuffel, de mensen, de grapjes die thuis terugkomen. Dit doe je maar één keer, daarna weten wij genoeg.",
     },
     {
       n: "II",
@@ -257,7 +256,7 @@ function HowItGoes() {
     },
     {
       n: "III",
-      t: "Voorlezen — of laten voorlezen",
+      t: "Voorlezen, of laten voorlezen",
       b: "Op de tablet, of op papier. Aan het einde van het jaar bundel je de mooiste verhalen in een echt gedrukt boekje.",
     },
   ];
@@ -419,7 +418,7 @@ function NightHero() {
             }}
           >
             Dat is het verschil. We maken geen verhaal over een meisje dat
-            toevallig jouw naam heeft — we maken er één waarin jij jezelf
+            toevallig jouw naam heeft, we maken er één waarin jij jezelf
             herkent. Tot in de kleinste details.
           </p>
         </div>
@@ -471,7 +470,7 @@ function BookSection() {
             }}
           >
             De mooiste verhalen van het jaar worden een echt kinderboek.
-            Voor op het nachtkastje — of om ooit aan hun eigen kinderen voor
+            Voor op het nachtkastje, of om ooit aan hun eigen kinderen voor
             te lezen.
           </p>
           <div
@@ -598,7 +597,7 @@ function BookSection() {
                 letterSpacing: "0.2em",
               }}
             >
-              MMXXVI
+              2026
             </div>
           </div>
         </div>
@@ -625,7 +624,7 @@ function Pricing() {
     {
       t: "Per jaar",
       p: "€79",
-      u: "per jaar — bespaar €16",
+      u: "per jaar, bespaar €16",
       badge: "meest gekozen",
       f: [
         "Onbeperkt verhalen",
@@ -922,8 +921,7 @@ function SlotCTA() {
             opacity: 0.8,
           }}
         >
-          Eén gratis verhaal om te proberen. Geen creditcard. Klaar in drie
-          minuten.
+          Eén gratis verhaal om te proberen. Klaar in drie minuten.
         </p>
         <div style={{ marginTop: 44 }}>
           <EBtn kind="on-dark" size="lg" href="/register">

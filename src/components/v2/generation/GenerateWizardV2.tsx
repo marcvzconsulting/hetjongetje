@@ -39,6 +39,8 @@ interface ChildData {
   mainCharacterType: string;
   mainCharacterDescription: string | null;
   approvedCharacterPrompt: string | null;
+  loraUrl: string | null;
+  loraTriggerWord: string | null;
 }
 
 type Length = "short" | "medium" | "long";
@@ -118,6 +120,8 @@ export function GenerateWizardV2({ child }: { child: ChildData }) {
         wearsGlasses: child.wearsGlasses,
         hasFreckles: child.hasFreckles,
         approvedCharacterPrompt: child.approvedCharacterPrompt || undefined,
+        loraUrl: child.loraUrl || undefined,
+        loraTriggerWord: child.loraTriggerWord || undefined,
         interests: child.interests,
         pets: child.pets || undefined,
         friends: child.friends || undefined,
@@ -337,7 +341,7 @@ function Step1({
           lineHeight: 1.55,
         }}
       >
-        Eén zin is genoeg. Vertel meer als je wil — wij halen eruit wat
+        Eén zin is genoeg. Vertel meer als je wil. Wij halen eruit wat
         belangrijk is. Laat het leeg als het gewoon een avondverhaal moet
         worden.
       </p>
@@ -571,7 +575,7 @@ function Step2({
         }}
       >
         Kies een wereld. Jullie eigen thuissituatie blijft altijd het
-        vertrekpunt — dit bepaalt waar het avontuur heen gaat.
+        vertrekpunt. Dit bepaalt waar het avontuur heen gaat.
       </p>
       <TileGrid
         options={Object.entries(STORY_SETTINGS).map(([key, s]) => ({
@@ -687,7 +691,7 @@ function Step4({
           lineHeight: 1.55,
         }}
       >
-        Optioneel — laat het op &ldquo;Geen&rdquo; staan als het gewoon een
+        Optioneel. Laat het op &ldquo;Geen&rdquo; staan als het gewoon een
         avondverhaal moet worden.
       </p>
 

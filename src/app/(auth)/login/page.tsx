@@ -54,7 +54,7 @@ function LoginForm() {
       }
       rightKicker="Gisteravond"
       rightTitle="Noor en het maanlicht"
-      rightMeta="BLZ 6 / 6 — UITGELEZEN"
+      rightMeta="BLZ 6 / 6 · UITGELEZEN"
       footer={
         <>
           Nog geen account?{" "}
