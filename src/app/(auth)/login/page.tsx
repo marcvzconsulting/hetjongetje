@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
@@ -33,7 +33,14 @@ function LoginForm() {
       if (result?.error) {
         setError("Onjuist e-mailadres of wachtwoord");
       } else {
-        router.push("/dashboard");
+        // Admins land directly on the admin overview, others on their
+        // own dashboard.
+        const session = await getSession();
+        if (session?.user?.role === "admin") {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       }
     } catch {
       setError("Er ging iets mis. Probeer het opnieuw.");

@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildWelcomeMail } from "@/lib/email/templates/welcome";
+import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@onsverhaaltje.nl";
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +54,27 @@ export async function POST(request: NextRequest) {
     } catch (mailError) {
       // Mail failure must not block registration.
       console.error("[register] welcome mail failed", mailError);
+    }
+
+    // Notify the admin so pending accounts can be reviewed quickly while
+    // we're still in test phase.
+    try {
+      const reviewUrl = await buildAppUrl(`/admin/users/${user.id}`);
+      const mail = buildAdminNewSignupMail({
+        userName: user.name,
+        userEmail: user.email,
+        createdAt: user.createdAt,
+        reviewUrl,
+      });
+      await sendMail({
+        to: ADMIN_EMAIL,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["admin-new-signup"],
+      });
+    } catch (adminMailError) {
+      console.error("[register] admin notification mail failed", adminMailError);
     }
 
     return NextResponse.json(
