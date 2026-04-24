@@ -73,10 +73,15 @@ export default async function GeneratePage({ params }: Props) {
             wearsGlasses: child.wearsGlasses,
             hasFreckles: child.hasFreckles,
             interests: child.interests,
-            pets: child.pets as { name: string; type: string }[] | null,
+            pets: child.pets as {
+              name: string;
+              type: string;
+              description?: string;
+            }[] | null,
             friends: child.friends as {
               name: string;
               relationship: string;
+              description?: string;
             }[] | null,
             favoriteThings: child.favoriteThings as {
               color?: string;

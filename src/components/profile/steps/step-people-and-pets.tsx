@@ -145,15 +145,27 @@ function SectionTitle({
 export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
   const [petName, setPetName] = useState("");
   const [petType, setPetType] = useState("");
+  const [petDescription, setPetDescription] = useState("");
   const [friendName, setFriendName] = useState("");
   const [friendRelation, setFriendRelation] = useState("");
+  const [friendDescription, setFriendDescription] = useState("");
   const [fearInput, setFearInput] = useState("");
 
   function addPet() {
     if (!petName || !petType) return;
-    onChange({ pets: [...data.pets, { name: petName, type: petType }] });
+    onChange({
+      pets: [
+        ...data.pets,
+        {
+          name: petName,
+          type: petType,
+          ...(petDescription.trim() ? { description: petDescription.trim() } : {}),
+        },
+      ],
+    });
     setPetName("");
     setPetType("");
+    setPetDescription("");
   }
 
   function removePet(index: number) {
@@ -165,11 +177,18 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
     onChange({
       friends: [
         ...data.friends,
-        { name: friendName, relationship: friendRelation || "vriend" },
+        {
+          name: friendName,
+          relationship: friendRelation || "vriend",
+          ...(friendDescription.trim()
+            ? { description: friendDescription.trim() }
+            : {}),
+        },
       ],
     });
     setFriendName("");
     setFriendRelation("");
+    setFriendDescription("");
   }
 
   function removeFriend(index: number) {
@@ -268,6 +287,18 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
               style={{ ...underlineInput, width: "100%" }}
             />
           </div>
+          <div style={{ flex: "1 1 100%", minWidth: 0 }}>
+            <label style={fieldLabel}>
+              Uiterlijk (optioneel, voor consistente illustraties)
+            </label>
+            <input
+              type="text"
+              value={petDescription}
+              onChange={(e) => setPetDescription(e.target.value)}
+              placeholder="Bijv. witte kat met zwarte vlekken en een rood halsbandje"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
           <button
             type="button"
             onClick={addPet}
@@ -331,6 +362,18 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
               value={friendRelation}
               onChange={(e) => setFriendRelation(e.target.value)}
               placeholder="Bijv. buurmeisje"
+              style={{ ...underlineInput, width: "100%" }}
+            />
+          </div>
+          <div style={{ flex: "1 1 100%", minWidth: 0 }}>
+            <label style={fieldLabel}>
+              Uiterlijk (optioneel, voor consistente illustraties)
+            </label>
+            <input
+              type="text"
+              value={friendDescription}
+              onChange={(e) => setFriendDescription(e.target.value)}
+              placeholder="Bijv. blonde krullen, bril, rode trui"
               style={{ ...underlineInput, width: "100%" }}
             />
           </div>

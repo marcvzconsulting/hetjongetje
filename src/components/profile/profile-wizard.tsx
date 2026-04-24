@@ -19,8 +19,8 @@ export interface ProfileData {
   wearsGlasses: boolean;
   hasFreckles: boolean;
   interests: string[];
-  pets: { name: string; type: string }[];
-  friends: { name: string; relationship: string }[];
+  pets: { name: string; type: string; description?: string }[];
+  friends: { name: string; relationship: string; description?: string }[];
   favoriteThings: {
     color: string;
     food: string;

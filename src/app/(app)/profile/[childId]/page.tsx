@@ -127,10 +127,18 @@ export default async function ProfilePage({ params }: Props) {
               wearsGlasses: child.wearsGlasses,
               hasFreckles: child.hasFreckles,
               interests: child.interests,
-              pets: (child.pets as { name: string; type: string }[]) || [],
+              pets:
+                (child.pets as {
+                  name: string;
+                  type: string;
+                  description?: string;
+                }[]) || [],
               friends:
-                (child.friends as { name: string; relationship: string }[]) ||
-                [],
+                (child.friends as {
+                  name: string;
+                  relationship: string;
+                  description?: string;
+                }[]) || [],
               favoriteThings:
                 (child.favoriteThings as {
                   color: string;

@@ -27,8 +27,8 @@ interface ChildData {
   wearsGlasses: boolean;
   hasFreckles: boolean;
   interests: string[];
-  pets: { name: string; type: string }[] | null;
-  friends: { name: string; relationship: string }[] | null;
+  pets: { name: string; type: string; description?: string }[] | null;
+  friends: { name: string; relationship: string; description?: string }[] | null;
   favoriteThings: {
     color?: string;
     food?: string;

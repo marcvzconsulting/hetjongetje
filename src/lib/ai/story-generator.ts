@@ -18,7 +18,7 @@ export interface CharacterBible {
   hasFreckles?: boolean;
   interests: string[];
   pets?: { name: string; type: string; description?: string }[];
-  friends?: { name: string; relationship?: string }[];
+  friends?: { name: string; relationship?: string; description?: string }[];
   favoriteThings?: { color?: string; food?: string; toy?: string; place?: string };
   fears?: string[];
   mainCharacterType: string;
@@ -141,14 +141,20 @@ export function buildSideCharacterDescriptions(bible: CharacterBible): string {
 
   if (bible.pets?.length) {
     for (const pet of bible.pets) {
-      parts.push(`${pet.name} the ${pet.type}: always the same color and size in every illustration`);
+      const extra = pet.description ? `, ${pet.description}` : "";
+      parts.push(
+        `${pet.name} the ${pet.type}${extra}: always the same color and size in every illustration`
+      );
     }
   }
 
   if (bible.friends?.length) {
     for (const friend of bible.friends) {
       const rel = friend.relationship ? ` (${friend.relationship})` : "";
-      parts.push(`${friend.name}${rel}: must look identical in every illustration, consistent hair color, clothing, and features`);
+      const extra = friend.description ? `, ${friend.description}` : "";
+      parts.push(
+        `${friend.name}${rel}${extra}: must look identical in every illustration, consistent hair, clothing and features`
+      );
     }
   }
 
@@ -210,10 +216,22 @@ export async function generateStory(
 
   // Pets and friends are listed for context, but should ONLY appear if chosen as companion
   const petsStr = characterBible.pets?.length
-    ? `- Huisdieren (alleen vermelden als ze als metgezel zijn gekozen): ${characterBible.pets.map((p) => `${p.name} de ${p.type}`).join(", ")}`
+    ? `- Huisdieren (alleen vermelden als ze als metgezel zijn gekozen): ${characterBible.pets
+        .map(
+          (p) =>
+            `${p.name} de ${p.type}${p.description ? ` — uiterlijk: ${p.description}` : ""}`
+        )
+        .join(", ")}`
     : "";
   const friendsStr = characterBible.friends?.length
-    ? `- Vriendjes (alleen vermelden als ze als metgezel zijn gekozen): ${characterBible.friends.map((f) => `${f.name}${f.relationship ? ` (${f.relationship})` : ""}`).join(", ")}`
+    ? `- Vriendjes (alleen vermelden als ze als metgezel zijn gekozen): ${characterBible.friends
+        .map(
+          (f) =>
+            `${f.name}${f.relationship ? ` (${f.relationship})` : ""}${
+              f.description ? ` — uiterlijk: ${f.description}` : ""
+            }`
+        )
+        .join(", ")}`
     : "";
   const favStr = characterBible.favoriteThings
     ? `- Favorieten: ${Object.entries(characterBible.favoriteThings).filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join(", ")}`
@@ -266,6 +284,8 @@ Voeg daarna de scène toe. Het karakter moet er in ELKE illustratie IDENTIEK uit
 
 BIJPERSONAGES — HEEL BELANGRIJK VOOR CONSISTENTIE:
 Als er bijpersonages in het verhaal voorkomen (metgezel, broertje/zusje, huisdier), moet je EERST in je JSON een "sideCharacters" object opnemen met een vaste Engelse beschrijving per personage. Gebruik die beschrijving dan LETTERLIJK (copy-paste) in ELKE illustratie waar dat personage voorkomt.
+
+BELANGRIJK: als de ouder hierboven onder "Huisdieren" of "Vriendjes" een uiterlijk-beschrijving heeft opgegeven (achter "— uiterlijk:"), gebruik die dan ONGEWIJZIGD als basis van de beschrijving in "sideCharacters". Vertaal alleen naar het Engels en vul aan met specifieke kleding/kleuren; verzin GEEN ander uiterlijk.
 
 Voorbeeld: als Sam (broertje, 3 jaar) meegaat:
 "sideCharacters": { "Sam": "a 3 year old boy, fair skin, short blonde hair, blue eyes, wearing a red sweater and blue jeans" }
