@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { V2 } from "@/components/v2/tokens";
 import { EBtn, Kicker, IconV2 } from "@/components/v2";
 
@@ -18,11 +18,8 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
   const [approved, setApproved] = useState(isApproved);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [showConsent, setShowConsent] = useState(false);
   const [generatingStatus, setGeneratingStatus] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate preview from profile settings (no photo)
   async function generatePreview() {
     setGenerating(true);
     setGeneratingStatus("Illustratie wordt gegenereerd...");
@@ -48,72 +45,6 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
       setGenerating(false);
       setGeneratingStatus("");
     }
-  }
-
-  // Generate preview from uploaded photo
-  async function handlePhotoUpload(file: File) {
-    setGenerating(true);
-    setGeneratingStatus("Foto wordt omgezet naar illustratie...");
-    setError("");
-    setApproved(false);
-    setShowConsent(false);
-
-    try {
-      const formData = new FormData();
-      formData.append("photo", file);
-
-      const res = await fetch(`/api/children/${childId}/preview/from-photo`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Foto verwerken mislukt");
-      }
-
-      const data = await res.json();
-      setPreviewUrl(data.imageUrl);
-      setCharacterPrompt(data.characterPrompt);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Er ging iets mis");
-    } finally {
-      setGenerating(false);
-      setGeneratingStatus("");
-    }
-  }
-
-  function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file
-    if (!file.type.startsWith("image/")) {
-      setError("Selecteer een afbeelding (JPG, PNG)");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Afbeelding is te groot (max 10MB)");
-      return;
-    }
-
-    setShowConsent(true);
-    // Store file for after consent
-    (window as unknown as Record<string, File>).__pendingPhoto = file;
-  }
-
-  function onConsentAccepted() {
-    const file = (window as unknown as Record<string, File>).__pendingPhoto;
-    if (file) {
-      handlePhotoUpload(file);
-      delete (window as unknown as Record<string, File>).__pendingPhoto;
-    }
-  }
-
-  function onConsentDeclined() {
-    setShowConsent(false);
-    delete (window as unknown as Record<string, File>).__pendingPhoto;
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function approvePreview() {
@@ -168,8 +99,9 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
           lineHeight: 1.5,
         }}
       >
-        Upload een foto of genereer een illustratie vanuit het profiel. Zo blijft het
-        personage herkenbaar door elk verhaal.
+        Genereer een indicatief portret vanuit de profielgegevens. Voor
+        fotoherkenning over verhalen heen: gebruik de character-training
+        hieronder.
       </p>
 
       {error && (
@@ -185,42 +117,6 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
           }}
         >
           {error}
-        </div>
-      )}
-
-      {/* Consent dialog */}
-      {showConsent && (
-        <div
-          style={{
-            marginBottom: 20,
-            padding: 20,
-            background: V2.paperDeep,
-            border: `1px solid ${V2.paperShade}`,
-          }}
-        >
-          <Kicker color={V2.goldDeep}>Privacy toestemming</Kicker>
-          <p
-            style={{
-              fontFamily: V2.body,
-              fontSize: 13,
-              color: V2.inkSoft,
-              margin: "10px 0 16px",
-              lineHeight: 1.6,
-            }}
-          >
-            De foto wordt eenmalig gebruikt om een illustratie te maken in de stijl van de verhalen.
-            De originele foto wordt{" "}
-            <strong style={{ color: V2.ink }}>direct na verwerking verwijderd</strong>{" "}
-            en wordt niet opgeslagen. Alleen de illustratie wordt bewaard.
-          </p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <EBtn kind="primary" size="sm" onClick={onConsentAccepted}>
-              Akkoord, maak illustratie
-            </EBtn>
-            <EBtn kind="ghost" size="sm" onClick={onConsentDeclined}>
-              Annuleren
-            </EBtn>
-          </div>
         </div>
       )}
 
@@ -301,7 +197,7 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
               lineHeight: 1.5,
             }}
           >
-            Nog geen portret. Upload een foto of genereer vanuit het profiel.
+            Nog geen portret. Genereer er een vanuit het profiel.
           </p>
         </div>
       )}
@@ -336,31 +232,13 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
           </div>
         ) : (
           <>
-            {/* Photo upload (hidden) */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={onFileSelected}
-              style={{ display: "none" }}
-            />
-
             <EBtn
               kind="primary"
-              size="md"
-              onClick={() => fileInputRef.current?.click()}
-              style={{ justifyContent: "center", width: "100%" }}
-            >
-              Foto uploaden
-            </EBtn>
-
-            <EBtn
-              kind="ghost"
               size="md"
               onClick={generatePreview}
               style={{ justifyContent: "center", width: "100%" }}
             >
-              {previewUrl ? "Opnieuw genereren zonder foto" : "Genereer zonder foto"}
+              {previewUrl ? "Opnieuw genereren" : "Genereer portret"}
             </EBtn>
 
             {previewUrl && !approved && (
