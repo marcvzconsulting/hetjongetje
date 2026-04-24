@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { buildAppUrl } from "@/lib/url";
+import { sendMail } from "@/lib/email/client";
+import { buildWelcomeMail } from "@/lib/email/templates/welcome";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +36,22 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: { name, email, passwordHash },
     });
+
+    try {
+      const profileUrl = await buildAppUrl("/profile/new");
+      const mail = buildWelcomeMail({ name: user.name, profileUrl });
+      await sendMail({
+        to: user.email,
+        toName: user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["welcome"],
+      });
+    } catch (mailError) {
+      // Mail failure must not block registration.
+      console.error("[register] welcome mail failed", mailError);
+    }
 
     return NextResponse.json(
       { id: user.id, email: user.email, name: user.name },

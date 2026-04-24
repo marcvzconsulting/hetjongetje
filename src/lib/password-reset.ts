@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
-import { headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { buildAppUrl } from "@/lib/url";
 
 const TOKEN_BYTES = 32;
 const USER_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
@@ -69,7 +69,7 @@ export async function validateResetToken(
 export async function consumeTokenAndSetPassword(
   token: string,
   newPassword: string
-): Promise<{ ok: true } | { ok: false; reason: string }> {
+): Promise<{ ok: true; userId: string } | { ok: false; reason: string }> {
   const validated = await validateResetToken(token);
   if (!validated) {
     return { ok: false, reason: "invalid_or_expired" };
@@ -91,32 +91,9 @@ export async function consumeTokenAndSetPassword(
     }),
   ]);
 
-  return { ok: true };
+  return { ok: true, userId: validated.userId };
 }
 
-/**
- * Build the absolute reset URL. Prefers the current request's forwarded
- * host/proto (so it works on Vercel without extra env config), then falls
- * back to NEXTAUTH_URL / NEXT_PUBLIC_APP_URL, then localhost.
- */
 export async function buildResetUrl(token: string): Promise<string> {
-  let base =
-    process.env.NEXTAUTH_URL ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000";
-
-  try {
-    const h = await headers();
-    const host = h.get("x-forwarded-host") ?? h.get("host");
-    if (host) {
-      const proto =
-        h.get("x-forwarded-proto") ??
-        (host.startsWith("localhost") ? "http" : "https");
-      base = `${proto}://${host}`;
-    }
-  } catch {
-    // headers() is only available in a request scope. Fall back to env.
-  }
-
-  return `${base.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+  return buildAppUrl(`/reset-password?token=${encodeURIComponent(token)}`);
 }

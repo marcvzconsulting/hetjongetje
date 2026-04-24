@@ -15,6 +15,9 @@ import {
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 import { reserveStoryCredit, refundStoryCredit } from "@/lib/user-gate";
+import { sendMail } from "@/lib/email/client";
+import { buildFirstStoryMail } from "@/lib/email/templates/first-story";
+import { buildAppUrl } from "@/lib/url";
 
 // Allow extra time: story gen + illustrations + uploads
 export const maxDuration = 120;
@@ -193,6 +196,44 @@ export async function POST(request: NextRequest) {
         },
       });
     }
+
+    // 6. First-story celebration mail — only once per user, idempotent via
+    // `firstStoryEmailSentAt`. Best-effort: never block the response.
+    (async () => {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: {
+            email: true,
+            name: true,
+            firstStoryEmailSentAt: true,
+          },
+        });
+        if (!user || user.firstStoryEmailSentAt) return;
+
+        const storyUrl = await buildAppUrl(`/story/${story.id}`);
+        const mail = buildFirstStoryMail({
+          userName: user.name,
+          childName: child.name,
+          storyTitle: story.title,
+          storyUrl,
+        });
+        await sendMail({
+          to: user.email,
+          toName: user.name,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          tags: ["first-story"],
+        });
+        await prisma.user.update({
+          where: { id: session.user.id },
+          data: { firstStoryEmailSentAt: new Date() },
+        });
+      } catch (mailErr) {
+        console.error("[first-story] mail send failed", mailErr);
+      }
+    })();
 
     return NextResponse.json({ story });
   } catch (error) {

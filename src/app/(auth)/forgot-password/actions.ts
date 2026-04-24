@@ -6,6 +6,10 @@ import {
   createPasswordResetToken,
   buildResetUrl,
 } from "@/lib/password-reset";
+import { sendMail } from "@/lib/email/client";
+import { buildPasswordResetMail } from "@/lib/email/templates/password-reset";
+
+const USER_LIFETIME_HOURS = 1;
 
 export async function requestResetAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -21,10 +25,30 @@ export async function requestResetAction(formData: FormData) {
   if (user) {
     const { token } = await createPasswordResetToken({ userId: user.id });
     const url = await buildResetUrl(token);
-    // TODO: send via email. For now we log the link so it's usable in dev.
-    console.log(
-      `[password-reset] Reset link for ${user.email}: ${url}`
-    );
+
+    const mail = buildPasswordResetMail({
+      name: user.name,
+      resetUrl: url,
+      lifetimeHours: USER_LIFETIME_HOURS,
+    });
+
+    try {
+      await sendMail({
+        to: user.email,
+        toName: user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["password-reset"],
+      });
+    } catch (err) {
+      // Don't leak failures to the client. Keep the reset link in logs so an
+      // admin can retrieve it manually if the mail provider is down.
+      console.error(
+        `[password-reset] Send failed for ${user.email}. Reset URL: ${url}`,
+        err
+      );
+    }
   }
 
   redirect("/forgot-password?sent=1");

@@ -28,7 +28,7 @@ export default async function ForgotPasswordPage({
         }
         rightKicker="Zachtjes"
         rightTitle="De maan kijkt mee"
-        rightMeta="WACHT OP JE — EEN UUR GELDIG"
+        rightMeta="WACHT OP JE · EEN UUR GELDIG"
         footer={
           <Link
             href="/login"
@@ -56,17 +56,6 @@ export default async function ForgotPasswordPage({
             hebben we een reset-link verstuurd. Check je mailbox (en
             spam-folder). De link is 1 uur geldig.
           </p>
-          <p
-            style={{
-              margin: "16px 0 0",
-              fontSize: 13,
-              color: V2.inkMute,
-              fontStyle: "italic",
-            }}
-          >
-            Tip voor dev: de link staat nu in de console van de dev-server.
-            E-mailverzending is nog niet geconfigureerd.
-          </p>
         </div>
       </AuthShell>
     );
@@ -77,7 +66,7 @@ export default async function ForgotPasswordPage({
       kicker="Wachtwoord vergeten"
       heading={
         <>
-          Geen zorgen —<br />
+          Geen zorgen,<br />
           we sturen je een{" "}
           <span style={{ fontStyle: "italic" }}>sleutel.</span>
         </>
