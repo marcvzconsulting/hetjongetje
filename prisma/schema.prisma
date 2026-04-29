@@ -33,6 +33,13 @@ model User {
   authoredNotes      AdminNote[]    @relation("NotesByAdmin")
   resetTokens        PasswordResetToken[]
 
+  // Admin views filter on these constantly (status pill, role split,
+  // recent-signups sort, last-login report). Cheap defence against
+  // full-table scans as the user count grows.
+  @@index([status])
+  @@index([role])
+  @@index([createdAt])
+  @@index([lastLoginAt])
   @@map("users")
 }
 
@@ -192,6 +199,9 @@ model Story {
   bookStories  BookStory[]
 
   @@index([landingPreviewSlot])
+  // Dashboard library query: stories per child filtered by "ready" status,
+  // sorted newest first. Composite index covers WHERE + ORDER BY.
+  @@index([childProfileId, status, createdAt])
   @@map("stories")
 }
 
