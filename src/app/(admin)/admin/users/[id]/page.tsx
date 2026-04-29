@@ -10,6 +10,8 @@ import {
   buildResetUrl,
 } from "@/lib/password-reset";
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
+import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
+import { logAdminAction } from "@/lib/admin/audit-log";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn, IconV2 } from "@/components/v2";
 
@@ -23,31 +25,59 @@ function formatDate(date: Date | null | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
+// Capture the admin's identity once so each handler can log without
+// re-fetching the session. Returns the session as before.
+async function requireAdminWithIdentity() {
+  const session = await requireAdmin();
+  return {
+    session,
+    audit: {
+      adminId: session.user.id,
+      adminEmail: session.user.email ?? "",
+      adminName: session.user.name ?? "",
+    },
+  };
+}
+
 async function addNoteAction(formData: FormData) {
   "use server";
-  const session = await requireAdmin();
+  const { session, audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   const content = String(formData.get("content") ?? "").trim();
   if (!userId || !content) return;
-  await prisma.adminNote.create({
+  const note = await prisma.adminNote.create({
     data: { userId, authorId: session.user.id, content },
+  });
+  await logAdminAction({
+    ...audit,
+    action: "note.add",
+    targetType: "user",
+    targetId: userId,
+    metadata: { noteId: note.id, length: content.length },
   });
   revalidatePath(`/admin/users/${userId}`);
 }
 
 async function deleteNoteAction(formData: FormData) {
   "use server";
-  await requireAdmin();
+  const { audit } = await requireAdminWithIdentity();
   const noteId = String(formData.get("noteId") ?? "");
   const userId = String(formData.get("userId") ?? "");
   if (!noteId) return;
   await prisma.adminNote.delete({ where: { id: noteId } });
+  await logAdminAction({
+    ...audit,
+    action: "note.delete",
+    targetType: "user",
+    targetId: userId,
+    metadata: { noteId },
+  });
   revalidatePath(`/admin/users/${userId}`);
 }
 
 async function saveSubscriptionAction(formData: FormData) {
   "use server";
-  await requireAdmin();
+  const { audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   const plan = String(formData.get("plan") ?? "free");
   const status = String(formData.get("status") ?? "active");
@@ -60,21 +90,34 @@ async function saveSubscriptionAction(formData: FormData) {
     create: { userId, plan, status, endsAt },
     update: { plan, status, endsAt },
   });
+  await logAdminAction({
+    ...audit,
+    action: "subscription.upsert",
+    targetType: "user",
+    targetId: userId,
+    metadata: { plan, status, endsAt: endsAt?.toISOString() ?? null },
+  });
   revalidatePath(`/admin/users/${userId}`);
 }
 
 async function deleteSubscriptionAction(formData: FormData) {
   "use server";
-  await requireAdmin();
+  const { audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   if (!userId) return;
   await prisma.subscription.deleteMany({ where: { userId } });
+  await logAdminAction({
+    ...audit,
+    action: "subscription.delete",
+    targetType: "user",
+    targetId: userId,
+  });
   revalidatePath(`/admin/users/${userId}`);
 }
 
 async function generateResetLinkAction(formData: FormData) {
   "use server";
-  const session = await requireAdmin();
+  const { session, audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   if (!userId) return;
   const { token, expiresAt } = await createPasswordResetToken({
@@ -82,6 +125,13 @@ async function generateResetLinkAction(formData: FormData) {
     createdByAdminId: session.user.id,
   });
   const url = await buildResetUrl(token);
+  await logAdminAction({
+    ...audit,
+    action: "password.reset_link_generated",
+    targetType: "user",
+    targetId: userId,
+    metadata: { expiresAt: expiresAt.toISOString() },
+  });
   revalidatePath(`/admin/users/${userId}`);
   redirect(
     `/admin/users/${userId}?resetLink=${encodeURIComponent(url)}&resetExp=${expiresAt.getTime()}`
@@ -90,7 +140,7 @@ async function generateResetLinkAction(formData: FormData) {
 
 async function setPasswordAction(formData: FormData) {
   "use server";
-  await requireAdmin();
+  const { audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   const newPassword = String(formData.get("newPassword") ?? "");
   if (!userId) return;
@@ -105,17 +155,26 @@ async function setPasswordAction(formData: FormData) {
       data: { usedAt: new Date() },
     }),
   ]);
+  await logAdminAction({
+    ...audit,
+    action: "password.set_directly",
+    targetType: "user",
+    targetId: userId,
+  });
   revalidatePath(`/admin/users/${userId}`);
   redirect(`/admin/users/${userId}?pwSet=1`);
 }
 
 async function updateApprovalAction(formData: FormData) {
   "use server";
-  await requireAdmin();
+  const { audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   const action = String(formData.get("action") ?? "");
   const creditsRaw = String(formData.get("credits") ?? "");
   if (!userId) return;
+
+  let logAction: string | null = null;
+  let logMetadata: Record<string, unknown> | undefined;
 
   if (action === "approve") {
     const credits = Math.max(0, parseInt(creditsRaw, 10) || 5);
@@ -123,27 +182,45 @@ async function updateApprovalAction(formData: FormData) {
       where: { id: userId },
       data: { status: "approved", storyCredits: credits },
     });
+    logAction = "user.approve";
+    logMetadata = { credits };
   } else if (action === "suspend") {
     await prisma.user.update({
       where: { id: userId },
       data: { status: "suspended" },
     });
+    logAction = "user.suspend";
   } else if (action === "unsuspend") {
     await prisma.user.update({
       where: { id: userId },
       data: { status: "approved" },
     });
+    logAction = "user.unsuspend";
   } else if (action === "setCredits") {
     const credits = Math.max(0, parseInt(creditsRaw, 10) || 0);
     await prisma.user.update({
       where: { id: userId },
       data: { storyCredits: credits },
     });
+    logAction = "user.set_credits";
+    logMetadata = { credits };
   } else if (action === "addCredits") {
     const delta = Math.max(0, parseInt(creditsRaw, 10) || 0);
     await prisma.user.update({
       where: { id: userId },
       data: { storyCredits: { increment: delta } },
+    });
+    logAction = "user.add_credits";
+    logMetadata = { delta };
+  }
+
+  if (logAction) {
+    await logAdminAction({
+      ...audit,
+      action: logAction,
+      targetType: "user",
+      targetId: userId,
+      metadata: logMetadata,
     });
   }
 
@@ -152,7 +229,7 @@ async function updateApprovalAction(formData: FormData) {
 
 async function setLandingPreviewSlotAction(formData: FormData) {
   "use server";
-  await requireAdmin();
+  const { audit } = await requireAdminWithIdentity();
   const storyId = String(formData.get("storyId") ?? "");
   const userId = String(formData.get("userId") ?? "");
   const raw = String(formData.get("slot") ?? "");
@@ -174,13 +251,21 @@ async function setLandingPreviewSlotAction(formData: FormData) {
     data: { landingPreviewSlot: slot },
   });
 
+  await logAdminAction({
+    ...audit,
+    action: slot ? "story.set_landing_slot" : "story.clear_landing_slot",
+    targetType: "story",
+    targetId: storyId,
+    metadata: { slot, userId },
+  });
+
   revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/");
 }
 
 async function deleteUserAction(formData: FormData) {
   "use server";
-  const session = await requireAdmin();
+  const { session, audit } = await requireAdminWithIdentity();
   const userId = String(formData.get("userId") ?? "");
   const emailConfirm = String(formData.get("emailConfirm") ?? "")
     .trim()
@@ -201,6 +286,10 @@ async function deleteUserAction(formData: FormData) {
     redirect(`/admin/users/${userId}?delError=email_mismatch`);
   }
 
+  // Cancel any in-progress LoRA training so we're not paying for a job
+  // that's about to point at a non-existent profile, then drop the
+  // bucket assets. Both are best-effort and never block the delete.
+  await cancelInProgressLoraJobs(userId);
   const cleanup = await deleteUserStorage(userId);
   if (cleanup.error) {
     console.error(
@@ -218,6 +307,23 @@ async function deleteUserAction(formData: FormData) {
   }
 
   await prisma.user.delete({ where: { id: userId } });
+
+  // Log AFTER delete: the audit row should reflect "this happened",
+  // not "this might happen" — and the row survives the user deletion
+  // since there's no FK from audit to user.
+  await logAdminAction({
+    ...audit,
+    action: "user.delete",
+    targetType: "user",
+    targetId: userId,
+    metadata: {
+      email: target.email,
+      name: target.name,
+      storageKeysRemoved: cleanup.requested,
+      storageKeysFailed: cleanup.failed.length,
+    },
+  });
+
   redirect(`/admin/users?deleted=${encodeURIComponent(target.email)}`);
 }
 
