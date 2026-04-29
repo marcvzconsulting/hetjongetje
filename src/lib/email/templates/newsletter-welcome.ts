@@ -1,4 +1,5 @@
 import { bodyParagraph, wrapEditorialEmail } from "../layout";
+import { escapeHtml } from "../escape";
 
 type NewsletterWelcomeMail = {
   name?: string | null;
@@ -10,7 +11,8 @@ export function buildNewsletterWelcomeMail(opts: NewsletterWelcomeMail): {
   html: string;
   text: string;
 } {
-  const greeting = opts.name ? `Hallo ${opts.name},` : "Hallo,";
+  const greetingPlain = opts.name ? `Hallo ${opts.name},` : "Hallo,";
+  const greeting = opts.name ? `Hallo ${escapeHtml(opts.name)},` : "Hallo,";
   const subject = "Welkom op de Ons Verhaaltje-nieuwsbrief";
 
   const html = wrapEditorialEmail({
@@ -30,7 +32,7 @@ export function buildNewsletterWelcomeMail(opts: NewsletterWelcomeMail): {
   });
 
   const text = [
-    greeting,
+    greetingPlain,
     "",
     "Bedankt voor je aanmelding op de nieuwsbrief van Ons Verhaaltje. We sturen niet vaak iets, en altijd alleen als we echt iets te vertellen hebben.",
     "",

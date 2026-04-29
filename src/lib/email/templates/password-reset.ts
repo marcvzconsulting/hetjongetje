@@ -1,4 +1,5 @@
 import { bodyParagraph, wrapEditorialEmail } from "../layout";
+import { escapeHtml } from "../escape";
 
 type PasswordResetMail = {
   name?: string | null;
@@ -12,7 +13,8 @@ export function buildPasswordResetMail(opts: PasswordResetMail): {
   html: string;
   text: string;
 } {
-  const greeting = opts.name ? `Hallo ${opts.name},` : "Hallo,";
+  const greeting = opts.name ? `Hallo ${escapeHtml(opts.name)},` : "Hallo,";
+  const greetingPlain = opts.name ? `Hallo ${opts.name},` : "Hallo,";
   const subject = "Kies een nieuw wachtwoord voor Ons Verhaaltje";
 
   const html = wrapEditorialEmail({
@@ -32,7 +34,7 @@ export function buildPasswordResetMail(opts: PasswordResetMail): {
   });
 
   const text = [
-    greeting,
+    greetingPlain,
     "",
     "Je vroeg om een nieuw wachtwoord voor Ons Verhaaltje.",
     "",

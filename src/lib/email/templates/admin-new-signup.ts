@@ -1,4 +1,5 @@
 import { bodyParagraph, wrapEditorialEmail } from "../layout";
+import { escapeHtml } from "../escape";
 
 type AdminNewSignupMail = {
   userName: string;
@@ -15,13 +16,6 @@ function formatDateTime(date: Date): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }
 
 export function buildAdminNewSignupMail(opts: AdminNewSignupMail): {

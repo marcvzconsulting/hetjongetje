@@ -3,7 +3,15 @@
  * renders the same in Outlook/Gmail/Apple Mail. Colors mirror the v2
  * "Dromerige Nacht" palette; fonts fall back to web-safe serifs because
  * email clients don't load custom fonts.
+ *
+ * SECURITY: `bodyParagraph(html)` takes RAW HTML so templates can mark
+ * up their own copy. Every interpolation of user-controlled data
+ * (`User.name`, child names, story titles, contact-form messages)
+ * MUST pass through `escapeHtml()` from `./escape` first. The wrapper
+ * itself escapes `title`, `preheader` and `heading` automatically; the
+ * `body` and `footerNote` slots are raw HTML.
  */
+import { escapeHtml } from "./escape";
 
 const C = {
   paper: "#f5efe4",
@@ -40,15 +48,6 @@ type WrapOpts = {
   /** Small italic footer note (after the CTA). */
   footerNote?: string;
 };
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function ctaButton(cta: { label: string; url: string }): string {
   return `

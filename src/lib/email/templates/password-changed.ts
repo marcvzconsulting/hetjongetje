@@ -1,4 +1,5 @@
 import { bodyParagraph, wrapEditorialEmail } from "../layout";
+import { escapeHtml } from "../escape";
 
 type PasswordChangedMail = {
   name?: string | null;
@@ -12,7 +13,8 @@ export function buildPasswordChangedMail(opts: PasswordChangedMail): {
   html: string;
   text: string;
 } {
-  const greeting = opts.name ? `Hallo ${opts.name},` : "Hallo,";
+  const greetingPlain = opts.name ? `Hallo ${opts.name},` : "Hallo,";
+  const greeting = opts.name ? `Hallo ${escapeHtml(opts.name)},` : "Hallo,";
   const subject = "Je wachtwoord is gewijzigd";
 
   const how =
@@ -39,7 +41,7 @@ export function buildPasswordChangedMail(opts: PasswordChangedMail): {
   });
 
   const text = [
-    greeting,
+    greetingPlain,
     "",
     `We sturen deze mail ter bevestiging: je wachtwoord voor Ons Verhaaltje is zojuist gewijzigd (${how}).`,
     "",

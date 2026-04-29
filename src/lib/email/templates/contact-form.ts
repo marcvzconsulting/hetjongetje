@@ -1,4 +1,5 @@
 import { bodyParagraph, wrapEditorialEmail } from "../layout";
+import { escapeHtml } from "../escape";
 
 type ContactFormMail = {
   fromName: string;
@@ -7,15 +8,6 @@ type ContactFormMail = {
   /** Submitter's IP (for abuse tracing only, never shown). */
   ip?: string;
 };
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function renderMessage(message: string): string {
   return message
