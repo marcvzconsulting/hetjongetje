@@ -199,6 +199,11 @@ export async function POST(request: NextRequest) {
 
     // 6. First-story celebration mail — only once per user, idempotent via
     // `firstStoryEmailSentAt`. Best-effort: never block the response.
+    //
+    // Belt-and-braces: also verify this is genuinely the user's first story.
+    // The flag was added later, so accounts that pre-date it have it null
+    // even though they already have many stories. Without this guard those
+    // users would receive the "first story" mail on their next generation.
     (async () => {
       try {
         const user = await prisma.user.findUnique({
@@ -210,6 +215,18 @@ export async function POST(request: NextRequest) {
           },
         });
         if (!user || user.firstStoryEmailSentAt) return;
+
+        const storyCount = await prisma.story.count({
+          where: { childProfile: { userId: session.user.id } },
+        });
+        if (storyCount > 1) {
+          // Pre-existing user — backfill the flag so we never re-check.
+          await prisma.user.update({
+            where: { id: session.user.id },
+            data: { firstStoryEmailSentAt: new Date() },
+          });
+          return;
+        }
 
         const storyUrl = await buildAppUrl(`/story/${story.id}`);
         const mail = buildFirstStoryMail({

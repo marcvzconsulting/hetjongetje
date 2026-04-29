@@ -14,7 +14,8 @@
     "db:push:prod": "tsx scripts/push-schema-prod.ts",
     "migrate:storage": "tsx scripts/migrate-fal-to-scaleway.ts",
     "migrate:dev-to-prod": "tsx scripts/migrate-dev-to-prod.ts",
-    "gen:spots": "tsx scripts/generate-spot-illustrations.ts"
+    "gen:spots": "tsx scripts/generate-spot-illustrations.ts",
+    "backfill:first-story": "tsx scripts/backfill-first-story-flag.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
