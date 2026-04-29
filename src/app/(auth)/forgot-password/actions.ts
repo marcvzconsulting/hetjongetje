@@ -74,11 +74,14 @@ export async function requestResetAction(formData: FormData) {
         tags: ["password-reset"],
       });
     } catch (err) {
-      // Don't leak failures to the client. Keep the reset link in logs so an
-      // admin can retrieve it manually if the mail provider is down.
+      // Don't leak failures to the client. We deliberately do NOT log the
+      // email or the reset URL: both are PII / single-use credentials that
+      // would land in Vercel runtime logs (not Sentry — those are scrubbed).
+      // If a mail provider outage means a user can't reset, an admin can
+      // generate a fresh link from /admin/users/<id>.
       console.error(
-        `[password-reset] Send failed for ${user.email}. Reset URL: ${url}`,
-        err
+        `[password-reset] Send failed for user ${user.id}`,
+        err instanceof Error ? err.message : err
       );
     }
   }

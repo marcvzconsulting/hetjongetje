@@ -24,10 +24,15 @@ export async function sendMail(opts: SendMailOpts): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
 
   if (!apiKey) {
+    // Only print the full payload in local development. In any deployed
+    // environment we'd be writing recipient emails, names, and (for
+    // reset/welcome flows) tokens straight into Vercel runtime logs.
     console.log("[email] BREVO_API_KEY not set — skipping send");
-    console.log(`[email]   to: ${opts.toName ? `${opts.toName} <${opts.to}>` : opts.to}`);
-    console.log(`[email]   subject: ${opts.subject}`);
-    console.log(`[email]   text:\n${opts.text}`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[email]   to: ${opts.toName ? `${opts.toName} <${opts.to}>` : opts.to}`);
+      console.log(`[email]   subject: ${opts.subject}`);
+      console.log(`[email]   text:\n${opts.text}`);
+    }
     return;
   }
 

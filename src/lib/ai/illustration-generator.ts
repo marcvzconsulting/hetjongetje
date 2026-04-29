@@ -79,7 +79,8 @@ export async function generateIllustrations(
         }
       : null;
 
-  if (lora) {
+  if (lora && process.env.NODE_ENV === "development") {
+    // Child name is PII and shouldn't end up in production runtime logs.
     console.log(
       `[fal.ai] Using trained LoRA for ${characterBible.childName} (trigger: ${lora.triggerWord})`
     );

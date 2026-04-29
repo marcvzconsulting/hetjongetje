@@ -73,7 +73,10 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   const prompt = `${charDescription}, standing in a sunny meadow with flowers, smiling and waving, full body portrait, looking at the viewer. ${style}`;
 
-  console.log("[preview] Prompt:", prompt);
+  // Prompt contains the child's appearance + name. Only print in dev.
+  if (process.env.NODE_ENV === "development") {
+    console.log("[preview] Prompt:", prompt);
+  }
 
   try {
     const result = await fal.subscribe("fal-ai/flux-pro/v1.1", {
