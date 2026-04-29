@@ -74,7 +74,10 @@ function LoginForm() {
         </>
       }
     >
-      <form onSubmit={handleSubmit}>
+      {/* method="post" so a pre-hydration Enter falls back to a POST (which the
+          page handler ignores) instead of a GET that puts the password in the
+          URL. Once React hydrates, handleSubmit takes over via preventDefault. */}
+      <form onSubmit={handleSubmit} method="post" action="/login">
         {justReset && !error && (
           <div
             style={{

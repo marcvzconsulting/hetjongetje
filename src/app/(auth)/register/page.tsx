@@ -86,7 +86,7 @@ export default function RegisterPage() {
         </>
       }
     >
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} method="post" action="/register">
         {error && (
           <div
             style={{
