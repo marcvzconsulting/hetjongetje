@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Spread } from "@/lib/story/spread-types";
-import { BookViewerV2 } from "@/components/v2/story/BookViewerV2";
+import { BookViewerV3 } from "@/components/v2/story/BookViewerV3";
 
 interface Props {
   storyId: string;
@@ -38,7 +38,7 @@ export function StoryPageClient({
   }
 
   return (
-    <BookViewerV2
+    <BookViewerV3
       spreads={spreads}
       childName={childName}
       childId={childId}
