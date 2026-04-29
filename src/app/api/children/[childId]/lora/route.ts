@@ -13,6 +13,7 @@ import {
   MAX_PHOTOS,
 } from "@/lib/ai/lora-training";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { loadUserGate } from "@/lib/user-gate";
 import { sendMail } from "@/lib/email/client";
 import { buildLoraReadyMail } from "@/lib/email/templates/lora-ready";
 import { buildAppUrl } from "@/lib/url";
@@ -158,6 +159,16 @@ export async function POST(req: NextRequest, { params }: Props) {
     return NextResponse.json(
       { error: "FAL_KEY niet ingesteld" },
       { status: 500 }
+    );
+  }
+
+  // Block pending/suspended users — training costs €2-3 per run, never
+  // run it for an account that hasn't been admin-approved yet.
+  const gate = await loadUserGate(session.user.id);
+  if (!gate?.isApproved) {
+    return NextResponse.json(
+      { error: "Je account moet eerst goedgekeurd worden" },
+      { status: 403 }
     );
   }
 

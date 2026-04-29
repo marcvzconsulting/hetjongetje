@@ -30,7 +30,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   profile_email_invalid: "Ongeldig emailadres",
   profile_email_taken: "Dit emailadres is al in gebruik",
   password_missing: "Vul alle wachtwoordvelden in",
-  password_too_short: "Nieuw wachtwoord moet minimaal 6 tekens zijn",
+  password_too_short: "Nieuw wachtwoord moet minimaal 10 tekens zijn",
+  password_too_long: "Nieuw wachtwoord mag maximaal 128 tekens zijn",
+  password_banned: "Dit wachtwoord komt veel voor en is niet veilig genoeg. Kies iets unieks.",
+  password_all_same: "Wachtwoord is te eenvoudig. Gebruik meer verschillende tekens.",
   password_mismatch: "De wachtwoorden komen niet overeen",
   password_wrong_current: "Huidig wachtwoord is onjuist",
   delete_missing: "Vul wachtwoord en email in om te bevestigen",
@@ -295,7 +298,7 @@ export default async function AccountPage({
         {/* Password */}
         <Section
           title="Wachtwoord wijzigen"
-          meta="Minimaal 6 tekens, kies iets dat je niet vergeet"
+          meta="Minimaal 10 tekens, kies iets dat je niet vergeet"
         >
           <form action={changePasswordAction}>
             <div>

@@ -5,6 +5,10 @@ import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildWelcomeMail } from "@/lib/email/templates/welcome";
 import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
+import {
+  validatePassword,
+  passwordPolicyMessage,
+} from "@/lib/auth/password-policy";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@onsverhaaltje.nl";
 
@@ -19,9 +23,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 6) {
+    const policy = validatePassword(password);
+    if (!policy.ok) {
       return NextResponse.json(
-        { error: "Wachtwoord moet minimaal 6 tekens zijn" },
+        { error: passwordPolicyMessage(policy.reason) },
         { status: 400 }
       );
     }

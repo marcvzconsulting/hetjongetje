@@ -24,12 +24,14 @@ export async function resetPasswordAction(formData: FormData) {
 
   const result = await consumeTokenAndSetPassword(token, newPassword);
   if (!result.ok) {
-    if (result.reason === "too_short") {
-      redirect(
-        `/reset-password?token=${encodeURIComponent(token)}&error=too_short`
-      );
+    if (result.reason === "invalid_or_expired") {
+      redirect("/reset-password?error=invalid");
     }
-    redirect("/reset-password?error=invalid");
+    // Any policy violation surfaces back to the form with the reason
+    // so the page can render a friendly message.
+    redirect(
+      `/reset-password?token=${encodeURIComponent(token)}&error=${result.reason}`
+    );
   }
 
   // Confirmation mail — best-effort, shouldn't block the redirect on failure.

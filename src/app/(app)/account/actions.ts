@@ -14,6 +14,7 @@ import {
   deleteContact,
   subscribeToNewsletter,
 } from "@/lib/email/brevo-contacts";
+import { validatePassword } from "@/lib/auth/password-policy";
 
 async function requireUser() {
   const session = await auth();
@@ -165,8 +166,9 @@ export async function changePasswordAction(formData: FormData) {
   if (!current || !next || !confirm) {
     redirect("/account?error=password_missing");
   }
-  if (next.length < 6) {
-    redirect("/account?error=password_too_short");
+  const policy = validatePassword(next);
+  if (!policy.ok) {
+    redirect(`/account?error=password_${policy.reason}`);
   }
   if (next !== confirm) {
     redirect("/account?error=password_mismatch");

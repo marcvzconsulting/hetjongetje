@@ -10,6 +10,7 @@ import {
   isOwnStorageUrl,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { loadUserGate } from "@/lib/user-gate";
 
 fal.config({ credentials: process.env.FAL_KEY! });
 
@@ -26,6 +27,16 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   if (!process.env.FAL_KEY) {
     return NextResponse.json({ error: "FAL_KEY niet ingesteld" }, { status: 500 });
+  }
+
+  // Block pending/suspended users from burning fal.ai credits before
+  // an admin has approved the account.
+  const gate = await loadUserGate(session.user.id);
+  if (!gate?.isApproved) {
+    return NextResponse.json(
+      { error: "Je account moet eerst goedgekeurd worden" },
+      { status: 403 }
+    );
   }
 
   // Rate limit BEFORE fal.ai call (costs ~€0.01 per preview)
@@ -97,6 +108,14 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
+  }
+
+  const gate = await loadUserGate(session.user.id);
+  if (!gate?.isApproved) {
+    return NextResponse.json(
+      { error: "Je account moet eerst goedgekeurd worden" },
+      { status: 403 }
+    );
   }
 
   const { childId } = await params;

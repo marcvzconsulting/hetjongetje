@@ -1,8 +1,50 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+/**
+ * Security headers applied to every response. Together they harden the
+ * app against XSS amplification, clickjacking, MIME-sniffing, downgrade
+ * attacks, and unnecessary feature exposure.
+ *
+ * The CSP is intentionally permissive on `script-src` (`unsafe-inline`
+ * + `unsafe-eval`) because Next.js inline runtime + Turbopack require
+ * it in dev and production. Tightening to a nonce-based CSP is a known
+ * future-iteration project — done here would just break the build.
+ */
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+  {
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://va.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://*.scw.cloud https://*.fal.media https://*.fal.run https://*.fal.ai",
+      "font-src 'self' data:",
+      // ws:/wss: are needed for Next.js dev hot-reload over WebSocket;
+      // harmless in production where no WS upgrade happens on these origins.
+      "connect-src 'self' ws: wss: https://api.brevo.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; "),
+  },
+];
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  async headers() {
+    return [
+      {
+        // Apply to every route, including API routes.
+        source: "/:path*",
+        headers: SECURITY_HEADERS,
+      },
+    ];
+  },
 };
 
 // Only wrap with Sentry when a DSN is configured. Keeps local dev painless

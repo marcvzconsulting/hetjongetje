@@ -134,7 +134,7 @@ export default function RegisterPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
-          placeholder="Minimaal 6 tekens"
+          placeholder="Minimaal 10 tekens"
         />
 
         <AuthField

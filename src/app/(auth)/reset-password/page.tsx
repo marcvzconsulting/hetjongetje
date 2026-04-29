@@ -12,7 +12,10 @@ const ERRORS: Record<string, string> = {
   missing_token: "Geen reset-token gevonden in de link",
   missing: "Vul beide wachtwoordvelden in",
   mismatch: "De wachtwoorden komen niet overeen",
-  too_short: "Wachtwoord moet minimaal 6 tekens zijn",
+  too_short: "Wachtwoord moet minimaal 10 tekens zijn",
+  too_long: "Wachtwoord mag maximaal 128 tekens zijn",
+  banned: "Dit wachtwoord komt veel voor en is niet veilig genoeg. Kies iets unieks.",
+  all_same: "Wachtwoord is te eenvoudig. Gebruik meer verschillende tekens.",
   invalid: "Deze reset-link is ongeldig of verlopen",
 };
 
@@ -120,7 +123,7 @@ export default async function ResetPasswordPage({
           type="password"
           required
           autoComplete="new-password"
-          placeholder="Minimaal 6 tekens"
+          placeholder="Minimaal 10 tekens"
         />
 
         <AuthField

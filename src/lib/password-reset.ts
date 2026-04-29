@@ -2,6 +2,10 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { buildAppUrl } from "@/lib/url";
+import {
+  validatePassword,
+  type PasswordPolicyReason,
+} from "@/lib/auth/password-policy";
 
 const TOKEN_BYTES = 32;
 const USER_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
@@ -69,13 +73,17 @@ export async function validateResetToken(
 export async function consumeTokenAndSetPassword(
   token: string,
   newPassword: string
-): Promise<{ ok: true; userId: string } | { ok: false; reason: string }> {
+): Promise<
+  | { ok: true; userId: string }
+  | { ok: false; reason: "invalid_or_expired" | PasswordPolicyReason }
+> {
   const validated = await validateResetToken(token);
   if (!validated) {
     return { ok: false, reason: "invalid_or_expired" };
   }
-  if (newPassword.length < 6) {
-    return { ok: false, reason: "too_short" };
+  const policy = validatePassword(newPassword);
+  if (!policy.ok) {
+    return { ok: false, reason: policy.reason };
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12);

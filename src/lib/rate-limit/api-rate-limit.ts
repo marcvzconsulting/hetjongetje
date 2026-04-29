@@ -16,6 +16,10 @@ export const RATE_LIMITS = {
   // LoRA training costs ~€2-3 per run. Tight limit; will become a paid
   // one-time unlock in the future.
   loraTrain: { limit: 2, windowSeconds: 24 * 60 * 60 }, // 2 per 24 hours
+  // Per-email password-reset to prevent mailbox flooding.
+  passwordResetEmail: { limit: 3, windowSeconds: 60 * 60 }, // 3 per hour
+  // Per-IP password-reset to prevent enumeration scanning.
+  passwordResetIp: { limit: 15, windowSeconds: 60 * 60 }, // 15 per hour
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
@@ -33,6 +37,8 @@ const FRIENDLY_LABELS: Record<RateLimitAction, string> = {
   previewGenerate: "karakter-previews",
   photoUpload: "foto-uploads",
   loraTrain: "character-trainingen",
+  passwordResetEmail: "wachtwoord-reset-aanvragen",
+  passwordResetIp: "wachtwoord-reset-aanvragen",
 };
 
 /**
