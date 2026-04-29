@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
+import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
 import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildPasswordChangedMail } from "@/lib/email/templates/password-changed";
@@ -234,9 +235,16 @@ export async function deleteAccountAction(formData: FormData) {
     redirect("/account?error=delete_wrong_password");
   }
 
-  // Remove storage objects BEFORE deleting the DB row — the cascade wipes the
-  // URLs so we'd lose track of them otherwise. Storage failures are logged
-  // but never block the account deletion itself.
+  // GDPR cleanup, in order:
+  //   1. cancel in-flight LoRA training (so we don't pay for an orphan job)
+  //   2. delete bucket assets (photos, illustrations, book PDFs, previews)
+  //   3. cascade-delete the DB row (children, stories, books, etc.)
+  //   4. wipe Brevo contact (newsletter / transactional)
+  //
+  // Note on fal.ai: trained LoRA model files cannot be deleted via the
+  // public API. We drop the URL from our DB during the cascade so the
+  // file is no longer referenced; fal.ai eventually garbage-collects.
+  await cancelInProgressLoraJobs(userId);
   const cleanup = await deleteUserStorage(userId);
   if (cleanup.error) {
     console.error(

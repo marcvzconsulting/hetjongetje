@@ -138,6 +138,37 @@ export async function cancelLoraTraining(requestId: string): Promise<void> {
 }
 
 /**
+ * Cancel every in-progress LoRA training job belonging to the given user.
+ * Used during account deletion (both self-delete and admin-delete) so we
+ * stop paying fal.ai for a job that's about to be orphaned.
+ *
+ * fal.ai does not expose a "delete trained LoRA file" API — once a model
+ * is on their CDN we can't actively remove it. We do, however, delete
+ * the loraUrl reference from our DB during the cascade so nobody fetches
+ * it any longer.
+ */
+export async function cancelInProgressLoraJobs(userId: string): Promise<void> {
+  try {
+    const { prisma } = await import("@/lib/db");
+    const inProgress = await prisma.childProfile.findMany({
+      where: {
+        userId,
+        loraStatus: "training",
+        loraTrainingRequestId: { not: null },
+      },
+      select: { id: true, loraTrainingRequestId: true },
+    });
+    for (const child of inProgress) {
+      if (child.loraTrainingRequestId) {
+        await cancelLoraTraining(child.loraTrainingRequestId);
+      }
+    }
+  } catch (err) {
+    console.warn("[lora] cancelInProgressLoraJobs (best-effort):", err);
+  }
+}
+
+/**
  * Delete all stored training inputs for a child (photos + zip). Returns
  * the keys that failed to delete. Does not throw.
  */
