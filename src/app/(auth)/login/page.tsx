@@ -8,6 +8,7 @@ import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
+import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
 
 function LoginForm() {
   const router = useRouter();
@@ -74,6 +75,9 @@ function LoginForm() {
         </>
       }
     >
+      <GoogleSignInButton />
+      <AuthDivider />
+
       {/* method="post" so a pre-hydration Enter falls back to a POST (which the
           page handler ignores) instead of a GET that puts the password in the
           URL. Once React hydrates, handleSubmit takes over via preventDefault. */}

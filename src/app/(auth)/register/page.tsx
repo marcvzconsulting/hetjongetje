@@ -8,6 +8,7 @@ import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
+import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -86,6 +87,9 @@ export default function RegisterPage() {
         </>
       }
     >
+      <GoogleSignInButton label="Aanmelden met Google" />
+      <AuthDivider />
+
       <form onSubmit={handleSubmit} method="post" action="/register">
         {error && (
           <div
