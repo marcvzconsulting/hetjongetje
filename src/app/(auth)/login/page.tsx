@@ -9,11 +9,13 @@ import { EBtn } from "@/components/v2";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
 import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
+import { requestMagicLinkAction } from "./actions";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justReset = searchParams.get("reset") === "1";
+  const magicSent = searchParams.get("magic") === "sent";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -77,6 +79,23 @@ function LoginForm() {
     >
       <GoogleSignInButton />
       <AuthDivider />
+
+      {magicSent && (
+        <div
+          style={{
+            background: "rgba(201, 169, 97, 0.14)",
+            padding: 14,
+            fontSize: 14,
+            color: V2.ink,
+            marginBottom: 20,
+            fontFamily: V2.body,
+            borderLeft: `2px solid ${V2.goldDeep}`,
+          }}
+        >
+          ✓ Check je inbox. Als het emailadres bij ons bekend is, hebben
+          we een login-link gestuurd. De link werkt 15 minuten.
+        </div>
+      )}
 
       {/* method="post" so a pre-hydration Enter falls back to a POST (which the
           page handler ignores) instead of a GET that puts the password in the
@@ -147,6 +166,31 @@ function LoginForm() {
         >
           {loading ? "Bezig met inloggen…" : "Inloggen →"}
         </EBtn>
+      </form>
+
+      {/* Passwordless alternative. Server action receives the email field
+          and posts a magic-link. Submitting this form is the only way to
+          log in as an admin (password login is blocked for that role). */}
+      <form action={requestMagicLinkAction} style={{ marginTop: 18 }}>
+        <input type="hidden" name="email" value={email} />
+        <button
+          type="submit"
+          disabled={!email}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: email ? "pointer" : "default",
+            opacity: email ? 1 : 0.5,
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+          }}
+        >
+          Liever geen wachtwoord typen? Stuur me een login-link.
+        </button>
       </form>
     </AuthShell>
   );

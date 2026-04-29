@@ -10,6 +10,7 @@ import { sendMail } from "@/lib/email/client";
 import { buildWelcomeMail } from "@/lib/email/templates/welcome";
 import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
 import { buildAppUrl } from "@/lib/url";
+import { consumeMagicLinkToken } from "@/lib/magic-link";
 
 // Constant-time decoy hash for the "user not found" path. Without this,
 // an unknown email returns immediately while a known email triggers a
@@ -118,12 +119,47 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user || !passwordMatch) return null;
 
+        // Admins are blocked from password login as a 2FA-style defence.
+        // They must use Google OAuth or a magic-link instead — both
+        // require live access to the admin's mailbox, so a leaked
+        // password alone is no longer enough to take over an admin
+        // account. Same null response as wrong-password to avoid
+        // surfacing the role to a probing attacker.
+        if (user.role === "admin") return null;
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        };
+      },
+    }),
+    // Passwordless ("magic-link") sign-in. The token itself is generated
+    // and emailed by `requestMagicLinkAction`; this provider just claims
+    // the token and returns the matching user. Token validation is
+    // atomic and single-use inside `consumeMagicLinkToken`.
+    Credentials({
+      id: "magic-link",
+      name: "magic-link",
+      credentials: { token: { label: "Token", type: "text" } },
+      async authorize(credentials) {
+        const token = (credentials?.token as string | undefined) ?? "";
+        if (!token) return null;
+        const userId = await consumeMagicLinkToken(token);
+        if (!userId) return null;
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return null;
+
         await prisma.user.update({
           where: { id: user.id },
           data: {
             lastLoginAt: new Date(),
-            // Admins bypass the pending-approval gate. Self-heal any admin
-            // account whose status was left at the default "pending".
             ...(user.role === "admin" && user.status !== "approved"
               ? { status: "approved" }
               : {}),

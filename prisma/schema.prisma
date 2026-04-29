@@ -32,6 +32,7 @@ model User {
   adminNotes         AdminNote[]    @relation("NotesAboutUser")
   authoredNotes      AdminNote[]    @relation("NotesByAdmin")
   resetTokens        PasswordResetToken[]
+  magicLinkTokens    MagicLinkToken[]
 
   // Admin views filter on these constantly (status pill, role split,
   // recent-signups sort, last-login report). Cheap defence against
@@ -81,6 +82,23 @@ model NewsletterSignup {
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@map("newsletter_signups")
+}
+
+/// One-shot tokens for passwordless ("magic-link") login. Raw token in the
+/// email link; only the SHA-256 hash is stored. Lifetime is short (15 min)
+/// because the email itself is the second factor.
+model MagicLinkToken {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("magic_link_tokens")
 }
 
 /// Tokens for password-reset flow (self-service or admin-initiated).
