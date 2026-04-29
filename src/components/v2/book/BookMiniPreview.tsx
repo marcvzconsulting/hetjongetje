@@ -258,7 +258,7 @@ function MiniSpreadRender({ spread }: { spread: MiniSpread }) {
                 marginBottom: 8,
               }}
             >
-              VERZAMELD 2026
+              VERZAMELD MMXXVI
             </div>
             <div
               style={{

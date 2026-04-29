@@ -601,7 +601,7 @@ function BookSection() {
                 letterSpacing: "0.2em",
               }}
             >
-              2026
+              MMXXVI
             </div>
           </div>
         </div>

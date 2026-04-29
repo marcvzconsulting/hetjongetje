@@ -940,7 +940,7 @@ function CoverPreview({
             opacity: 0.85,
           }}
         >
-          VERZAMELD 2026
+          VERZAMELD MMXXVI
         </div>
         <div
           style={{
