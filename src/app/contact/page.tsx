@@ -3,6 +3,13 @@ import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
 import { submitContactFormAction } from "./actions";
 
+export const metadata = {
+  title: "Contact",
+  description:
+    "Vraag of opmerking over Ons Verhaaltje? Stuur een bericht — we lezen alles zelf en antwoorden binnen vijf werkdagen.",
+  alternates: { canonical: "/contact" },
+};
+
 type SearchParams = Promise<{ sent?: string; error?: string }>;
 
 const ERROR_MESSAGES: Record<string, string> = {

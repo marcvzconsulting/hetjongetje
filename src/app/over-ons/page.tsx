@@ -5,6 +5,13 @@ import {
 } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
 
+export const metadata = {
+  title: "Over ons",
+  description:
+    "Wie er achter Ons Verhaaltje zit, en waarom we deze dienst hebben gemaakt.",
+  alternates: { canonical: "/over-ons" },
+};
+
 export default function OverOnsPage() {
   return (
     <ContentPage

@@ -4,6 +4,13 @@ import {
   StubNote,
 } from "@/components/v2/landing/ContentPage";
 
+export const metadata = {
+  title: "Veelgestelde vragen",
+  description:
+    "Antwoorden op de vragen die ouders ons het vaakst stellen — over privacy, abonnement, het printboek en het maken van een verhaal.",
+  alternates: { canonical: "/veelgestelde-vragen" },
+};
+
 export default function VeelgesteldeVragenPage() {
   return (
     <ContentPage

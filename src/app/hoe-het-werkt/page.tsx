@@ -4,6 +4,13 @@ import {
   StubNote,
 } from "@/components/v2/landing/ContentPage";
 
+export const metadata = {
+  title: "Hoe het werkt",
+  description:
+    "Van profiel naar voorleesverhaal in drie stappen — naam en knuffel invullen, vertellen wat er speelt, en wij maken er een verhaal van.",
+  alternates: { canonical: "/hoe-het-werkt" },
+};
+
 export default function HoeHetWerktPage() {
   return (
     <ContentPage
