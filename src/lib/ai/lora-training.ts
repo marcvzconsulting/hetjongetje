@@ -1,6 +1,7 @@
 import { fal } from "@fal-ai/client";
 import JSZip from "jszip";
 import { uploadBuffer, deleteObjects } from "@/lib/storage/scaleway";
+import { assertSafeFetchUrl } from "@/lib/storage/url-guard";
 
 // Configure fal (idempotent — safe to call at import time).
 if (process.env.FAL_KEY) {
@@ -40,7 +41,8 @@ export async function buildTrainingZip(
 ): Promise<string> {
   const zip = new JSZip();
   for (let i = 0; i < photoUrls.length; i++) {
-    const res = await fetch(photoUrls[i]);
+    const safe = assertSafeFetchUrl(photoUrls[i]);
+    const res = await fetch(safe);
     if (!res.ok) throw new Error(`Kon foto ${i + 1} niet ophalen`);
     const ab = await res.arrayBuffer();
     const url = photoUrls[i];

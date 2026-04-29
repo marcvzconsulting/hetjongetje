@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
+import { assertSafeFetchUrl } from "./url-guard";
 
 const REGION = process.env.SCALEWAY_REGION || "nl-ams";
 const ENDPOINT = `https://s3.${REGION}.scw.cloud`;
@@ -44,13 +45,18 @@ function getClient(): S3Client {
 /**
  * Download an image from a source URL (e.g. fal.ai) and upload it to our
  * Scaleway bucket. Returns the permanent public URL.
+ *
+ * The URL is validated against an allowlist before fetching to prevent
+ * SSRF — an attacker (or a corrupted upstream response) cannot make this
+ * function fetch arbitrary hosts.
  */
 export async function uploadFromUrl(
   sourceUrl: string,
   key: string,
   contentType?: string
 ): Promise<string> {
-  const response = await fetch(sourceUrl);
+  const safeUrl = assertSafeFetchUrl(sourceUrl);
+  const response = await fetch(safeUrl);
   if (!response.ok) {
     throw new Error(
       `Download van bronafbeelding mislukt (${response.status}): ${sourceUrl}`

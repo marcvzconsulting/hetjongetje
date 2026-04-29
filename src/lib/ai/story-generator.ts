@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { STORY_SETTINGS, ADVENTURE_TYPES, STORY_MOODS, OCCASIONS, type StorySetting, type AdventureType, type StoryMood, type Occasion } from "./prompts/story-request";
 import { calculateAge } from "@/lib/utils/age";
+import {
+  sanitizePromptShort,
+  sanitizePromptDescription,
+} from "./sanitize";
 
 const anthropic = new Anthropic();
 
@@ -130,7 +134,7 @@ export function buildCharacterDescription(bible: CharacterBible): string {
   if (bible.hasFreckles) parts.push("prominently freckled face with many dark freckle spots across nose and cheeks");
 
   if (bible.mainCharacterDescription) {
-    parts.push(bible.mainCharacterDescription);
+    parts.push(sanitizePromptDescription(bible.mainCharacterDescription));
   }
 
   return parts.join(", ");
@@ -141,19 +145,25 @@ export function buildSideCharacterDescriptions(bible: CharacterBible): string {
 
   if (bible.pets?.length) {
     for (const pet of bible.pets) {
-      const extra = pet.description ? `, ${pet.description}` : "";
+      const name = sanitizePromptShort(pet.name);
+      const type = sanitizePromptShort(pet.type);
+      const desc = sanitizePromptDescription(pet.description);
+      const extra = desc ? `, ${desc}` : "";
       parts.push(
-        `${pet.name} the ${pet.type}${extra}: always the same color and size in every illustration`
+        `${name} the ${type}${extra}: always the same color and size in every illustration`
       );
     }
   }
 
   if (bible.friends?.length) {
     for (const friend of bible.friends) {
-      const rel = friend.relationship ? ` (${friend.relationship})` : "";
-      const extra = friend.description ? `, ${friend.description}` : "";
+      const name = sanitizePromptShort(friend.name);
+      const relRaw = sanitizePromptShort(friend.relationship);
+      const rel = relRaw ? ` (${relRaw})` : "";
+      const desc = sanitizePromptDescription(friend.description);
+      const extra = desc ? `, ${desc}` : "";
       parts.push(
-        `${friend.name}${rel}${extra}: must look identical in every illustration, consistent hair, clothing and features`
+        `${name}${rel}${extra}: must look identical in every illustration, consistent hair, clothing and features`
       );
     }
   }
@@ -186,10 +196,86 @@ export function buildIllustrationStyle(bible: CharacterBible): string {
 
 // —— Hoofdfunctie: verhaal genereren ————————————————————————————————
 
+/**
+ * Return a copy of the bible with every parent-supplied free-text field
+ * sanitized so it's safe to splice into LLM prompts. Static enums
+ * (gender, mainCharacterType, dateOfBirth) pass through untouched.
+ */
+function sanitizeBible(bible: CharacterBible): CharacterBible {
+  return {
+    ...bible,
+    childName: sanitizePromptShort(bible.childName),
+    hairColor: sanitizePromptShort(bible.hairColor),
+    hairStyle: sanitizePromptShort(bible.hairStyle),
+    eyeColor: sanitizePromptShort(bible.eyeColor),
+    skinColor: sanitizePromptShort(bible.skinColor),
+    interests: (bible.interests ?? []).map(sanitizePromptShort).filter(Boolean),
+    pets: bible.pets?.map((p) => ({
+      name: sanitizePromptShort(p.name),
+      type: sanitizePromptShort(p.type),
+      description: p.description
+        ? sanitizePromptDescription(p.description)
+        : undefined,
+    })),
+    friends: bible.friends?.map((f) => ({
+      name: sanitizePromptShort(f.name),
+      relationship: f.relationship
+        ? sanitizePromptShort(f.relationship)
+        : undefined,
+      description: f.description
+        ? sanitizePromptDescription(f.description)
+        : undefined,
+    })),
+    favoriteThings: bible.favoriteThings
+      ? {
+          color: sanitizePromptShort(bible.favoriteThings.color),
+          food: sanitizePromptShort(bible.favoriteThings.food),
+          toy: sanitizePromptShort(bible.favoriteThings.toy),
+          place: sanitizePromptShort(bible.favoriteThings.place),
+        }
+      : undefined,
+    fears: bible.fears?.map(sanitizePromptShort).filter(Boolean),
+    mainCharacterDescription: bible.mainCharacterDescription
+      ? sanitizePromptDescription(bible.mainCharacterDescription)
+      : undefined,
+    // approvedCharacterPrompt is reviewed by an admin before use, so it
+    // gets the long-text treatment but stays editable. Still strip control
+    // chars to harden against accidental newlines or copy-paste artefacts.
+    approvedCharacterPrompt: bible.approvedCharacterPrompt
+      ? sanitizePromptDescription(bible.approvedCharacterPrompt)
+      : undefined,
+    previousAdventures: bible.previousAdventures?.map((a) => ({
+      title: sanitizePromptShort(a.title),
+      setting: sanitizePromptShort(a.setting),
+      summary: sanitizePromptDescription(a.summary),
+    })),
+    // loraTriggerWord is generated server-side, so a strict short cap is
+    // enough — no description treatment needed.
+    loraTriggerWord: bible.loraTriggerWord
+      ? sanitizePromptShort(bible.loraTriggerWord)
+      : undefined,
+  };
+}
+
+function sanitizeRequest(request: StoryRequest): StoryRequest {
+  return {
+    ...request,
+    companion: request.companion
+      ? sanitizePromptShort(request.companion)
+      : undefined,
+    specialDetail: request.specialDetail
+      ? sanitizePromptDescription(request.specialDetail)
+      : undefined,
+  };
+}
+
 export async function generateStory(
-  characterBible: CharacterBible,
-  request: StoryRequest
+  rawBible: CharacterBible,
+  rawRequest: StoryRequest
 ): Promise<GeneratedStory> {
+  const characterBible = sanitizeBible(rawBible);
+  const request = sanitizeRequest(rawRequest);
+
   const age = calculateAge(characterBible.dateOfBirth) ?? 1;
   const charDescription = buildCharacterDescription(characterBible);
   const styleHint = buildIllustrationStyle(characterBible);
