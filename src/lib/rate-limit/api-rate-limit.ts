@@ -20,6 +20,12 @@ export const RATE_LIMITS = {
   passwordResetEmail: { limit: 3, windowSeconds: 60 * 60 }, // 3 per hour
   // Per-IP password-reset to prevent enumeration scanning.
   passwordResetIp: { limit: 15, windowSeconds: 60 * 60 }, // 15 per hour
+  // Brute-force defence on login: caps attempts per email address. Generous
+  // enough for normal misclicks; tight enough that an offline-cracked
+  // candidate list never gets to be tried online.
+  loginAttemptByEmail: { limit: 10, windowSeconds: 15 * 60 }, // 10 per 15 min
+  // Same defence at the IP layer in case an attacker rotates targets.
+  loginAttemptByIp: { limit: 30, windowSeconds: 15 * 60 }, // 30 per 15 min
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
@@ -39,6 +45,8 @@ const FRIENDLY_LABELS: Record<RateLimitAction, string> = {
   loraTrain: "character-trainingen",
   passwordResetEmail: "wachtwoord-reset-aanvragen",
   passwordResetIp: "wachtwoord-reset-aanvragen",
+  loginAttemptByEmail: "login-pogingen",
+  loginAttemptByIp: "login-pogingen",
 };
 
 /**

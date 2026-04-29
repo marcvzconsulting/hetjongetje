@@ -2,6 +2,8 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { rateLimit } from "@/lib/rate-limit/rate-limit";
+import { RATE_LIMITS } from "@/lib/rate-limit/api-rate-limit";
 
 // Constant-time decoy hash for the "user not found" path. Without this,
 // an unknown email returns immediately while a known email triggers a
@@ -21,8 +23,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Wachtwoord", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // Brute-force defence: limit attempts per IP and per email address
+        // BEFORE we hit the database or run bcrypt. A blocked attempt
+        // returns null — same response as a wrong password — so the
+        // attacker can't tell rate-limits from real failures.
+        const rawIp =
+          request?.headers.get("x-forwarded-for") ??
+          request?.headers.get("x-real-ip") ??
+          "unknown";
+        const ip = rawIp.split(",")[0].trim() || "unknown";
+        const email = (credentials.email as string).toLowerCase().trim();
+
+        const ipLimit = await rateLimit({
+          key: `login-attempt-ip:${ip}`,
+          ...RATE_LIMITS.loginAttemptByIp,
+        });
+        if (!ipLimit.allowed) return null;
+        const emailLimit = await rateLimit({
+          key: `login-attempt-email:${email}`,
+          ...RATE_LIMITS.loginAttemptByEmail,
+        });
+        if (!emailLimit.allowed) return null;
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
