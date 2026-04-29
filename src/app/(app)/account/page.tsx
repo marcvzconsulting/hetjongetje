@@ -76,6 +76,7 @@ export default async function AccountPage({
       ]}
     >
       <div
+        className="app-page-pad"
         style={{
           maxWidth: 820,
           margin: "0 auto",
@@ -561,6 +562,7 @@ function FieldRow({
 }) {
   return (
     <div
+      className="app-form-row"
       style={{
         display: "grid",
         gridTemplateColumns: threeTwo

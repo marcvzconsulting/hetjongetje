@@ -49,7 +49,27 @@ export function AppShell({
         minHeight: "100vh",
       }}
     >
+      {/* Mobile responsive overrides for any logged-in page that uses AppShell.
+          Pages opt in by adding the matching classnames. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+@media (max-width: 640px) {
+  .app-nav-pad { padding: 14px 16px !important; gap: 10px !important; }
+  .app-nav-links { gap: 14px !important; font-size: 13px !important; }
+  .app-page-pad { padding: 24px 16px 64px !important; }
+  .app-section-pad { padding: 32px 16px !important; }
+  .app-form-row { grid-template-columns: 1fr !important; gap: 0 !important; }
+  .app-section-h2 { font-size: 28px !important; }
+  .app-child-header-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .app-actions-row { flex-direction: column !important; align-items: stretch !important; }
+  .app-actions-row > * { width: 100% !important; }
+}
+`,
+        }}
+      />
       <nav
+        className="app-nav-pad"
         style={{
           display: "flex",
           alignItems: "center",
@@ -64,6 +84,7 @@ export function AppShell({
           <Logo size={20} />
         </Link>
         <div
+          className="app-nav-links"
           style={{
             display: "flex",
             alignItems: "center",

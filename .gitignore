@@ -56,3 +56,4 @@ next-env.d.ts
 
 # fal.ai spot variant candidates — regenerate with `pnpm gen:spots`
 /public/images/spot-candidates/
+cloudflared.exe

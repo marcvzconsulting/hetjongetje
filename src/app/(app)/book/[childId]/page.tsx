@@ -88,6 +88,7 @@ export default async function BookPage({ params }: Props) {
     >
       {/* Breadcrumb */}
       <div
+        className="app-section-pad"
         style={{
           maxWidth: 1200,
           margin: "0 auto",
@@ -111,6 +112,7 @@ export default async function BookPage({ params }: Props) {
 
       {/* Nacht hero */}
       <section
+        className="app-section-pad"
         style={{
           background: V2.night,
           color: V2.paper,

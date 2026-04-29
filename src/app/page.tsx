@@ -20,6 +20,7 @@ export default function Home() {
         background: V2.paper,
       }}
     >
+      <ResponsiveStyles />
       <Nav />
       <Hero />
       <StoryPreviewSection />
@@ -34,11 +35,62 @@ export default function Home() {
   );
 }
 
+/**
+ * Mobile responsive overrides. Inline styles take precedence so we use
+ * `!important` to make these rules win on small viewports. Scoped to the
+ * landing via `lp-` prefixed classnames added to specific elements below.
+ */
+function ResponsiveStyles() {
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: `
+@media (max-width: 760px) {
+  .lp-section { padding-left: 20px !important; padding-right: 20px !important; }
+  .lp-section-tall { padding-top: 64px !important; padding-bottom: 64px !important; }
+  .lp-hero-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
+  .lp-2col { grid-template-columns: 1fr !important; gap: 28px !important; }
+  .lp-2col-steps { grid-template-columns: 1fr !important; gap: 36px !important; }
+  .lp-step-row { grid-template-columns: 56px 1fr !important; gap: 16px !important; }
+  .lp-step-num { font-size: 32px !important; }
+  .lp-section-h2 { font-size: 36px !important; }
+  .lp-pricing {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    background: transparent !important;
+    border: none !important;
+  }
+  .lp-pricing-card {
+    border: 1px solid #e2d7c2 !important;
+  }
+  .lp-pricing-price { font-size: 48px !important; }
+  .lp-pricing-card-pad { padding: 28px !important; }
+  .lp-book-mock { width: 220px !important; height: 300px !important; }
+  .lp-nav-pad { padding: 16px 20px !important; }
+  .lp-nav-mobile-hide { display: none !important; }
+  .lp-nav-gap { gap: 14px !important; }
+  .lp-footer-pad { padding: 36px 20px !important; }
+  .lp-footer-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+  .lp-footer-links {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 14px 20px !important;
+    justify-content: stretch !important;
+    align-self: stretch !important;
+  }
+}
+`,
+      }}
+    />
+  );
+}
+
 // ── Nav ────────────────────────────────────────────────────────────
 
 function Nav() {
   return (
     <nav
+      className="lp-nav-pad"
       style={{
         display: "flex",
         alignItems: "center",
@@ -51,6 +103,7 @@ function Nav() {
         <Logo size={22} />
       </Link>
       <div
+        className="lp-nav-gap"
         style={{
           display: "flex",
           gap: 36,
@@ -60,13 +113,13 @@ function Nav() {
           fontWeight: 500,
         }}
       >
-        <Link href="/hoe-het-werkt" style={{ color: V2.ink, textDecoration: "none" }}>
+        <Link href="/hoe-het-werkt" className="lp-nav-mobile-hide" style={{ color: V2.ink, textDecoration: "none" }}>
           Hoe het werkt
         </Link>
-        <Link href="#voorbeeld" style={{ color: V2.ink, textDecoration: "none" }}>
+        <Link href="#voorbeeld" className="lp-nav-mobile-hide" style={{ color: V2.ink, textDecoration: "none" }}>
           Voorbeeld
         </Link>
-        <Link href="#prijs" style={{ color: V2.ink, textDecoration: "none" }}>
+        <Link href="#prijs" className="lp-nav-mobile-hide" style={{ color: V2.ink, textDecoration: "none" }}>
           Prijs
         </Link>
         <Link href="/login" style={{ color: V2.ink, textDecoration: "none" }}>
@@ -86,9 +139,10 @@ function Hero() {
   const vignette =
     "radial-gradient(ellipse 68% 74% at 50% 47%, black 52%, transparent 92%)";
   return (
-    <section style={{ padding: "96px 48px 80px" }}>
+    <section className="lp-section lp-section-tall" style={{ padding: "96px 48px 80px" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div
+          className="lp-hero-grid"
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 0.9fr)",
@@ -200,6 +254,7 @@ async function StoryPreviewSection() {
   return (
     <section
       id="voorbeeld"
+      className="lp-section"
       style={{
         padding: "48px 48px 96px",
         borderTop: `1px solid ${V2.paperShade}`,
@@ -266,6 +321,7 @@ function HowItGoes() {
   ];
   return (
     <section
+      className="lp-section lp-section-tall"
       style={{
         padding: "96px 48px",
         borderTop: `1px solid ${V2.paperShade}`,
@@ -273,6 +329,7 @@ function HowItGoes() {
     >
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div
+          className="lp-2col-steps"
           style={{
             display: "grid",
             gridTemplateColumns: "minmax(0, 360px) minmax(0, 1fr)",
@@ -302,6 +359,7 @@ function HowItGoes() {
             {steps.map((s) => (
               <div
                 key={s.n}
+                className="lp-step-row"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "80px 1fr",
@@ -311,6 +369,7 @@ function HowItGoes() {
                 }}
               >
                 <div
+                  className="lp-step-num"
                   style={{
                     fontFamily: V2.display,
                     fontStyle: "italic",
@@ -362,6 +421,7 @@ function HowItGoes() {
 function NightHero() {
   return (
     <section
+      className="lp-section lp-section-tall"
       style={{
         padding: "120px 48px",
         background: V2.night,
@@ -391,6 +451,7 @@ function NightHero() {
           {SAMPLE_NAME}.
         </h2>
         <div
+          className="lp-2col"
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
@@ -435,8 +496,9 @@ function NightHero() {
 
 function BookSection() {
   return (
-    <section style={{ padding: "96px 48px" }}>
+    <section className="lp-section lp-section-tall" style={{ padding: "96px 48px" }}>
       <div
+        className="lp-2col"
         style={{
           maxWidth: 1200,
           margin: "0 auto",
@@ -500,6 +562,7 @@ function BookSection() {
         </div>
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div
+            className="lp-book-mock"
             style={{
               width: 280,
               height: 380,
@@ -652,6 +715,7 @@ function Pricing() {
   return (
     <section
       id="prijs"
+      className="lp-section lp-section-tall"
       style={{
         padding: "96px 48px",
         background: V2.paperDeep,
@@ -680,6 +744,7 @@ function Pricing() {
           </h2>
         </div>
         <div
+          className="lp-pricing"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -693,10 +758,11 @@ function Pricing() {
             return (
               <div
                 key={p.t}
+                className="lp-pricing-card lp-pricing-card-pad"
                 style={{
                   padding: 40,
                   position: "relative",
-                  background: featured ? V2.night : "transparent",
+                  background: featured ? V2.night : V2.paper,
                   color: featured ? V2.paper : V2.ink,
                   borderRight:
                     i < plans.length - 1
@@ -735,6 +801,7 @@ function Pricing() {
                   {p.t}
                 </div>
                 <div
+                  className="lp-pricing-price"
                   style={{
                     fontFamily: V2.display,
                     fontSize: 64,
@@ -816,7 +883,7 @@ function Pricing() {
 
 function Testimonial() {
   return (
-    <section style={{ padding: "120px 48px" }}>
+    <section className="lp-section lp-section-tall" style={{ padding: "120px 48px" }}>
       <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
         <Kicker>Ouders vertellen</Kicker>
         <blockquote
@@ -882,6 +949,7 @@ function Testimonial() {
 function SlotCTA() {
   return (
     <section
+      className="lp-section lp-section-tall"
       style={{
         padding: "120px 48px",
         background: V2.night,

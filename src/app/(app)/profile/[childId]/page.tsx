@@ -43,6 +43,7 @@ export default async function ProfilePage({ params }: Props) {
       ]}
     >
       <div
+        className="app-page-pad"
         style={{
           maxWidth: 820,
           margin: "0 auto",

@@ -40,6 +40,7 @@ export function EBtn({
   const base: CSSProperties = {
     display: "inline-flex",
     alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     padding: `${padV}px ${padH}px`,
     borderRadius: 2,
@@ -51,6 +52,8 @@ export function EBtn({
     textDecoration: "none",
     border: "none",
     transition: "background .15s, color .15s",
+    // 40px tap-target minimum (WCAG 2.5.5 / Apple HIG).
+    minHeight: 40,
     ...style,
   };
 

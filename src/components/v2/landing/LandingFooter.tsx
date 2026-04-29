@@ -6,6 +6,7 @@ import { FooterNewsletter } from "./FooterNewsletter";
 export function LandingFooter() {
   return (
     <footer
+      className="lp-footer-pad"
       style={{
         padding: "48px 48px",
         borderTop: `1px solid ${V2.paperShade}`,
@@ -15,6 +16,7 @@ export function LandingFooter() {
       }}
     >
       <div
+        className="lp-footer-grid"
         style={{
           maxWidth: 1200,
           margin: "0 auto",
@@ -30,6 +32,7 @@ export function LandingFooter() {
           <FooterNewsletter />
         </div>
         <div
+          className="lp-footer-links"
           style={{
             display: "flex",
             gap: 32,

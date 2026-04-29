@@ -30,7 +30,7 @@ export default async function DashboardPage() {
           { label: "Account", href: "/account" },
         ]}
       >
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "80px 40px" }}>
+        <div className="app-page-pad" style={{ maxWidth: 680, margin: "0 auto", padding: "80px 40px" }}>
           {gate.status === "suspended" ? (
             <WaitingCard
               kicker="Account opgeschort"
@@ -87,6 +87,7 @@ export default async function DashboardPage() {
     >
       {/* Hero strip */}
       <section
+        className="app-section-pad"
         style={{
           background: V2.night,
           color: V2.paper,
@@ -150,6 +151,7 @@ export default async function DashboardPage() {
 
       {/* Child list / empty state */}
       <section
+        className="app-section-pad"
         style={{
           maxWidth: 1200,
           margin: "0 auto",
@@ -267,7 +269,7 @@ function ChildSectionHeader({
           </h2>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <div className="app-actions-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <EBtn kind="primary" size="sm" href={`/generate/${childId}`}>
           + Nieuw verhaal
         </EBtn>
