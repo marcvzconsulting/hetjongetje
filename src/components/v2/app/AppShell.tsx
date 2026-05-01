@@ -109,8 +109,13 @@ export function AppShell({
           ))}
 
           {credits !== null && credits !== undefined && (
-            <span
-              title="Aantal verhalen dat je nog kunt maken"
+            <Link
+              href="/credits"
+              title={
+                credits > 0
+                  ? "Aantal verhalen dat je nog kunt maken — klik om bij te kopen"
+                  : "Geen credits meer — klik om bij te kopen"
+              }
               style={{
                 fontFamily: V2.ui,
                 fontSize: 12,
@@ -123,10 +128,11 @@ export function AppShell({
                 }`,
                 color: credits > 0 ? V2.inkMute : V2.ink,
                 background: credits > 0 ? "transparent" : "rgba(196,165,168,0.15)",
+                textDecoration: "none",
               }}
             >
               {credits} {showCreditsLabel && (credits === 1 ? "verhaal over" : "verhalen over")}
-            </span>
+            </Link>
           )}
 
           <SignOutButtonV2 />

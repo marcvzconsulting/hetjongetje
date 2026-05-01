@@ -42,3 +42,41 @@ export function centsToMollieAmount(cents: number): string {
   const remainder = cents % 100;
   return `${euros}.${remainder.toString().padStart(2, "0")}`;
 }
+
+/**
+ * Mollie payment statuses we care about. The full set is larger but for
+ * order-state transitions these four cover everything: anything not in
+ * "paid" stays in pending/cancelled/expired/failed.
+ */
+export type MolliePaymentStatus =
+  | "open"
+  | "pending"
+  | "authorized"
+  | "paid"
+  | "expired"
+  | "failed"
+  | "canceled";
+
+/**
+ * Map a Mollie payment status to our internal Order.status values. We
+ * intentionally collapse intermediate states ("open", "pending",
+ * "authorized") to "pending" — the user sees a single waiting state until
+ * the money truly lands.
+ */
+export function mollieStatusToOrderStatus(status: string): string {
+  switch (status as MolliePaymentStatus) {
+    case "paid":
+      return "paid";
+    case "expired":
+      return "expired";
+    case "canceled":
+      return "cancelled";
+    case "failed":
+      return "failed";
+    case "open":
+    case "pending":
+    case "authorized":
+    default:
+      return "pending";
+  }
+}

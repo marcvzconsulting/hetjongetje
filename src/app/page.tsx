@@ -6,6 +6,7 @@ import { StoryPreviewV2 } from "@/components/v2/landing/StoryPreviewV2";
 import { LandingFooter } from "@/components/v2/landing/LandingFooter";
 import { RotatingName } from "@/components/v2/landing/RotatingName";
 import { fetchLandingPreviews } from "@/lib/story/landing-previews";
+import { prisma } from "@/lib/db";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
@@ -675,43 +676,93 @@ function BookSection() {
 
 // ── Prijs ──────────────────────────────────────────────────────────
 
-function Pricing() {
-  const plans = [
-    {
-      t: "Per maand",
-      p: "€7,95",
-      u: "per maand",
-      f: [
-        "8 verhalen per maand",
-        "Verhalen blijven bewaard",
-        "Meerdere kinderen",
-        "Opzeggen kan altijd",
-      ],
-    },
-    {
-      t: "Per jaar",
-      p: "€79",
-      u: "per jaar, bespaar €16",
-      badge: "meest gekozen",
-      f: [
-        "Onbeperkt verhalen",
-        "Verhalen blijven bewaard",
-        "Meerdere kinderen",
-        "€10 korting op het boekje",
-      ],
-      featured: true,
-    },
-    {
+function eurosFromCents(cents: number): string {
+  // Show whole euros without decimals when there are none, "€7,95" otherwise.
+  // Matches the original landing copy's mix of €79 and €7,95.
+  const s = (cents / 100).toFixed(2).replace(".", ",");
+  return s.endsWith(",00") ? s.slice(0, -3) : s;
+}
+
+async function Pricing() {
+  // Pull subscription plans + a representative credit pack from the DB so
+  // /admin/pricing can tune the landing without a code deploy. Falls back
+  // to hardcoded copy if the DB isn't reachable yet (during a fresh
+  // deploy or migration).
+  let subscriptionRows: Awaited<ReturnType<typeof prisma.subscriptionPlan.findMany>> = [];
+  let smallestCreditPack: Awaited<ReturnType<typeof prisma.creditPack.findFirst>> = null;
+  let bulkCreditPack: Awaited<ReturnType<typeof prisma.creditPack.findFirst>> = null;
+  try {
+    const [subs, single, bulk] = await Promise.all([
+      prisma.subscriptionPlan.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }],
+      }),
+      // Cheapest single-story option for the per-verhaal headline.
+      prisma.creditPack.findFirst({
+        where: { active: true, creditAmount: 1 },
+        orderBy: [{ priceCents: "asc" }],
+      }),
+      // Pack >1 to highlight as "10 voor €12"-style deal.
+      prisma.creditPack.findFirst({
+        where: { active: true, creditAmount: { gt: 1 } },
+        orderBy: [{ creditAmount: "desc" }],
+      }),
+    ]);
+    subscriptionRows = subs;
+    smallestCreditPack = single;
+    bulkCreditPack = bulk;
+  } catch (err) {
+    console.error("[landing-pricing] DB read failed, using fallback", err);
+  }
+
+  type PricingCard = {
+    t: string;
+    p: string;
+    u: string;
+    f: string[];
+    badge?: string;
+    featured?: boolean;
+  };
+
+  const plans: PricingCard[] = subscriptionRows.length > 0
+    ? subscriptionRows.map((s) => ({
+        t: s.name,
+        p: `€${eurosFromCents(s.priceCents)}`,
+        u: s.description ?? "",
+        badge: s.badge ?? undefined,
+        featured: s.code === "annual",
+        f: Array.isArray(s.features) ? (s.features as string[]) : [],
+      }))
+    : [
+        // Fallback if catalog hasn't been seeded yet — same copy as before.
+        {
+          t: "Per maand",
+          p: "€7,95",
+          u: "per maand",
+          f: ["8 verhalen per maand", "Verhalen blijven bewaard", "Meerdere kinderen", "Opzeggen kan altijd"],
+        },
+        {
+          t: "Per jaar",
+          p: "€79",
+          u: "per jaar, bespaar €16",
+          badge: "meest gekozen",
+          featured: true,
+          f: ["Onbeperkt verhalen", "Verhalen blijven bewaard", "Meerdere kinderen", "€10 korting op het boekje"],
+        },
+      ];
+
+  // Append the "los bijkopen" card if we have at least one pack to point at.
+  if (smallestCreditPack) {
+    const bulkLine = bulkCreditPack
+      ? `Pakket van ${bulkCreditPack.creditAmount} voor €${eurosFromCents(bulkCreditPack.priceCents)}`
+      : "Direct beschikbaar";
+    plans.push({
       t: "Los bijkopen",
-      p: "€1,50",
+      p: `€${eurosFromCents(smallestCreditPack.priceCents)}`,
       u: "per los verhaal",
-      f: [
-        "Bovenop je abonnement",
-        "Pakket van 10 voor €12",
-        "Direct beschikbaar",
-      ],
-    },
-  ];
+      f: ["Bovenop je abonnement", bulkLine, "Direct beschikbaar"],
+    });
+  }
   return (
     <section
       id="prijs"
@@ -770,6 +821,11 @@ function Pricing() {
                           featured ? "rgba(255,255,255,0.1)" : V2.paperShade
                         }`
                       : "none",
+                  // Flex column lets us push the CTA to the bottom of the
+                  // card so the three buttons line up regardless of how
+                  // many feature bullets each plan has.
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
                 {featured && p.badge && (
@@ -849,7 +905,7 @@ function Pricing() {
                     </li>
                   ))}
                 </ul>
-                <div style={{ marginTop: 32 }}>
+                <div style={{ marginTop: "auto", paddingTop: 32 }}>
                   <EBtn
                     kind={featured ? "on-dark" : "primary"}
                     size="md"
