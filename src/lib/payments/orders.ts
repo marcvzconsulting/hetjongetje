@@ -53,10 +53,15 @@ export async function createCreditsCheckout(opts: {
   });
 
   // 2. Hand off to Mollie. The redirectUrl is where the user lands after
-  //    paying (or cancelling). The webhookUrl is where Mollie POSTs
-  //    payment-status changes server-to-server. Both must be public URLs;
-  //    in dev that requires a tunnel.
+  //    paying (or after a final fail/expire). The cancelUrl is where the
+  //    "Vorige pagina"-style escape on Mollie's checkout sends them
+  //    when they back out without choosing a method — we point this at
+  //    /credits so they're back on the pack-picker, not on a stale order
+  //    status page. The webhookUrl is where Mollie POSTs payment-status
+  //    changes server-to-server. All three must be public URLs; in dev
+  //    that requires a tunnel.
   const redirectUrl = await buildAppUrl(`/credits/order/${order.id}`);
+  const cancelUrl = await buildAppUrl(`/credits`);
   const webhookUrl = await buildAppUrl(`/api/payments/mollie/webhook`);
 
   const client = getMollieClient();
@@ -67,6 +72,7 @@ export async function createCreditsCheckout(opts: {
     },
     description: `Ons Verhaaltje — ${description}`,
     redirectUrl,
+    cancelUrl,
     webhookUrl,
     metadata: { orderId: order.id, kind: "credits", packCode: pack.code },
   });
