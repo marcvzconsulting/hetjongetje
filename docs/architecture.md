@@ -1,6 +1,6 @@
 # Ons Verhaaltje — Architectuur Overzicht
 
-Laatst bijgewerkt: 2026-04-17 (v2: monitoring toegevoegd)
+Laatst bijgewerkt: 2026-05-01 (v3: betalingen + abonnementen via Mollie, Brevo email, Google OAuth, magic-link)
 
 Dit document legt uit welke diensten we gebruiken, waarvoor, en hoe alles samenwerkt. Bedoeld voor als je door de bomen het bos niet meer ziet.
 
@@ -20,6 +20,9 @@ Dit document legt uit welke diensten we gebruiken, waarvoor, en hoe alles samenw
 | **Sentry** | de.sentry.io | Error tracking + monitoring (Frankfurt) | Gratis tier | `admin@onsverhaaltje.nl` |
 | **Anthropic** | console.anthropic.com | Claude AI: verhalen schrijven + foto-beschrijvingen | Pay-per-use (~€0.05/verhaal) | Persoonlijk |
 | **fal.ai** | fal.ai | FLUX AI voor illustraties | Pay-per-use (~€0.10/verhaal) | Persoonlijk |
+| **Mollie** | my.mollie.com | Betaalprovider — credits, abonnementen, SEPA-incasso | 1.8% + €0.25 per transactie (iDEAL ~€0.29) | `admin@onsverhaaltje.nl` |
+| **Brevo** | app.brevo.com | Transactionele e-mail + nieuwsbrief-contacten | Gratis tot 300 mails/dag | `admin@onsverhaaltje.nl` |
+| **Google Cloud** | console.cloud.google.com | OAuth-client voor "Inloggen met Google" | Gratis | `admin@onsverhaaltje.nl` |
 | **Docker Desktop** | (lokaal) | Dev PostgreSQL op je laptop (port 5433) | Gratis | n.v.t. |
 
 ---
@@ -60,6 +63,115 @@ sequenceDiagram
 - **Scaleway** serveert de "hete" data (illustraties) direct naar de browser, zonder Vercel te belasten
 - **Claude + fal.ai** zijn specialistische AI-services — wij huren hun rekenkracht in per verhaal
 - **Sentry** staat ernaast om fouten op te vangen zonder de flow te verstoren
+
+---
+
+## 💳 Wat gebeurt er bij een betaling
+
+Twee soorten betalingen: **eenmalige credit-pakketten** en **abonnementen** (recurring).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Ouder
+    participant Browser
+    participant Vercel as Vercel<br/>(Next.js app)
+    participant Neon as Neon Postgres
+    participant Mollie as Mollie<br/>(checkout + recurring)
+    participant Brevo as Brevo<br/>(transactionele mail)
+
+    User->>Browser: Kiest pakket of abonnement<br/>+ vinkt voorwaarden aan
+    Browser->>Vercel: POST server-action<br/>(buyCreditsAction / subscribeAction)
+    Vercel->>Neon: Maak Order(status=pending) aan
+    Vercel->>Mollie: payments.create<br/>(sequenceType=oneoff of first)
+    Mollie-->>Vercel: checkoutUrl + paymentId
+    Vercel-->>Browser: Redirect naar Mollie hosted checkout
+    User->>Mollie: iDEAL / Apple Pay / SEPA-mandaat
+    Mollie-->>Browser: Redirect terug naar /credits/order/[id] of /subscribe/order/[id]
+    Mollie->>Vercel: Webhook /api/payments/mollie/webhook
+    Vercel->>Mollie: Verifieer payment-status (server-side fetch)
+    Vercel->>Neon: Order=paid + storyCredits++ (of subscriptie starten)
+    Vercel->>Brevo: sendMail (bevestiging + factuur)
+    Brevo-->>User: Bevestigingsmail in inbox
+```
+
+**Belangrijke eigenschappen:**
+- **Webhook is bron van waarheid**, niet de redirect — webhook is idempotent en wordt mogelijk meerdere keren afgevuurd
+- **Abonnement = 2 fases**: eerste betaling (`sequenceType=first`) zet een SEPA-mandaat; daarna maakt de webhook een Mollie-subscription voor recurring billing
+- **Snapshot-semantiek**: `Order` slaat `priceCents` + `vatRate` op moment-van-koop op, dus prijswijzigingen in `/admin/pricing` schrijven historie niet over
+- **iDEAL voor abonnementen** vereist actieve **SEPA Direct Debit** in Mollie-profiel — anders filtert Mollie iDEAL eruit en zie je alleen creditcard
+
+Belangrijke files:
+- [src/lib/payments/mollie.ts](../src/lib/payments/mollie.ts) — Mollie-client + helpers
+- [src/lib/payments/orders.ts](../src/lib/payments/orders.ts) — credit-orders, webhook-dispatch
+- [src/lib/payments/subscriptions.ts](../src/lib/payments/subscriptions.ts) — recurring billing logica
+- [src/app/api/payments/mollie/webhook/route.ts](../src/app/api/payments/mollie/webhook/route.ts) — webhook-endpoint
+- [src/app/(app)/credits/](../src/app/(app)/credits/) — koop-flow voor pakketten
+- [src/app/(app)/subscribe/](../src/app/(app)/subscribe/) — abonnementen
+- [src/app/(admin)/admin/pricing/](../src/app/(admin)/admin/pricing/) — prijsbeheer
+
+**Mollie checkout-branding** ([profile in dashboard](https://my.mollie.com/dashboard/)):
+- Logo: `/checkout-logo.png` (paper-tinte achtergrond, "ons verhaaltje" wordmark)
+- Wallpaper: `/checkout-wallpaper.png` (paper-kleur `#f5efe4` met goud-stipjes)
+- Knop-kleur: `#c9a961` (gold-token)
+
+---
+
+## 📧 Email — wie stuurt wat
+
+```mermaid
+flowchart LR
+    App[Next.js app]
+    App -->|sendMail| Brevo[Brevo<br/>transactionele API]
+    App -->|subscribeToNewsletter / deleteContact| BrevoList[Brevo<br/>contact-lijst]
+    Brevo -->|SMTP| Inbox[Gebruiker]
+    BrevoList -.->|nieuwsbrief campagnes| Inbox
+
+    TransIP[TransIP<br/>mail-forwarding] -->|admin@onsverhaaltje.nl| PrivEmail[Persoonlijke inbox]
+
+    style App fill:#2a9d8f,color:#fff
+    style Brevo fill:#e9c46a
+    style TransIP fill:#dae8fc
+```
+
+**Twee verschillende email-paden, niet door elkaar halen:**
+- **Inkomend** (`info@`, `admin@onsverhaaltje.nl`) → TransIP forwarding → persoonlijke inbox
+- **Uitgaand** (verhaal klaar, betaling, magic-link, wachtwoord-reset, nieuwsbrief) → Brevo
+
+Templates staan in [src/lib/email/templates/](../src/lib/email/templates/):
+- `magic-link.ts`, `password-changed.ts`, `password-reset.ts`
+- `story-ready.ts`, `account-approved.ts`
+- `credits-purchased.ts`, `subscription-started.ts`
+- `newsletter-welcome.ts`, `book-order-confirmation.ts`
+
+Alle templates gebruiken [src/lib/email/editorial-template.ts](../src/lib/email/editorial-template.ts) als gemeenschappelijke wrapper voor consistente styling.
+
+---
+
+## 🔐 Authenticatie — drie manieren om in te loggen
+
+```mermaid
+flowchart LR
+    User[Bezoeker]
+    User -->|optie 1| Cred[E-mail + wachtwoord<br/>credentials provider]
+    User -->|optie 2| Google[Google OAuth<br/>via Google Cloud]
+    User -->|optie 3| Magic[Magic-link<br/>via Brevo email]
+
+    Cred --> NA[NextAuth v5<br/>session-cookie]
+    Google --> NA
+    Magic --> NA
+    NA -->|JWT in cookie| Session[Ingelogd]
+
+    style NA fill:#2a9d8f,color:#fff
+```
+
+**Belangrijke regels:**
+- **Admins** kunnen niet met wachtwoord inloggen — alleen via magic-link of Google. Beschermt tegen credential-stuffing.
+- **Magic-link** is rate-limited per IP en per email, gebruikt single-use tokens met 15-min TTL
+- **Google OAuth** maakt een pending-account aan voor nieuwe users (zelfde flow als handmatige registratie)
+- **callbackUrl** wordt gehonoreerd door /login na succesvolle credentials- of Google-login (alleen relatieve paden, anti-open-redirect)
+
+Code: [src/lib/auth/](../src/lib/auth/), [src/app/(auth)/](../src/app/(auth)/), [src/lib/magic-link.ts](../src/lib/magic-link.ts)
 
 ---
 
@@ -151,6 +263,9 @@ flowchart TB
 | Sentry gratis | €0 | Boven 5.000 errors/maand |
 | Anthropic Claude | ~€0.05/verhaal | Schaalt met gebruik |
 | fal.ai | ~€0.10/verhaal | Schaalt met gebruik |
+| Mollie | 1.8% + €0.25 per transactie (iDEAL ~€0.29) | Per transactie, geen vaste kosten |
+| Brevo | €0 | Boven 300 mails/dag (~9.000/mnd gratis) |
+| Google OAuth | €0 | Niet kostend voor consumer-apps |
 
 **Ruwe schatting: eerste 100 testers = maximaal ~€15-20 aan AI-kosten, verder alles gratis.**
 
@@ -168,6 +283,9 @@ flowchart TB
 | `FAL_KEY` | `.env` + Vercel | Illustration generator |
 | `SCALEWAY_*` | `.env` + Vercel | Image uploader |
 | `SENTRY_*` | `.env` + Vercel | Error tracker |
+| `MOLLIE_API_KEY` | `.env` (test_…) + Vercel (test_… nu, live_… straks) | Betalingen, abonnementen |
+| `BREVO_API_KEY` | `.env` + Vercel | Transactionele e-mail + nieuwsbrief-contacten |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `.env` + Vercel | Google OAuth login |
 
 **Gitignored** (nooit in git): `.env`, `.env.production.local`, `.env.*.local`
 
@@ -219,6 +337,10 @@ flowchart LR
 | Site voelt traag aan | Vercel → Speed Insights | Zoek pagina's met hoge LCP/INP |
 | Minder bezoekers dan verwacht | Vercel → Analytics → Referrers | Check of social-link nog klopt |
 | Tester zegt "er ging iets mis" maar Sentry is leeg | Vercel → Runtime Logs | Zoek op de tijd van de melding |
+| Betaling lukt niet / klant ziet alleen creditcard bij abonnement | Mollie dashboard → Profielen → Betaalmethodes | SEPA Direct Debit moet actief zijn voor iDEAL bij recurring |
+| Webhook van Mollie komt niet aan | Mollie → Activity → webhook-log | Check `/api/payments/mollie/webhook` is publiek bereikbaar (geen auth-gate) |
+| Mail komt niet aan | Brevo → Statistics → Transactional | Check daily-quota (300 gratis); klant in spam laten kijken |
+| Magic-link mailtje blijft uit | Vercel logs `[magic-link]` + Brevo logs | Anti-enumeration: ook bij onbekend e-mailadres lijkt het te slagen |
 
 ---
 
@@ -264,6 +386,8 @@ Denk aan Ons Verhaaltje als een orkest:
 - **Neon** is de bibliotheek — bewaart de bladmuziek (data)
 - **Scaleway** is de galerie — toont de schilderijen (illustraties)
 - **Claude + fal.ai** zijn de externe gastmusici — we huren hun skill per keer
+- **Mollie** is de kassa bij de ingang — int de toegangsprijs en houdt abonnementen bij
+- **Brevo** is de postbode — bezorgt elke bevestiging, magic-link en bevestigingsmail
 - **Sentry** is de geluidscheck-technicus — meldt als iemand vals speelt
 - **GitHub** is het archief — elke versie van de partituur wordt bewaard
 - **TransIP** is de stadscanon — wijst iedereen de weg naar het concertgebouw
