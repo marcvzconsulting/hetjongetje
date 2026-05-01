@@ -33,6 +33,7 @@ model User {
   authoredNotes      AdminNote[]    @relation("NotesByAdmin")
   resetTokens        PasswordResetToken[]
   magicLinkTokens    MagicLinkToken[]
+  orders             Order[]
 
   // Admin views filter on these constantly (status pill, role split,
   // recent-signups sort, last-login report). Cheap defence against
@@ -118,7 +119,11 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-/// Placeholder subscription model — not wired to a payment provider yet.
+/// Subscription model — backed by Mollie. Mollie's "Subscriptions" require
+/// a customer + a recurring mandate; we store both ids so we can manage the
+/// lifecycle (resume, cancel, update payment method) without re-asking the
+/// user. The legacy `stripeCustomerId` column is preserved for now in case
+/// data was already written there during the placeholder phase.
 model Subscription {
   id               String    @id @default(uuid())
   userId           String    @unique @map("user_id")
@@ -127,6 +132,18 @@ model Subscription {
   startedAt        DateTime  @default(now()) @map("started_at")
   endsAt           DateTime? @map("ends_at")
   cancelledAt      DateTime? @map("cancelled_at")
+
+  /// Mollie customer id (cst_xxx). Created the first time a user starts
+  /// any payment flow; reused for subsequent subscriptions and orders.
+  mollieCustomerId     String?   @map("mollie_customer_id")
+  /// Mollie mandate id (mdt_xxx) — proof of recurring-payment consent.
+  mollieMandateId      String?   @map("mollie_mandate_id")
+  /// Mollie subscription id (sub_xxx) for the active recurring billing.
+  mollieSubscriptionId String?   @map("mollie_subscription_id")
+
+  /// Legacy field — never written by current code. Keeping the column so
+  /// any rows from the placeholder phase don't break a backfill. Drop in
+  /// a follow-up migration once we've verified the table is clean.
   stripeCustomerId String?   @map("stripe_customer_id")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
@@ -134,6 +151,53 @@ model Subscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+/// One-time purchases. Generic across products: credit packs (the
+/// pay-as-you-go alternative to a subscription) and printed books. The
+/// `kind` field switches between them and selects which sub-fields apply.
+///
+///   kind = "credits"  →  creditAmount must be set; bookId stays null
+///   kind = "book"     →  bookId must be set; creditAmount stays null
+///
+/// Mollie's payment id is the join between our Order and their record;
+/// the webhook receives the payment id and looks up the matching Order.
+model Order {
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  kind            String   // "credits" | "book"
+  description     String   // human-readable label rendered on the receipt
+  amountCents     Int      @map("amount_cents") // Mollie works in major+minor units; we store integer cents to avoid float drift
+  currency        String   @default("EUR")
+  status          String   @default("pending") // "pending" | "paid" | "failed" | "expired" | "cancelled" | "refunded"
+
+  /// Mollie payment id (tr_xxx). Null until we hand off to Mollie.
+  molliePaymentId String?  @unique @map("mollie_payment_id")
+
+  /// For credit packs: how many story credits to grant on payment.
+  creditAmount    Int?     @map("credit_amount")
+
+  /// For book orders: which StoryBook + ship-to address.
+  bookId          String?  @map("book_id")
+  shippingName        String? @map("shipping_name")
+  shippingStreet      String? @map("shipping_street")
+  shippingHouseNumber String? @map("shipping_house_number")
+  shippingPostalCode  String? @map("shipping_postal_code")
+  shippingCity        String? @map("shipping_city")
+  shippingCountry     String? @map("shipping_country")
+
+  paidAt          DateTime? @map("paid_at")
+  refundedAt      DateTime? @map("refunded_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book StoryBook? @relation(fields: [bookId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
 }
 
 /// Internal notes an admin can attach to any user for support context.
@@ -256,6 +320,7 @@ model StoryBook {
 
   childProfile ChildProfile @relation(fields: [childProfileId], references: [id], onDelete: Cascade)
   bookStories  BookStory[]
+  orders       Order[]
 
   @@map("story_books")
 }
