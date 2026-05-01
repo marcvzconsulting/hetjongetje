@@ -4,9 +4,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
-import { Kicker, EBtn, IconV2 } from "@/components/v2";
+import { Kicker, EBtn } from "@/components/v2";
 import { AppShell } from "@/components/v2/app/AppShell";
 import { buyCreditsAction } from "./actions";
+import { BuyButton } from "./BuyButton";
 
 type SearchParams = Promise<{ error?: string }>;
 
@@ -63,6 +64,10 @@ export default async function CreditsPage({
         { label: "Account", href: "/account" },
       ]}
     >
+      {/* Open the TCP+TLS handshake to Mollie's checkout host before the
+          user clicks Bestellen. Saves ~100-200ms on the first hop. */}
+      <link rel="preconnect" href="https://www.mollie.com" />
+      <link rel="dns-prefetch" href="https://www.mollie.com" />
       <div
         className="app-page-pad"
         style={{
@@ -361,36 +366,7 @@ function PackCard({
             .
           </span>
         </label>
-        <button
-          type="submit"
-          disabled={disabled}
-          style={{
-            width: "100%",
-            marginTop: 14,
-            padding: "12px 16px",
-            background: featured ? V2.gold : V2.ink,
-            color: featured ? V2.ink : V2.paper,
-            border: "none",
-            fontFamily: V2.ui,
-            fontSize: 14,
-            fontWeight: 500,
-            letterSpacing: "0.04em",
-            cursor: disabled ? "not-allowed" : "pointer",
-            opacity: disabled ? 0.45 : 1,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            minHeight: 44,
-          }}
-        >
-          Bestellen
-          <IconV2
-            name="arrow"
-            size={14}
-            color={featured ? V2.ink : V2.paper}
-          />
-        </button>
+        <BuyButton disabled={disabled} featured={featured} />
       </div>
     </form>
   );
