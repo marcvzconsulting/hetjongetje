@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="1200" height="360">
+  <title>Ons Verhaaltje</title>
+  <defs>
+    <style type="text/css"><![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,400&amp;display=swap');
+      .word { font-family: 'Fraunces', 'Lora', Georgia, serif; fill: #1f1e3a; }
+      .ons { font-weight: 300; }
+      .verhaaltje { font-weight: 400; font-style: italic; }
+      .ornament { font-family: 'Fraunces', Georgia, serif; font-weight: 400; fill: #8a7340; letter-spacing: 0.28em; }
+    ]]></style>
+  </defs>
+  <text x="600" y="200" text-anchor="middle" class="word" font-size="140" letter-spacing="-2">
+    <tspan class="ons">ons</tspan><tspan class="verhaaltje" dx="24">verhaaltje</tspan>
+  </text>
+  <text x="600" y="270" text-anchor="middle" class="ornament" font-size="20">✦  GEPERSONALISEERDE  VERHALEN  ✦</text>
+</svg>

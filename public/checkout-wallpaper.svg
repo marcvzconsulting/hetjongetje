@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <title>Ons Verhaaltje wallpaper</title>
+  <rect width="1920" height="1080" fill="#f5efe4"/>
+  <!-- Subtiele goud-stipjes als knipoog naar de StarField op de site -->
+  <g fill="#c9a961" opacity="0.18">
+    <circle cx="180" cy="160" r="2"/>
+    <circle cx="420" cy="90" r="1.5"/>
+    <circle cx="760" cy="220" r="2"/>
+    <circle cx="1180" cy="120" r="1.5"/>
+    <circle cx="1520" cy="200" r="2"/>
+    <circle cx="1780" cy="80" r="1.5"/>
+    <circle cx="240" cy="540" r="2"/>
+    <circle cx="640" cy="620" r="1.5"/>
+    <circle cx="1040" cy="500" r="2"/>
+    <circle cx="1440" cy="640" r="1.5"/>
+    <circle cx="1700" cy="540" r="2"/>
+    <circle cx="120" cy="900" r="1.5"/>
+    <circle cx="500" cy="980" r="2"/>
+    <circle cx="880" cy="880" r="1.5"/>
+    <circle cx="1320" cy="960" r="2"/>
+    <circle cx="1660" cy="900" r="1.5"/>
+  </g>
+</svg>
