@@ -85,8 +85,6 @@ export function BookBuilderV2({
   const [coverStyle, setCoverStyle] = useState<
     (typeof COVER_STYLES)[number]["id"]
   >(initialDraft?.coverStyle ?? "night");
-  const [orderModal, setOrderModal] = useState(false);
-
   // ── Auto-save draft ───────────────────────────────────────────
   type SaveStatus = "idle" | "saving" | "saved" | "error";
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -663,20 +661,37 @@ export function BookBuilderV2({
                 € {total.toFixed(2).replace(".", ",")}
               </span>
             </div>
-            <EBtn
-              kind="primary"
-              size="lg"
-              onClick={() => setOrderModal(true)}
-              style={{
-                width: "100%",
-                justifyContent: "center",
-                marginTop: 20,
-                opacity: selectedStories.length > 0 ? 1 : 0.4,
-                cursor: selectedStories.length > 0 ? "pointer" : "not-allowed",
-              }}
-            >
-              Bestellen →
-            </EBtn>
+            {selectedStories.length > 0 ? (
+              <EBtn
+                kind="primary"
+                size="lg"
+                href="/binnenkort"
+                style={{
+                  width: "100%",
+                  justifyContent: "center",
+                  marginTop: 20,
+                }}
+              >
+                Bestellen →
+              </EBtn>
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  marginTop: 20,
+                  padding: "16px 24px",
+                  background: V2.paper,
+                  border: `1px solid ${V2.paperShade}`,
+                  fontFamily: V2.body,
+                  fontStyle: "italic",
+                  fontSize: 13,
+                  color: V2.inkMute,
+                  textAlign: "center",
+                }}
+              >
+                Selecteer eerst een verhaal.
+              </div>
+            )}
             <div
               style={{
                 fontFamily: V2.body,
@@ -688,7 +703,8 @@ export function BookBuilderV2({
                 lineHeight: 1.5,
               }}
             >
-              We drukken op aanvraag. Levering in 7–10 werkdagen.
+              Het drukken zelf is nog in ontwikkeling — we mailen je zodra je
+              echt kunt bestellen.
             </div>
           </div>
 
@@ -722,7 +738,6 @@ export function BookBuilderV2({
         </aside>
       </div>
 
-      {orderModal && <OrderModal onClose={() => setOrderModal(false)} />}
     </>
   );
 }
@@ -1029,67 +1044,3 @@ function SaveIndicator({
   );
 }
 
-function OrderModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(20,20,46,0.55)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          maxWidth: 520,
-          width: "100%",
-          background: V2.paper,
-          padding: 40,
-          position: "relative",
-          color: V2.ink,
-        }}
-      >
-        <Kicker>Binnenkort</Kicker>
-        <h2
-          style={{
-            fontFamily: V2.display,
-            fontWeight: 300,
-            fontSize: 32,
-            margin: "14px 0 16px",
-            letterSpacing: -0.8,
-            lineHeight: 1.1,
-          }}
-        >
-          Het <span style={{ fontStyle: "italic" }}>bestellen</span> werkt
-          nog niet.
-        </h2>
-        <p
-          style={{
-            fontFamily: V2.body,
-            fontSize: 15,
-            lineHeight: 1.6,
-            color: V2.inkSoft,
-            margin: "0 0 24px",
-          }}
-        >
-          We zijn bezig met de drukker. Zodra dit klaar is kun je hier je
-          boekje bestellen. Je samenstelling blijft bewaard, niks gaat
-          verloren.
-        </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-          <EBtn kind="ghost" size="md" onClick={onClose}>
-            Sluiten
-          </EBtn>
-        </div>
-      </div>
-    </div>
-  );
-}
