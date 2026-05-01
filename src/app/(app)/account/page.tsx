@@ -13,6 +13,7 @@ import {
   changePasswordAction,
   deleteAccountAction,
   toggleNewsletterAction,
+  cancelSubscriptionAction,
 } from "./actions";
 
 type SearchParams = Promise<{ saved?: string; error?: string }>;
@@ -23,6 +24,8 @@ const SAVED_MESSAGES: Record<string, string> = {
   password: "Wachtwoord gewijzigd",
   newsletter_on: "Je staat op de nieuwsbrief",
   newsletter_off: "Je bent uitgeschreven van de nieuwsbrief",
+  subscription_cancelled:
+    "Je abonnement is opgezegd. Je behoudt toegang tot het einde van de huidige periode.",
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -41,6 +44,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   delete_wrong_password: "Wachtwoord is onjuist",
   delete_admin_blocked:
     "Admin-accounts kunnen niet via deze pagina verwijderd worden",
+  subscription_no_active:
+    "Je hebt geen actief abonnement om op te zeggen.",
+  subscription_cancel_failed:
+    "Opzeggen ging niet — probeer het later opnieuw, of mail ons.",
 };
 
 export default async function AccountPage({
@@ -56,6 +63,18 @@ export default async function AccountPage({
     include: { subscription: true, _count: { select: { children: true } } },
   });
   if (!user) redirect("/login");
+
+  // Resolve the subscription's plan code to its catalog row so the
+  // panel can show name + interval + creditsPerInterval. Skip for free
+  // / unsubscribed users.
+  const subscriptionPlan =
+    user.subscription &&
+    user.subscription.plan &&
+    user.subscription.plan !== "free"
+      ? await prisma.subscriptionPlan.findUnique({
+          where: { code: user.subscription.plan },
+        })
+      : null;
 
   const gate = await loadUserGate(session.user.id);
   const credits = gate && !gate.isAdmin ? gate.storyCredits : null;
@@ -295,6 +314,12 @@ export default async function AccountPage({
           </form>
         </Section>
 
+        {/* Subscription */}
+        <SubscriptionPanel
+          subscription={user.subscription}
+          plan={subscriptionPlan}
+        />
+
         {/* Password */}
         <Section
           title="Wachtwoord wijzigen"
@@ -470,6 +495,190 @@ export default async function AccountPage({
 }
 
 // ── Sub components ──────────────────────────────────────────────
+
+function SubscriptionPanel({
+  subscription,
+  plan,
+}: {
+  subscription: {
+    plan: string;
+    status: string;
+    startedAt: Date;
+    endsAt: Date | null;
+    cancelledAt: Date | null;
+    mollieSubscriptionId: string | null;
+  } | null;
+  plan: {
+    name: string;
+    interval: string;
+    priceCents: number;
+    creditsPerInterval: number | null;
+  } | null;
+}) {
+  // No active paid subscription — show CTA to /subscribe.
+  if (!subscription || subscription.plan === "free" || !subscription.mollieSubscriptionId) {
+    return (
+      <Section
+        title="Abonnement"
+        meta="Liever niet per losse credits? Neem een abonnement."
+      >
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontSize: 15,
+            color: V2.inkSoft,
+            margin: "0 0 18px",
+            lineHeight: 1.6,
+            maxWidth: "60ch",
+          }}
+        >
+          Je hebt op dit moment geen actief abonnement. Met een
+          maand- of jaarabonnement wordt je tegoed automatisch
+          aangevuld — zonder dat je elke maand opnieuw hoeft te betalen.
+        </p>
+        <EBtn kind="primary" size="md" href="/subscribe">
+          Bekijk abonnementen →
+        </EBtn>
+      </Section>
+    );
+  }
+
+  const isCancelled = subscription.status === "cancelled";
+  const planName = plan?.name ?? subscription.plan;
+  const intervalNl =
+    plan?.interval?.toLowerCase() === "1 month"
+      ? "elke maand"
+      : plan?.interval?.toLowerCase() === "12 months"
+        ? "elk jaar"
+        : (plan?.interval ?? "");
+  const priceStr = plan
+    ? `€${(plan.priceCents / 100).toFixed(2).replace(".", ",")}`
+    : "";
+  const endsAtStr = subscription.endsAt
+    ? subscription.endsAt.toLocaleDateString("nl-NL", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <Section
+      title="Abonnement"
+      meta={
+        isCancelled
+          ? "Opgezegd — actief tot het einde van de huidige periode"
+          : `${planName} — ${intervalNl}`
+      }
+    >
+      <div
+        style={{
+          padding: 20,
+          background: V2.paperDeep,
+          border: `1px solid ${V2.paperShade}`,
+          marginBottom: 20,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: V2.display,
+                fontSize: 22,
+                fontStyle: "italic",
+                fontWeight: 400,
+                color: V2.ink,
+              }}
+            >
+              {planName}
+            </div>
+            <div
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 11,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: V2.inkMute,
+                marginTop: 6,
+              }}
+            >
+              {priceStr} {intervalNl}
+              {plan?.creditsPerInterval ? ` · ${plan.creditsPerInterval} verhalen` : ""}
+            </div>
+          </div>
+          <div
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 13,
+              color: isCancelled ? V2.heart : V2.goldDeep,
+              textAlign: "right",
+            }}
+          >
+            {isCancelled
+              ? endsAtStr
+                ? `Actief tot ${endsAtStr}`
+                : "Opgezegd"
+              : endsAtStr
+                ? `Volgende incasso ${endsAtStr}`
+                : "Actief"}
+          </div>
+        </div>
+      </div>
+
+      {!isCancelled ? (
+        <form action={cancelSubscriptionAction}>
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontSize: 14,
+              color: V2.inkSoft,
+              margin: "0 0 14px",
+              lineHeight: 1.55,
+              maxWidth: "60ch",
+            }}
+          >
+            Wil je opzeggen? Dat kan elk moment. Je behoudt toegang tot
+            het einde van de lopende periode; daarna wordt er niets
+            meer afgeschreven.
+          </p>
+          <EBtn kind="ghost" size="md" type="submit">
+            Abonnement opzeggen
+          </EBtn>
+        </form>
+      ) : (
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontSize: 14,
+            color: V2.inkSoft,
+            margin: 0,
+            lineHeight: 1.55,
+            maxWidth: "60ch",
+          }}
+        >
+          Wil je toch doorgaan? Mail{" "}
+          <a
+            href="mailto:info@onsverhaaltje.nl"
+            style={{ color: "inherit" }}
+          >
+            info@onsverhaaltje.nl
+          </a>{" "}
+          en we zetten het abonnement weer aan vóór de huidige periode
+          afloopt.
+        </p>
+      )}
+    </Section>
+  );
+}
 
 function Section({
   title,

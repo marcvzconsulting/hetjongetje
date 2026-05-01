@@ -97,14 +97,16 @@ const SUBSCRIPTION_PLANS = [
   {
     code: "annual",
     name: "Per jaar",
-    description: "Onbeperkt verhalen, met €10 korting op het boekje.",
+    description: "Genoeg verhalen voor het hele jaar, plus €10 korting op het boekje.",
     priceCents: 7900,
     interval: "12 months",
-    creditsPerInterval: null, // null = unlimited
+    // 96 = 12 × 8 (same per-month rate as the monthly plan). Tunable
+    // in /admin/pricing if the business case shifts.
+    creditsPerInterval: 96,
     sortOrder: 20,
     badge: "meest gekozen",
     features: [
-      "Onbeperkt verhalen",
+      "96 verhalen per jaar",
       "Verhalen blijven bewaard",
       "Meerdere kinderen",
       "€10 korting op het boekje",

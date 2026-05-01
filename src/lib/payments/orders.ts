@@ -7,6 +7,11 @@ import {
 import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildCreditsPurchasedMail } from "@/lib/email/templates/credits-purchased";
+import {
+  startRecurringSubscription,
+  applyRecurringPayment,
+} from "./subscriptions";
+import { buildSubscriptionStartedMail } from "@/lib/email/templates/subscription-started";
 
 /**
  * Create a credits order + matching Mollie payment in one transaction-
@@ -106,69 +111,50 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   const client = getMollieClient();
   const payment = await client.payments.get(paymentId);
 
+  const newStatus = mollieStatusToOrderStatus(payment.status);
+
+  // Recurring subscription payment: Mollie creates the Payment object
+  // automatically each interval, we don't have an Order in advance.
+  // Detect by sequenceType — "recurring" only fires for auto-charges.
+  const isRecurring =
+    (payment.sequenceType as string | undefined) === "recurring";
+
   const order = await prisma.order.findUnique({
     where: { molliePaymentId: paymentId },
   });
+
+  if (!order && isRecurring) {
+    // First-time we see this renewal. Hand off to subscriptions module
+    // which finds the right Subscription, creates an Order, applies status.
+    await applyRecurringPayment({
+      paymentId,
+      customerId: payment.customerId ?? null,
+      subscriptionMollieId:
+        (payment as { subscriptionId?: string }).subscriptionId ?? null,
+      amountCents: Math.round(parseFloat(payment.amount.value) * 100),
+      status: newStatus,
+    });
+    return null;
+  }
+
   if (!order) {
     // Payment exists but no matching Order — could be a webhook for an
     // unrelated tenant, or a race we lost. Caller logs and moves on.
     return null;
   }
 
-  const newStatus = mollieStatusToOrderStatus(payment.status);
   const wasPaid = order.status === "paid";
   const becomesPaid = newStatus === "paid" && !wasPaid;
 
-  // Grant credits + mark paid in a single transaction so we never end
-  // up with credits granted but order still pending (or vice versa).
+  // Dispatch on order kind — credits, subscription, book each need
+  // different handling on the pending → paid transition.
   if (becomesPaid && order.kind === "credits" && order.creditAmount) {
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id: order.id },
-        data: { status: "paid", paidAt: new Date() },
-      }),
-      prisma.user.update({
-        where: { id: order.userId },
-        data: { storyCredits: { increment: order.creditAmount } },
-      }),
-    ]);
-
-    // Confirmation mail — best-effort, never blocks payment processing.
-    // Idempotent because `becomesPaid` only fires on the pending → paid
-    // transition; subsequent webhook calls see status="paid" and skip.
-    try {
-      const user = await prisma.user.findUnique({
-        where: { id: order.userId },
-        select: { email: true, name: true },
-      });
-      if (user) {
-        const dashboardUrl = await buildAppUrl("/dashboard");
-        const mail = buildCreditsPurchasedMail({
-          name: user.name,
-          creditAmount: order.creditAmount,
-          amountCents: order.amountCents,
-          vatRate: order.vatRate,
-          dashboardUrl,
-          orderId: order.id,
-        });
-        await sendMail({
-          to: user.email,
-          toName: user.name,
-          subject: mail.subject,
-          html: mail.html,
-          text: mail.text,
-          tags: ["credits-purchased"],
-        });
-      }
-    } catch (mailErr) {
-      console.error(
-        `[orders] confirmation mail failed for order ${order.id}`,
-        mailErr instanceof Error ? mailErr.message : mailErr,
-      );
-    }
+    await applyCreditsPaid(order);
+  } else if (becomesPaid && order.kind === "subscription") {
+    await applySubscriptionFirstPaid(order, payment);
   } else if (newStatus !== order.status) {
     // Other transition (failed, expired, cancelled) — just update the
-    // order row, no credit change.
+    // order row, no credit / subscription change.
     await prisma.order.update({
       where: { id: order.id },
       data: { status: newStatus },
@@ -176,4 +162,160 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   }
 
   return { ...order, status: newStatus };
+}
+
+/**
+ * Handle the credits-purchase pending → paid transition: grant credits
+ * to the user in a transaction, then fire the confirmation mail.
+ */
+async function applyCreditsPaid(order: {
+  id: string;
+  userId: string;
+  creditAmount: number | null;
+  amountCents: number;
+  vatRate: number;
+}): Promise<void> {
+  if (!order.creditAmount) return;
+
+  await prisma.$transaction([
+    prisma.order.update({
+      where: { id: order.id },
+      data: { status: "paid", paidAt: new Date() },
+    }),
+    prisma.user.update({
+      where: { id: order.userId },
+      data: { storyCredits: { increment: order.creditAmount } },
+    }),
+  ]);
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: order.userId },
+      select: { email: true, name: true },
+    });
+    if (user) {
+      const dashboardUrl = await buildAppUrl("/dashboard");
+      const mail = buildCreditsPurchasedMail({
+        name: user.name,
+        creditAmount: order.creditAmount,
+        amountCents: order.amountCents,
+        vatRate: order.vatRate,
+        dashboardUrl,
+        orderId: order.id,
+      });
+      await sendMail({
+        to: user.email,
+        toName: user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["credits-purchased"],
+      });
+    }
+  } catch (mailErr) {
+    console.error(
+      `[orders] credits confirmation mail failed for order ${order.id}`,
+      mailErr instanceof Error ? mailErr.message : mailErr,
+    );
+  }
+}
+
+/**
+ * First subscription payment paid: capture the mandate id from the
+ * payment, kick off Mollie's recurring schedule, link the Order to the
+ * Subscription record, send the welcome-to-subscription mail.
+ */
+async function applySubscriptionFirstPaid(
+  order: {
+    id: string;
+    userId: string;
+    amountCents: number;
+    vatRate: number;
+  },
+  payment: {
+    mandateId?: string | null;
+    metadata?: unknown;
+  },
+): Promise<void> {
+  // Mark order paid first so we have a stable record; the rest is best-
+  // effort and recoverable.
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: "paid", paidAt: new Date() },
+  });
+
+  const mandateId = payment.mandateId ?? null;
+  const meta = (payment.metadata ?? {}) as { planCode?: string };
+  const planCode = meta.planCode;
+
+  if (!mandateId || !planCode) {
+    console.error(
+      `[orders] subscription first-payment ${order.id} missing mandate or planCode`,
+      { mandateId, planCode },
+    );
+    return;
+  }
+
+  try {
+    const subscriptionMollieId = await startRecurringSubscription({
+      userId: order.userId,
+      planCode,
+      mandateId,
+    });
+    // Backfill the Order's subscriptionId now that we know which row
+    // it belongs to (Subscription is found-or-created in startRecurring).
+    const sub = await prisma.subscription.findUnique({
+      where: { userId: order.userId },
+    });
+    if (sub) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { subscriptionId: sub.id },
+      });
+    }
+    // Best-effort welcome mail.
+    try {
+      const [user, plan] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: order.userId },
+          select: { email: true, name: true },
+        }),
+        prisma.subscriptionPlan.findUnique({
+          where: { code: planCode },
+        }),
+      ]);
+      if (user && plan && sub) {
+        const accountUrl = await buildAppUrl("/account");
+        const mail = buildSubscriptionStartedMail({
+          name: user.name,
+          planName: plan.name,
+          amountCents: order.amountCents,
+          vatRate: order.vatRate,
+          interval: plan.interval,
+          creditsPerInterval: plan.creditsPerInterval,
+          nextChargeAt: sub.endsAt,
+          accountUrl,
+          subscriptionMollieId,
+        });
+        await sendMail({
+          to: user.email,
+          toName: user.name,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          tags: ["subscription-started"],
+        });
+      }
+    } catch (mailErr) {
+      console.error(
+        `[orders] subscription welcome mail failed for order ${order.id}`,
+        mailErr instanceof Error ? mailErr.message : mailErr,
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[orders] startRecurringSubscription failed for order ${order.id}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 }

@@ -120,10 +120,36 @@ export default function VoorwaardenPage() {
         niet aan kwaliteitseisen voldoet of beschadigd aankomt, lossen we
         dat natuurlijk op met een herdruk of refund.
       </P>
+      <H2>Abonnementen en automatische incasso</H2>
       <P>
-        <strong>Abonnementen</strong> kun je per direct opzeggen vanuit je
-        account — je behoudt toegang tot het einde van de lopende periode.
-        Reeds verbruikte verhalen worden niet teruggegeven.
+        Een abonnement loopt door totdat jij het opzegt. Bij de eerste
+        betaling geef je via onze betaalprovider Mollie een{" "}
+        <strong>SEPA-incasso-mandaat</strong> af (of je geeft toestemming
+        voor recurring afschrijving op je creditcard / Apple Pay /
+        Google Pay, afhankelijk van wat je kiest). Daarmee wordt het
+        abonnementsbedrag automatisch afgeschreven aan het begin van elke
+        nieuwe periode — maandelijks of jaarlijks, afhankelijk van het
+        gekozen plan.
+      </P>
+      <P>
+        Op de bevestigingsmail én in je account-pagina zie je elke keer
+        wanneer de volgende incasso staat gepland. Op je bankafschrift
+        verschijnen de afschrijvingen onder de naam{" "}
+        <strong>Ons Verhaaltje</strong>.
+      </P>
+      <P>
+        <strong>Opzeggen</strong> kan elk moment via je account-pagina,
+        tot een dag voor de eerstvolgende incasso-datum. Bij opzegging
+        behoud je toegang tot het einde van de periode die je al hebt
+        betaald; daarna stopt de afschrijving en wordt het abonnement
+        beëindigd. Reeds verbruikte verhalen worden niet teruggegeven.
+      </P>
+      <P>
+        Voor SEPA-incasso&rsquo;s (iDEAL converteert daarnaartoe na de
+        eerste betaling) heb je tot <strong>56 dagen</strong> na elke
+        afschrijving het recht om het bedrag bij je bank terug te boeken
+        — dat is een Europees consumentenrecht. Wij stoppen dan
+        automatisch het abonnement.
       </P>
 
       <H2>Inhoud van de verhalen</H2>

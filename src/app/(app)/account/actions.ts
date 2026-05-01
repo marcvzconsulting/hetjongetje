@@ -16,6 +16,7 @@ import {
   subscribeToNewsletter,
 } from "@/lib/email/brevo-contacts";
 import { validatePassword } from "@/lib/auth/password-policy";
+import { cancelSubscription } from "@/lib/payments/subscriptions";
 
 async function requireUser() {
   const session = await auth();
@@ -272,4 +273,30 @@ export async function deleteAccountAction(formData: FormData) {
   }
 
   await signOut({ redirectTo: "/?deleted=1" });
+}
+
+/**
+ * Cancel the user's active Mollie subscription. Mollie stops scheduling
+ * future renewals immediately, but the user keeps access until the end
+ * of the period they already paid for (subscription.endsAt).
+ */
+export async function cancelSubscriptionAction() {
+  const userId = await requireUser();
+
+  try {
+    await cancelSubscription(userId);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "cancel_failed";
+    if (message === "no_active_subscription") {
+      redirect("/account?error=subscription_no_active");
+    }
+    console.error(
+      `[account] cancelSubscription failed for user ${userId}`,
+      err instanceof Error ? err.message : err,
+    );
+    redirect("/account?error=subscription_cancel_failed");
+  }
+
+  revalidatePath("/account");
+  redirect("/account?saved=subscription_cancelled");
 }

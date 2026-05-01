@@ -148,7 +148,8 @@ model Subscription {
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
 
   @@map("subscriptions")
 }
@@ -181,6 +182,12 @@ model Order {
   /// For credit packs: how many story credits to grant on payment.
   creditAmount    Int?     @map("credit_amount")
 
+  /// For subscription orders: which Subscription this payment belongs
+  /// to. Initial payment (sequenceType="first") + every recurring
+  /// renewal both reference the same Subscription so we can list all
+  /// related transactions on the receipt page.
+  subscriptionId  String?  @map("subscription_id")
+
   /// For book orders: which StoryBook + ship-to address.
   bookId          String?  @map("book_id")
   shippingName        String? @map("shipping_name")
@@ -195,12 +202,14 @@ model Order {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  book StoryBook? @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         StoryBook?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([status])
   @@index([createdAt])
+  @@index([subscriptionId])
   @@map("orders")
 }
 

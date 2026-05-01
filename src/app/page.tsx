@@ -722,6 +722,9 @@ async function Pricing() {
     f: string[];
     badge?: string;
     featured?: boolean;
+    /** Where the "Begin hiermee →" CTA points. Defaults to /register
+     *  for unauth visitors; auth-gates handle the rest. */
+    href: string;
   };
 
   const plans: PricingCard[] = subscriptionRows.length > 0
@@ -732,6 +735,7 @@ async function Pricing() {
         badge: s.badge ?? undefined,
         featured: s.code === "annual",
         f: Array.isArray(s.features) ? (s.features as string[]) : [],
+        href: "/subscribe",
       }))
     : [
         // Fallback if catalog hasn't been seeded yet — same copy as before.
@@ -740,6 +744,7 @@ async function Pricing() {
           p: "€7,95",
           u: "per maand",
           f: ["8 verhalen per maand", "Verhalen blijven bewaard", "Meerdere kinderen", "Opzeggen kan altijd"],
+          href: "/subscribe",
         },
         {
           t: "Per jaar",
@@ -747,7 +752,8 @@ async function Pricing() {
           u: "per jaar, bespaar €16",
           badge: "meest gekozen",
           featured: true,
-          f: ["Onbeperkt verhalen", "Verhalen blijven bewaard", "Meerdere kinderen", "€10 korting op het boekje"],
+          f: ["96 verhalen per jaar", "Verhalen blijven bewaard", "Meerdere kinderen", "€10 korting op het boekje"],
+          href: "/subscribe",
         },
       ];
 
@@ -761,6 +767,7 @@ async function Pricing() {
       p: `€${eurosFromCents(smallestCreditPack.priceCents)}`,
       u: "per los verhaal",
       f: ["Bovenop je abonnement", bulkLine, "Direct beschikbaar"],
+      href: "/credits",
     });
   }
   return (
@@ -909,7 +916,7 @@ async function Pricing() {
                   <EBtn
                     kind={featured ? "on-dark" : "primary"}
                     size="md"
-                    href="/register"
+                    href={p.href}
                     style={{ width: "100%", justifyContent: "center" }}
                   >
                     Begin hiermee →
