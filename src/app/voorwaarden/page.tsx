@@ -96,6 +96,36 @@ export default function VoorwaardenPage() {
         voor de details.
       </P>
 
+      <H2>Digitale producten en herroepingsrecht</H2>
+      <P>
+        Verhalen en credit-pakketten zijn digitale producten die direct na
+        betaling beschikbaar komen. Volgens de Wet koop op afstand vervalt
+        je herroepingsrecht zodra de levering is begonnen, mits je daar bij
+        het afrekenen uitdrukkelijk mee instemt. Bij elke aankoop vink je
+        daarom aan dat je akkoord gaat met deze voorwaarden — daarmee zie
+        je af van de standaard 14-dagen-bedenktijd voor digitale levering.
+      </P>
+      <P>
+        <strong>Niet-verbruikte credits</strong> kunnen we coulancehalve
+        crediteren als je binnen 14 dagen na aankoop mailt naar{" "}
+        <a href="mailto:info@onsverhaaltje.nl" style={{ color: "inherit" }}>
+          info@onsverhaaltje.nl
+        </a>
+        {" "}met een uitleg. Verplicht is het niet meer, maar we zijn redelijk.
+      </P>
+      <P>
+        <strong>Voor het gedrukte boekje</strong> geldt het herroepingsrecht
+        niet als het op aanvraag voor jou specifiek wordt gedrukt — de wet
+        sluit gepersonaliseerde producten uit van retourrecht. Als de druk
+        niet aan kwaliteitseisen voldoet of beschadigd aankomt, lossen we
+        dat natuurlijk op met een herdruk of refund.
+      </P>
+      <P>
+        <strong>Abonnementen</strong> kun je per direct opzeggen vanuit je
+        account — je behoudt toegang tot het einde van de lopende periode.
+        Reeds verbruikte verhalen worden niet teruggegeven.
+      </P>
+
       <H2>Inhoud van de verhalen</H2>
       <P>
         De verhalen worden gegenereerd door AI-modellen op basis van het

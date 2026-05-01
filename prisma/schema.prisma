@@ -169,6 +169,10 @@ model Order {
   description     String   // human-readable label rendered on the receipt
   amountCents     Int      @map("amount_cents") // Mollie works in major+minor units; we store integer cents to avoid float drift
   currency        String   @default("EUR")
+  /// VAT rate at the time of purchase, as integer percent (21 → 21%,
+  /// 9 → 9%). Snapshotted so old orders stay correct after a tariff
+  /// change in the catalog.
+  vatRate         Int      @default(21) @map("vat_rate")
   status          String   @default("pending") // "pending" | "paid" | "failed" | "expired" | "cancelled" | "refunded"
 
   /// Mollie payment id (tr_xxx). Null until we hand off to Mollie.
@@ -198,6 +202,66 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@map("orders")
+}
+
+/// Catalog of credit-pack products. Admin-managed via /admin/pricing —
+/// rows here define what users see and pay for in the credits-buying
+/// flow. Orders snapshot the price + credit count at purchase time, so
+/// editing or deleting a row never rewrites historical receipts.
+model CreditPack {
+  id            String   @id @default(uuid())
+  /// Stable code referenced from code paths (analytics, hardcoded
+  /// "popular" markers, etc.). Required, must be unique.
+  code          String   @unique
+  /// Human-readable label in the catalog, e.g. "5 verhalen".
+  name          String
+  description   String?
+  creditAmount  Int      @map("credit_amount")
+  /// Gross price (incl. VAT) in cents. Consumer pays this number.
+  priceCents    Int      @map("price_cents")
+  currency      String   @default("EUR")
+  /// VAT rate as integer percent (21 = 21%, 9 = 9%).
+  vatRate       Int      @default(21) @map("vat_rate")
+  /// Catalog can hide a pack without deleting it (preserves order
+  /// history references and lets us A/B test).
+  active        Boolean  @default(true)
+  /// Render order in the buy-credits picker, ascending.
+  sortOrder     Int      @default(0) @map("sort_order")
+  /// Optional flair label shown on the card, e.g. "populairst".
+  badge         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([active, sortOrder])
+  @@map("credit_packs")
+}
+
+/// Catalog of subscription plans (monthly / annual / future tiers).
+/// Same shape as CreditPack but with billing-interval semantics.
+model SubscriptionPlan {
+  id                 String   @id @default(uuid())
+  /// Stable code; the existing Subscription.plan column references this.
+  code               String   @unique
+  name               String
+  description        String?
+  priceCents         Int      @map("price_cents")
+  currency           String   @default("EUR")
+  vatRate            Int      @default(21) @map("vat_rate")
+  /// Mollie subscription interval string, e.g. "1 month", "12 months".
+  interval           String
+  /// Credits granted per interval. Null = unlimited.
+  creditsPerInterval Int?     @map("credits_per_interval")
+  active             Boolean  @default(true)
+  sortOrder          Int      @default(0) @map("sort_order")
+  badge              String?
+  /// Bullet-list of features rendered on the pricing page. Stored as
+  /// a JSON string array so admins can edit without code deploys.
+  features           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([active, sortOrder])
+  @@map("subscription_plans")
 }
 
 /// Internal notes an admin can attach to any user for support context.

@@ -328,6 +328,9 @@ export default async function AdminDashboardPage() {
         <EBtn kind="ghost" size="md" href="/admin/jobs">
           Jobs bekijken →
         </EBtn>
+        <EBtn kind="ghost" size="md" href="/admin/pricing">
+          Prijs-catalogus →
+        </EBtn>
       </div>
     </div>
   );
