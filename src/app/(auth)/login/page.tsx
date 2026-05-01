@@ -11,11 +11,23 @@ import { AuthField } from "@/components/v2/auth/AuthField";
 import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
 import { requestMagicLinkAction } from "./actions";
 
+/**
+ * Only relative paths within our own app are allowed as a post-login
+ * destination — never an absolute URL — so an attacker can't craft
+ * a /login?callbackUrl=https://evil.example link.
+ */
+function safeCallback(raw: string | null): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justReset = searchParams.get("reset") === "1";
   const magicSent = searchParams.get("magic") === "sent";
+  const callbackUrl = safeCallback(searchParams.get("callbackUrl"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -41,6 +53,8 @@ function LoginForm() {
         const session = await getSession();
         if (session?.user?.role === "admin") {
           router.push("/admin");
+        } else if (callbackUrl) {
+          router.push(callbackUrl);
         } else {
           router.push("/dashboard");
         }
@@ -77,7 +91,7 @@ function LoginForm() {
         </>
       }
     >
-      <GoogleSignInButton />
+      <GoogleSignInButton callbackUrl={callbackUrl ?? "/dashboard"} />
       <AuthDivider />
 
       {magicSent && (

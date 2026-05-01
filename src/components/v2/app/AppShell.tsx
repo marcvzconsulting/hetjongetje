@@ -25,6 +25,7 @@ type Props = {
 
 const DEFAULT_NAV: NavItem[] = [
   { label: "Bibliotheek", href: "/dashboard" },
+  { label: "Abonnement", href: "/subscribe" },
   { label: "Account", href: "/account" },
 ];
 

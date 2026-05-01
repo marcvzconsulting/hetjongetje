@@ -49,10 +49,10 @@ export default async function SubscribePage({
   searchParams: SearchParams;
 }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/login?callbackUrl=%2Fsubscribe");
 
   const gate = await loadUserGate(session.user.id);
-  if (!gate) redirect("/login");
+  if (!gate) redirect("/login?callbackUrl=%2Fsubscribe");
 
   const params = await searchParams;
   const errorMessage = params.error ? ERROR_LABELS[params.error] : null;

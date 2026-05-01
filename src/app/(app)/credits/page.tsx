@@ -39,10 +39,10 @@ export default async function CreditsPage({
   searchParams: SearchParams;
 }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) redirect("/login?callbackUrl=%2Fcredits");
 
   const gate = await loadUserGate(session.user.id);
-  if (!gate) redirect("/login");
+  if (!gate) redirect("/login?callbackUrl=%2Fcredits");
 
   const params = await searchParams;
   const errorMessage = params.error ? ERROR_LABELS[params.error] : null;
@@ -60,6 +60,7 @@ export default async function CreditsPage({
       credits={credits}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },
+        { label: "Abonnement", href: "/subscribe" },
         { label: "Credits", href: "/credits", active: true },
         { label: "Account", href: "/account" },
       ]}
