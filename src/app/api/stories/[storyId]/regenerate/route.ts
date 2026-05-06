@@ -83,27 +83,31 @@ export async function POST(
 
   // Rebuild the character-bible from the current child profile so the
   // regen reflects any profile edits since the original generation.
+  // Most fields live as direct columns on ChildProfile; only
+  // `previousAdventures` accumulates inside the JSON `characterBible`
+  // field. Reading from the wrong place silently produces empty
+  // interests/pets/friends and turns the prompt into a generic blank.
   const child = story.childProfile;
-  const characterBible = (child.characterBible ?? {}) as Record<string, unknown>;
+  const characterBibleJson = (child.characterBible ?? {}) as Record<string, unknown>;
   const bible: CharacterBible = {
     childName: child.name,
     dateOfBirth: child.dateOfBirth.toISOString(),
     gender: child.gender,
-    hairColor: (characterBible.hairColor as string | undefined) ?? child.hairColor ?? undefined,
-    hairStyle: (characterBible.hairStyle as string | undefined) ?? child.hairStyle ?? undefined,
-    eyeColor: (characterBible.eyeColor as string | undefined) ?? child.eyeColor ?? undefined,
-    skinColor: (characterBible.skinColor as string | undefined) ?? child.skinColor ?? undefined,
-    wearsGlasses: child.wearsGlasses ?? undefined,
-    hasFreckles: child.hasFreckles ?? undefined,
-    interests: (characterBible.interests as string[] | undefined) ?? [],
-    pets: characterBible.pets as CharacterBible["pets"],
-    friends: characterBible.friends as CharacterBible["friends"],
-    favoriteThings: characterBible.favoriteThings as CharacterBible["favoriteThings"],
-    fears: characterBible.fears as string[] | undefined,
+    hairColor: child.hairColor ?? undefined,
+    hairStyle: child.hairStyle ?? undefined,
+    eyeColor: child.eyeColor ?? undefined,
+    skinColor: child.skinColor ?? undefined,
+    wearsGlasses: child.wearsGlasses,
+    hasFreckles: child.hasFreckles,
+    interests: child.interests ?? [],
+    pets: (child.pets ?? undefined) as CharacterBible["pets"],
+    friends: (child.friends ?? undefined) as CharacterBible["friends"],
+    favoriteThings: (child.favoriteThings ?? undefined) as CharacterBible["favoriteThings"],
+    fears: child.fears ?? undefined,
     mainCharacterType: child.mainCharacterType,
     mainCharacterDescription: child.mainCharacterDescription ?? undefined,
     approvedCharacterPrompt: child.approvedCharacterPrompt ?? undefined,
-    previousAdventures: characterBible.previousAdventures as CharacterBible["previousAdventures"],
+    previousAdventures: characterBibleJson.previousAdventures as CharacterBible["previousAdventures"],
     loraUrl: child.loraUrl ?? undefined,
     loraTriggerWord: child.loraTriggerWord ?? undefined,
   };
@@ -195,9 +199,16 @@ export async function POST(
 
     return NextResponse.json({ ok: true, storyId });
   } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
     console.error(`[regen] failed for story ${storyId}`, err);
     return NextResponse.json(
-      { error: "Genereren mislukt — probeer het zo opnieuw." },
+      {
+        error: "Genereren mislukt — probeer het zo opnieuw.",
+        // Tijdelijk: stuur de message mee zodat we in de Network-tab
+        // direct zien wat er stuk ging. Niet ideaal voor security; weghalen
+        // zodra de regen-flow stabiel is.
+        debug: detail,
+      },
       { status: 500 },
     );
   }
