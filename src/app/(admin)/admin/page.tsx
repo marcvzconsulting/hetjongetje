@@ -2,14 +2,49 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
+import { RevenueChart } from "@/components/v2/admin/RevenueChart";
 import {
   loadDashboardStats,
+  loadRevenueTimeSeries,
   AI_COST_CENTS_PER_STORY,
+  REVENUE_CUTOFF,
   type DashboardStats,
+  type Granularity,
 } from "@/lib/admin/dashboard-stats";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+type SearchParams = Promise<{
+  range?: string;
+  granularity?: string;
+  from?: string;
+  to?: string;
+}>;
+
+const RANGE_PRESETS: Record<
+  string,
+  { label: string; days: number; granularity: Granularity }
+> = {
+  "30d": { label: "30 dagen", days: 30, granularity: "day" },
+  "90d": { label: "90 dagen", days: 90, granularity: "week" },
+  "12m": { label: "12 maanden", days: 365, granularity: "month" },
+  ytd: { label: "Dit jaar", days: 0, granularity: "month" },
+};
+
+function parseDate(s: string | undefined): Date | null {
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function isGranularity(s: string | undefined): s is Granularity {
+  return s === "day" || s === "week" || s === "month" || s === "quarter";
+}
 
 function eur(cents: number, opts?: { decimals?: 0 | 2 }): string {
   const decimals = opts?.decimals ?? 2;
@@ -33,9 +68,46 @@ function relativeNl(date: Date): string {
   return date.toLocaleDateString("nl-NL");
 }
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const session = await auth();
-  const stats = await loadDashboardStats();
+  const sp = await searchParams;
+
+  // Range — preset wins unless explicit from/to are passed.
+  const customFrom = parseDate(sp.from);
+  const customTo = parseDate(sp.to);
+  const presetKey = sp.range && RANGE_PRESETS[sp.range] ? sp.range : "30d";
+  const preset = RANGE_PRESETS[presetKey];
+  const now = new Date();
+  let rangeFrom: Date;
+  let rangeTo: Date;
+  if (customFrom && customTo) {
+    rangeFrom = customFrom;
+    rangeTo = customTo;
+  } else if (presetKey === "ytd") {
+    rangeFrom = new Date(now.getFullYear(), 0, 1);
+    rangeTo = now;
+  } else {
+    rangeFrom = new Date(now.getTime() - preset.days * 86_400_000);
+    rangeTo = now;
+  }
+  // exclusive upper bound: include today through end-of-day
+  const rangeToExclusive = new Date(rangeTo.getTime() + 86_400_000);
+  const granularity: Granularity = isGranularity(sp.granularity)
+    ? sp.granularity
+    : preset.granularity;
+
+  const [stats, buckets] = await Promise.all([
+    loadDashboardStats(),
+    loadRevenueTimeSeries({
+      from: rangeFrom,
+      to: rangeToExclusive,
+      granularity,
+    }),
+  ]);
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
     active: n.href === "/admin",
@@ -61,8 +133,33 @@ export default async function AdminDashboardPage() {
         <ActionBanner pending={stats.health.pendingUsers} />
       )}
 
+      {/* ── Omzet over tijd (chart) ─────────────────────── */}
+      <Section title="Omzet over tijd">
+        <RangeControls
+          presetKey={presetKey}
+          granularity={granularity}
+          customFrom={customFrom ? isoDate(customFrom) : ""}
+          customTo={customTo ? isoDate(customTo) : ""}
+        />
+        <RevenueChart buckets={buckets} />
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 12,
+            color: V2.inkMute,
+            marginTop: 12,
+            lineHeight: 1.5,
+          }}
+        >
+          Test-betalingen vóór {REVENUE_CUTOFF.toLocaleDateString("nl-NL")} zijn
+          uitgesloten van de cijfers — pas de datum in dashboard-stats.ts aan
+          als je een andere drempel wilt.
+        </p>
+      </Section>
+
       {/* ── Omzet ───────────────────────────────────────── */}
-      <Section title="Omzet">
+      <Section title="Omzet (samengevat)">
         <Grid>
           <Stat
             label="Vandaag"
@@ -210,6 +307,8 @@ export default async function AdminDashboardPage() {
                 <Th>Klant</Th>
                 <Th align="right">Lifetime</Th>
                 <Th align="right">Bestellingen</Th>
+                <Th align="right">Verhalen</Th>
+                <Th align="right">Tegoed</Th>
                 <Th>Status</Th>
                 <Th></Th>
               </tr>
@@ -237,6 +336,12 @@ export default async function AdminDashboardPage() {
                   </Td>
                   <Td align="right" mono>
                     {c.paidOrders}
+                  </Td>
+                  <Td align="right" mono>
+                    {c.storiesGenerated}
+                  </Td>
+                  <Td align="right" mono>
+                    {c.storyCredits}
                   </Td>
                   <Td>
                     {c.activeSubscription ? (
@@ -582,6 +687,176 @@ function FootNote({ children }: { children: React.ReactNode }) {
     </p>
   );
 }
+
+function RangeControls({
+  presetKey,
+  granularity,
+  customFrom,
+  customTo,
+}: {
+  presetKey: string;
+  granularity: Granularity;
+  customFrom: string;
+  customTo: string;
+}) {
+  const usingCustom = !!(customFrom && customTo);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 14,
+        alignItems: "center",
+        marginBottom: 16,
+      }}
+    >
+      {/* Preset range pills */}
+      <div style={{ display: "flex", gap: 6 }}>
+        {Object.entries(RANGE_PRESETS).map(([key, preset]) => {
+          const active = !usingCustom && key === presetKey;
+          return (
+            <Link
+              key={key}
+              href={`/admin?range=${key}`}
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 12,
+                fontWeight: 500,
+                letterSpacing: "0.04em",
+                padding: "6px 12px",
+                border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                background: active ? V2.ink : V2.paper,
+                color: active ? V2.paper : V2.ink,
+                textDecoration: "none",
+              }}
+            >
+              {preset.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Granularity pills */}
+      <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+        {(["day", "week", "month", "quarter"] as const).map((g) => {
+          const active = g === granularity;
+          const params = new URLSearchParams();
+          if (usingCustom) {
+            params.set("from", customFrom);
+            params.set("to", customTo);
+          } else {
+            params.set("range", presetKey);
+          }
+          params.set("granularity", g);
+          return (
+            <Link
+              key={g}
+              href={`/admin?${params.toString()}`}
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 11,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                padding: "6px 10px",
+                border: `1px solid ${active ? V2.goldDeep : V2.paperShade}`,
+                background: active ? V2.goldSoft : "transparent",
+                color: active ? V2.goldDeep : V2.inkMute,
+                textDecoration: "none",
+              }}
+            >
+              {g === "day"
+                ? "Dag"
+                : g === "week"
+                  ? "Week"
+                  : g === "month"
+                    ? "Maand"
+                    : "Kwartaal"}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Custom date-range form */}
+      <form
+        method="get"
+        action="/admin"
+        style={{
+          width: "100%",
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+          flexWrap: "wrap",
+          paddingTop: 8,
+          marginTop: 4,
+          borderTop: `1px dashed ${V2.paperShade}`,
+        }}
+      >
+        <input type="hidden" name="granularity" value={granularity} />
+        <label
+          style={{
+            fontFamily: V2.mono,
+            fontSize: 11,
+            color: V2.inkMute,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+          }}
+        >
+          Eigen periode:
+        </label>
+        <input
+          type="date"
+          name="from"
+          defaultValue={customFrom}
+          style={dateInputStyle}
+        />
+        <span style={{ color: V2.inkMute }}>→</span>
+        <input
+          type="date"
+          name="to"
+          defaultValue={customTo}
+          style={dateInputStyle}
+        />
+        <button
+          type="submit"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 12,
+            fontWeight: 500,
+            padding: "6px 14px",
+            background: V2.ink,
+            color: V2.paper,
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Toepassen
+        </button>
+        {usingCustom && (
+          <Link
+            href={`/admin?range=30d`}
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 12,
+              color: V2.inkMute,
+              textDecoration: "underline",
+            }}
+          >
+            wis
+          </Link>
+        )}
+      </form>
+    </div>
+  );
+}
+
+const dateInputStyle: React.CSSProperties = {
+  fontFamily: V2.mono,
+  fontSize: 12,
+  padding: "5px 8px",
+  border: `1px solid ${V2.paperShade}`,
+  background: V2.paper,
+  color: V2.ink,
+};
 
 function ActionBanner({ pending }: { pending: number }) {
   return (

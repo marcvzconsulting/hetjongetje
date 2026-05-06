@@ -7,6 +7,18 @@ import { prisma } from "@/lib/db";
  */
 export const AI_COST_CENTS_PER_STORY = 15;
 
+/**
+ * Mollie switched to live mode on 2026-05-06. Everything paid before
+ * that timestamp came from test transactions and shouldn't count
+ * towards reported revenue. Move this date if we ever do a clean cut
+ * later (e.g. fiscal-year reset).
+ *
+ * The orders themselves stay in DB so individual user pages still
+ * show the full history — the dashboard just hides them from the
+ * aggregates.
+ */
+export const REVENUE_CUTOFF = new Date("2026-05-06T00:00:00Z");
+
 export type DashboardStats = Awaited<ReturnType<typeof loadDashboardStats>>;
 
 function startOfDay(now: Date): Date {
@@ -17,6 +29,9 @@ function startOfMonth(now: Date): Date {
 }
 function startOfYear(now: Date): Date {
   return new Date(now.getFullYear(), 0, 1);
+}
+function maxDate(a: Date, b: Date): Date {
+  return a.getTime() > b.getTime() ? a : b;
 }
 
 /**
@@ -38,9 +53,11 @@ function intervalToMonths(interval: string): number {
 
 export async function loadDashboardStats() {
   const now = new Date();
-  const today = startOfDay(now);
-  const monthStart = startOfMonth(now);
-  const yearStart = startOfYear(now);
+  // Each window's lower bound is the later of (window start, REVENUE_CUTOFF)
+  // so a window that opens before live-mode collapses to the cutoff itself.
+  const today = maxDate(startOfDay(now), REVENUE_CUTOFF);
+  const monthStart = maxDate(startOfMonth(now), REVENUE_CUTOFF);
+  const yearStart = maxDate(startOfYear(now), REVENUE_CUTOFF);
 
   // Run all reads in parallel — Neon round-trips are the bottleneck.
   const [
@@ -69,7 +86,7 @@ export async function loadDashboardStats() {
     sumOrderAmount({ paidAt: { gte: today } }),
     sumOrderAmount({ paidAt: { gte: monthStart } }),
     sumOrderAmount({ paidAt: { gte: yearStart } }),
-    sumOrderAmount({}),
+    sumOrderAmount({ paidAt: { gte: REVENUE_CUTOFF } }),
     prisma.order.count({ where: { status: "paid", paidAt: { gte: today } } }),
     prisma.order.count({ where: { status: "paid", paidAt: { gte: monthStart } } }),
     prisma.story.count({ where: { createdAt: { gte: today } } }),
@@ -94,14 +111,14 @@ export async function loadDashboardStats() {
     prisma.generationJob.count({ where: { status: "processing" } }),
     prisma.order.groupBy({
       by: ["userId"],
-      where: { status: "paid" },
+      where: { status: "paid", paidAt: { gte: REVENUE_CUTOFF } },
       _sum: { amountCents: true },
       _count: { _all: true },
       orderBy: { _sum: { amountCents: "desc" } },
       take: 10,
     }),
     prisma.order.findMany({
-      where: { status: "paid" },
+      where: { status: "paid", paidAt: { gte: REVENUE_CUTOFF } },
       orderBy: { paidAt: "desc" },
       take: 10,
       include: { user: { select: { name: true, email: true } } },
@@ -147,6 +164,7 @@ export async function loadDashboardStats() {
           id: true,
           name: true,
           email: true,
+          storyCredits: true,
           subscription: {
             select: {
               plan: true,
@@ -154,18 +172,25 @@ export async function loadDashboardStats() {
               mollieSubscriptionId: true,
             },
           },
+          children: {
+            select: { _count: { select: { stories: true } } },
+          },
         },
       })
     : [];
   const topUserMap = new Map(topUserDetails.map((u) => [u.id, u]));
   const topCustomersHydrated = topCustomers.map((c) => {
     const u = topUserMap.get(c.userId);
+    const storyCount =
+      u?.children?.reduce((s, c) => s + (c._count.stories ?? 0), 0) ?? 0;
     return {
       userId: c.userId,
       name: u?.name ?? "(verwijderd)",
       email: u?.email ?? "",
       paidOrders: c._count._all,
       lifetimeCents: c._sum.amountCents ?? 0,
+      storyCredits: u?.storyCredits ?? 0,
+      storiesGenerated: storyCount,
       activeSubscription:
         u?.subscription?.status === "active" &&
         !!u.subscription.mollieSubscriptionId &&
@@ -276,4 +301,118 @@ async function sumOrderAmount(where: object): Promise<number> {
     _sum: { amountCents: true },
   });
   return r._sum.amountCents ?? 0;
+}
+
+// ── Revenue time-series ─────────────────────────────────────────────
+
+export type Granularity = "day" | "week" | "month" | "quarter";
+export type RevenueBucket = {
+  /** Inclusive start of the bucket. */
+  start: Date;
+  /** Short Dutch label suitable for an x-axis tick. */
+  label: string;
+  /** Sum of paid Order.amountCents falling inside the bucket. */
+  totalCents: number;
+  /** Count of paid orders for tooltip detail. */
+  orderCount: number;
+};
+
+/**
+ * Bucket every paid order between `from` (inclusive) and `to` (exclusive)
+ * into time-buckets at the chosen granularity, and return one row per
+ * bucket — including empty buckets so the chart's x-axis is gap-free.
+ *
+ * `from` is automatically clamped to REVENUE_CUTOFF; the chart never
+ * shows pre-live test data even if the caller forgets to clamp.
+ */
+export async function loadRevenueTimeSeries(opts: {
+  from: Date;
+  to: Date;
+  granularity: Granularity;
+}): Promise<RevenueBucket[]> {
+  const from = maxDate(opts.from, REVENUE_CUTOFF);
+  const to = opts.to;
+  if (from.getTime() >= to.getTime()) return [];
+
+  const orders = await prisma.order.findMany({
+    where: {
+      status: "paid",
+      paidAt: { gte: from, lt: to },
+    },
+    select: { paidAt: true, amountCents: true },
+    orderBy: { paidAt: "asc" },
+  });
+
+  // Generate empty buckets covering [from, to).
+  const buckets: RevenueBucket[] = [];
+  let cursor = bucketStart(from, opts.granularity);
+  while (cursor.getTime() < to.getTime()) {
+    buckets.push({
+      start: new Date(cursor),
+      label: bucketLabel(cursor, opts.granularity),
+      totalCents: 0,
+      orderCount: 0,
+    });
+    cursor = bucketAdvance(cursor, opts.granularity);
+  }
+
+  // Fill in totals — linear scan, both arrays are time-sorted.
+  let bi = 0;
+  for (const o of orders) {
+    if (!o.paidAt) continue;
+    while (
+      bi + 1 < buckets.length &&
+      o.paidAt.getTime() >= buckets[bi + 1].start.getTime()
+    ) {
+      bi++;
+    }
+    buckets[bi].totalCents += o.amountCents;
+    buckets[bi].orderCount += 1;
+  }
+  return buckets;
+}
+
+function bucketStart(d: Date, g: Granularity): Date {
+  if (g === "day") return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (g === "week") {
+    // ISO week: Monday as the first day.
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayIdx = (start.getDay() + 6) % 7; // Mon=0, Sun=6
+    start.setDate(start.getDate() - dayIdx);
+    return start;
+  }
+  if (g === "month") return new Date(d.getFullYear(), d.getMonth(), 1);
+  if (g === "quarter") {
+    const qMonth = Math.floor(d.getMonth() / 3) * 3;
+    return new Date(d.getFullYear(), qMonth, 1);
+  }
+  return d;
+}
+
+function bucketAdvance(d: Date, g: Granularity): Date {
+  const next = new Date(d);
+  if (g === "day") next.setDate(next.getDate() + 1);
+  else if (g === "week") next.setDate(next.getDate() + 7);
+  else if (g === "month") next.setMonth(next.getMonth() + 1);
+  else if (g === "quarter") next.setMonth(next.getMonth() + 3);
+  return next;
+}
+
+function bucketLabel(d: Date, g: Granularity): string {
+  if (g === "day") {
+    return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+  }
+  if (g === "week") {
+    const end = new Date(d);
+    end.setDate(end.getDate() + 6);
+    return `${d.getDate()}-${end.getDate()} ${d.toLocaleDateString("nl-NL", { month: "short" })}`;
+  }
+  if (g === "month") {
+    return d.toLocaleDateString("nl-NL", { month: "short", year: "2-digit" });
+  }
+  if (g === "quarter") {
+    const q = Math.floor(d.getMonth() / 3) + 1;
+    return `Q${q} ${d.getFullYear().toString().slice(2)}`;
+  }
+  return d.toISOString().slice(0, 10);
 }
