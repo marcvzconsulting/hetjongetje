@@ -51,7 +51,7 @@ const CREDIT_PACKS = [
   {
     code: "five",
     name: "5 verhalen",
-    description: "10% korting, voor een week of twee.",
+    description: "Voor een week of twee vooruit.",
     creditAmount: 5,
     priceCents: 675,
     sortOrder: 20,
@@ -60,7 +60,7 @@ const CREDIT_PACKS = [
   {
     code: "ten",
     name: "10 verhalen",
-    description: "20% korting, een hele maand vooruit.",
+    description: "Genoeg voor een hele maand.",
     creditAmount: 10,
     priceCents: 1200,
     sortOrder: 30,
@@ -69,7 +69,7 @@ const CREDIT_PACKS = [
   {
     code: "twentyfive",
     name: "25 verhalen",
-    description: "Beste prijs per verhaal — de hele zomer rond.",
+    description: "Voor de hele zomer of langer.",
     creditAmount: 25,
     priceCents: 2750,
     sortOrder: 40,

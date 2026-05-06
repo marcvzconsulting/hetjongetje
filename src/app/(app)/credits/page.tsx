@@ -33,6 +33,23 @@ function pricePerStory(cents: number, count: number): string {
   return (cents / 100 / count).toFixed(2).replace(".", ",");
 }
 
+/**
+ * Discount of a bundle versus the single-pack price, as a whole percent.
+ * Returns null when there's no anchor (no single-pack present) or the
+ * bundle isn't actually cheaper per credit. Computed at render time so
+ * it stays correct when an admin tunes prices via /admin/pricing.
+ */
+function bundleDiscountPercent(
+  bundlePriceCents: number,
+  bundleCredits: number,
+  singlePriceCents: number | null,
+): number | null {
+  if (!singlePriceCents || bundleCredits <= 1) return null;
+  const bundlePerCredit = bundlePriceCents / bundleCredits;
+  if (bundlePerCredit >= singlePriceCents) return null;
+  return Math.round((1 - bundlePerCredit / singlePriceCents) * 100);
+}
+
 export default async function CreditsPage({
   searchParams,
 }: {
@@ -53,6 +70,16 @@ export default async function CreditsPage({
   });
 
   const credits = gate.isAdmin ? null : gate.storyCredits;
+
+  // Anchor for auto-computed bundle discounts — fall back to the
+  // priciest per-credit pack if nobody seeded a "single" code yet.
+  const singlePack =
+    packs.find((p) => p.creditAmount === 1) ??
+    [...packs].sort(
+      (a, b) => b.priceCents / b.creditAmount - a.priceCents / a.creditAmount,
+    )[0] ??
+    null;
+  const singlePriceCents = singlePack ? singlePack.priceCents / singlePack.creditAmount : null;
 
   return (
     <AppShell
@@ -156,6 +183,11 @@ export default async function CreditsPage({
               key={p.id}
               pack={p}
               disabled={!gate.isApproved}
+              discountPercent={bundleDiscountPercent(
+                p.priceCents,
+                p.creditAmount,
+                singlePriceCents,
+              )}
             />
           ))}
         </div>
@@ -232,6 +264,7 @@ export default async function CreditsPage({
 function PackCard({
   pack,
   disabled,
+  discountPercent,
 }: {
   pack: {
     id: string;
@@ -242,6 +275,8 @@ function PackCard({
     badge: string | null;
   };
   disabled: boolean;
+  /** Auto-computed savings vs. single-pack — null hides the badge. */
+  discountPercent: number | null;
 }) {
   const featured = !!pack.badge;
   return (
@@ -313,6 +348,24 @@ function PackCard({
       >
         €{pricePerStory(pack.priceCents, pack.creditAmount)} per verhaal
       </div>
+      {discountPercent !== null && discountPercent > 0 && (
+        <div
+          style={{
+            display: "inline-block",
+            marginTop: 12,
+            padding: "4px 10px",
+            background: featured ? "rgba(201,169,97,0.18)" : "rgba(138,115,64,0.10)",
+            color: featured ? V2.gold : V2.goldDeep,
+            fontFamily: V2.ui,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            alignSelf: "flex-start",
+          }}
+        >
+          −{discountPercent}% per verhaal
+        </div>
+      )}
 
       {pack.description && (
         <p
