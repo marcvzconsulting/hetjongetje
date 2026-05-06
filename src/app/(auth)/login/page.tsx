@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -10,6 +11,67 @@ import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
 import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
 import { requestMagicLinkAction } from "./actions";
+
+/**
+ * Sits inside the magic-link <form> so useFormStatus picks up the pending
+ * state of that form's server action. The action does a Brevo round-trip
+ * which can take a few seconds — without this the user sees nothing
+ * happen and clicks again.
+ */
+function MagicLinkSubmit({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  const isDisabled = disabled || pending;
+  return (
+    <button
+      type="submit"
+      disabled={isDisabled}
+      style={{
+        width: "100%",
+        minHeight: 44,
+        padding: "10px 16px",
+        background: pending ? V2.paperDeep : V2.paper,
+        color: V2.ink,
+        border: `1px solid ${V2.paperShade}`,
+        borderRadius: 2,
+        fontFamily: V2.ui,
+        fontSize: 14,
+        fontWeight: 500,
+        cursor: isDisabled ? "default" : "pointer",
+        opacity: isDisabled && !pending ? 0.5 : 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10,
+        transition: "background .15s, border-color .15s",
+      }}
+    >
+      {pending ? (
+        <>
+          <Spinner /> Bezig met versturen…
+        </>
+      ) : (
+        <>✉ Stuur me een login-link via e-mail</>
+      )}
+    </button>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      aria-hidden
+      style={{
+        width: 14,
+        height: 14,
+        border: `2px solid ${V2.paperShade}`,
+        borderTopColor: V2.ink,
+        borderRadius: "50%",
+        display: "inline-block",
+        animation: "ov-spin 0.7s linear infinite",
+      }}
+    />
+  );
+}
 
 /**
  * Only relative paths within our own app are allowed as a post-login
@@ -184,28 +246,47 @@ function LoginForm() {
 
       {/* Passwordless alternative. Server action receives the email field
           and posts a magic-link. Submitting this form is the only way to
-          log in as an admin (password login is blocked for that role). */}
-      <form action={requestMagicLinkAction} style={{ marginTop: 18 }}>
-        <input type="hidden" name="email" value={email} />
-        <button
-          type="submit"
-          disabled={!email}
+          log in as an admin (password login is blocked for that role).
+
+          MagicLinkSubmit (above) shows a "Bezig met versturen…" state via
+          useFormStatus while the Brevo round-trip is in flight — without
+          that the user just sees nothing happen for a couple of seconds
+          and tends to click again. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `@keyframes ov-spin { to { transform: rotate(360deg); } }`,
+        }}
+      />
+      <div style={{ marginTop: 24 }}>
+        <div
           style={{
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            cursor: email ? "pointer" : "default",
-            opacity: email ? 1 : 0.5,
             fontFamily: V2.ui,
-            fontSize: 13,
+            fontSize: 12,
             color: V2.inkMute,
-            textDecoration: "underline",
-            textUnderlineOffset: 3,
+            textAlign: "center",
+            marginBottom: 10,
+            letterSpacing: "0.04em",
           }}
         >
-          Liever geen wachtwoord typen? Stuur me een login-link.
-        </button>
-      </form>
+          of liever zonder wachtwoord
+        </div>
+        <form action={requestMagicLinkAction}>
+          <input type="hidden" name="email" value={email} />
+          <MagicLinkSubmit disabled={!email} />
+        </form>
+        <div
+          style={{
+            fontFamily: V2.body,
+            fontSize: 12,
+            color: V2.inkMute,
+            textAlign: "center",
+            marginTop: 8,
+            lineHeight: 1.5,
+          }}
+        >
+          We mailen je een login-link, geldig 15 minuten.
+        </div>
+      </div>
     </AuthShell>
   );
 }
