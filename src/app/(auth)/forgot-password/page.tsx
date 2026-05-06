@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
-import { EBtn } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
 import { requestResetAction } from "./actions";
@@ -109,14 +109,14 @@ export default async function ForgotPasswordPage({
           placeholder="je@email.nl"
         />
 
-        <EBtn
+        <EBtnSubmit
           kind="primary"
           size="lg"
-          type="submit"
+          pendingLabel="Versturen…"
           style={{ width: "100%", justifyContent: "center" }}
         >
           Reset-link versturen →
-        </EBtn>
+        </EBtnSubmit>
       </form>
     </AuthShell>
   );

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
+import { PendingButton } from "@/components/v2/PendingButton";
 import {
   EDITABLE_TEMPLATES,
   findEditableTemplate,
@@ -224,9 +225,9 @@ export default async function EditTemplatePage({
                 flexWrap: "wrap",
               }}
             >
-              <button type="submit" style={primaryBtn}>
+              <PendingButton variant="primary" pendingLabel="Opslaan…">
                 Opslaan
-              </button>
+              </PendingButton>
             </div>
           </form>
 
@@ -242,16 +243,16 @@ export default async function EditTemplatePage({
           >
             <form action={sendTestTemplateAction}>
               <input type="hidden" name="code" value={code} />
-              <button type="submit" style={ghostBtn}>
+              <PendingButton variant="ghost" pendingLabel="Versturen…">
                 Test naar mij sturen
-              </button>
+              </PendingButton>
             </form>
             {isOverridden && (
               <form action={resetTemplateAction}>
                 <input type="hidden" name="code" value={code} />
-                <button type="submit" style={dangerBtn}>
+                <PendingButton variant="danger" pendingLabel="Resetten…">
                   Reset naar default
-                </button>
+                </PendingButton>
               </form>
             )}
           </div>
@@ -451,42 +452,6 @@ const inputStyle: React.CSSProperties = {
   fontSize: 14,
   color: V2.ink,
   outline: "none",
-};
-
-const primaryBtn: React.CSSProperties = {
-  padding: "10px 22px",
-  background: V2.ink,
-  color: V2.paper,
-  border: "none",
-  fontFamily: V2.ui,
-  fontSize: 13,
-  fontWeight: 500,
-  letterSpacing: "0.04em",
-  cursor: "pointer",
-};
-
-const ghostBtn: React.CSSProperties = {
-  padding: "10px 18px",
-  background: V2.paper,
-  color: V2.ink,
-  border: `1px solid ${V2.paperShade}`,
-  fontFamily: V2.ui,
-  fontSize: 13,
-  fontWeight: 500,
-  letterSpacing: "0.04em",
-  cursor: "pointer",
-};
-
-const dangerBtn: React.CSSProperties = {
-  padding: "10px 18px",
-  background: "transparent",
-  color: V2.heart,
-  border: `1px solid ${V2.rose}`,
-  fontFamily: V2.ui,
-  fontSize: 13,
-  fontWeight: 500,
-  letterSpacing: "0.04em",
-  cursor: "pointer",
 };
 
 const backLinkStyle: React.CSSProperties = {

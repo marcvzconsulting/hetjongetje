@@ -1,6 +1,7 @@
 import { ContentPage, Lead, P } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { submitBinnenkortAction } from "./actions";
 
 export const metadata = {
@@ -139,9 +140,9 @@ export default async function BinnenkortPage({
           />
 
           <div style={{ marginTop: 28 }}>
-            <EBtn kind="primary" size="lg" type="submit">
+            <EBtnSubmit kind="primary" size="lg" pendingLabel="Versturen…">
               Versturen →
-            </EBtn>
+            </EBtnSubmit>
           </div>
           <p
             style={{

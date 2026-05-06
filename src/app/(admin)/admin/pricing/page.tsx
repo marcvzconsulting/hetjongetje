@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import {
   createCreditPackAction,
@@ -598,9 +599,9 @@ function ActiveToggle({ defaultChecked }: { defaultChecked: boolean }) {
 
 function SaveButton({ label = "Opslaan" }: { label?: string }) {
   return (
-    <EBtn kind="primary" size="sm" type="submit">
+    <EBtnSubmit kind="primary" size="sm" pendingLabel="Opslaan…">
       {label}
-    </EBtn>
+    </EBtnSubmit>
   );
 }
 

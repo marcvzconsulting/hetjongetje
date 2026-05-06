@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
+import { PendingButton } from "@/components/v2/PendingButton";
 import { StarField } from "@/components/v2/StarField";
 import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import {
@@ -206,9 +208,9 @@ export default async function AccountPage({
               </div>
             </FieldRow>
             <div style={{ marginTop: 28 }}>
-              <EBtn kind="primary" size="md" type="submit">
+              <EBtnSubmit kind="primary" size="md" pendingLabel="Opslaan…">
                 Opslaan →
-              </EBtn>
+              </EBtnSubmit>
             </div>
           </form>
         </Section>
@@ -256,9 +258,9 @@ export default async function AccountPage({
               />
             </div>
             <div style={{ marginTop: 28 }}>
-              <EBtn kind="primary" size="md" type="submit">
+              <EBtnSubmit kind="primary" size="md" pendingLabel="Opslaan…">
                 Opslaan →
-              </EBtn>
+              </EBtnSubmit>
             </div>
           </form>
         </Section>
@@ -300,15 +302,15 @@ export default async function AccountPage({
                 </>
               )}
             </p>
-            <EBtn
+            <EBtnSubmit
               kind={user.newsletterOptIn ? "ghost" : "primary"}
               size="md"
-              type="submit"
+              pendingLabel="Bezig…"
             >
               {user.newsletterOptIn
                 ? "Uitschrijven"
                 : "Aanmelden voor de nieuwsbrief →"}
-            </EBtn>
+            </EBtnSubmit>
           </form>
         </Section>
 
@@ -350,9 +352,9 @@ export default async function AccountPage({
               />
             </FieldRow>
             <div style={{ marginTop: 28 }}>
-              <EBtn kind="primary" size="md" type="submit">
+              <EBtnSubmit kind="primary" size="md" pendingLabel="Wijzigen…">
                 Wachtwoord wijzigen →
-              </EBtn>
+              </EBtnSubmit>
             </div>
           </form>
         </Section>
@@ -465,24 +467,17 @@ export default async function AccountPage({
                     autoComplete="current-password"
                   />
                 </div>
-                <button
-                  type="submit"
+                <PendingButton
+                  variant="primary"
+                  pendingLabel="Verwijderen…"
                   style={{
                     marginTop: 16,
-                    padding: "12px 24px",
                     background: V2.heart,
-                    color: V2.paper,
-                    border: "none",
-                    fontFamily: V2.ui,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    letterSpacing: 0.2,
-                    cursor: "pointer",
                     borderRadius: 2,
                   }}
                 >
                   Account definitief verwijderen
-                </button>
+                </PendingButton>
               </form>
             </details>
           )}
@@ -648,9 +643,9 @@ function SubscriptionPanel({
             het einde van de lopende periode; daarna wordt er niets
             meer afgeschreven.
           </p>
-          <EBtn kind="ghost" size="md" type="submit">
+          <EBtnSubmit kind="ghost" size="md" pendingLabel="Opzeggen…">
             Abonnement opzeggen
-          </EBtn>
+          </EBtnSubmit>
         </form>
       ) : (
         <p

@@ -19,6 +19,7 @@ import { buildAccountApprovedMail } from "@/lib/email/templates/account-approved
 import { buildAppUrl } from "@/lib/url";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn, IconV2 } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 
 function formatDateTime(date: Date | null | undefined): string {
   if (!date) return "-";
@@ -746,9 +747,9 @@ export default async function AdminUserDetailPage({
                     }}
                   />
                 </div>
-                <EBtn kind="primary" size="sm" type="submit">
+                <EBtnSubmit kind="primary" size="sm" pendingLabel="Bezig…">
                   Goedkeuren →
-                </EBtn>
+                </EBtnSubmit>
               </form>
             </div>
           )}
@@ -791,9 +792,9 @@ export default async function AdminUserDetailPage({
                     style={inputStyle}
                   />
                 </div>
-                <EBtn kind="primary" size="sm" type="submit">
+                <EBtnSubmit kind="primary" size="sm" pendingLabel="Bezig…">
                   Instellen
-                </EBtn>
+                </EBtnSubmit>
               </div>
             </form>
 
@@ -828,9 +829,9 @@ export default async function AdminUserDetailPage({
                     style={inputStyle}
                   />
                 </div>
-                <EBtn kind="ghost" size="sm" type="submit">
+                <EBtnSubmit kind="ghost" size="sm" pendingLabel="Bezig…">
                   <IconV2 name="plus" size={14} /> Toevoegen
-                </EBtn>
+                </EBtnSubmit>
               </div>
             </form>
           </div>
@@ -847,32 +848,26 @@ export default async function AdminUserDetailPage({
               <form action={updateApprovalAction}>
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="action" value="suspend" />
-                <button
-                  type="submit"
+                <EBtnSubmit
+                  kind="ghost"
+                  size="sm"
+                  pendingLabel="Bezig…"
                   style={{
-                    padding: "10px 18px",
-                    background: "transparent",
                     color: V2.heart,
                     border: `1px solid ${V2.heart}`,
-                    fontFamily: V2.ui,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    letterSpacing: 0.2,
-                    cursor: "pointer",
-                    borderRadius: 2,
                   }}
                 >
                   Opschorten
-                </button>
+                </EBtnSubmit>
               </form>
             )}
             {user.status === "suspended" && (
               <form action={updateApprovalAction}>
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="action" value="unsuspend" />
-                <EBtn kind="ghost" size="sm" type="submit">
+                <EBtnSubmit kind="ghost" size="sm" pendingLabel="Bezig…">
                   <IconV2 name="check" size={14} /> Opschorting opheffen
-                </EBtn>
+                </EBtnSubmit>
               </form>
             )}
           </div>
@@ -1016,9 +1011,9 @@ export default async function AdminUserDetailPage({
             >
               Genereer een eenmalige reset-link voor de klant (aanbevolen).
             </p>
-            <EBtn kind="ghost" size="md" type="submit">
+            <EBtnSubmit kind="ghost" size="md" pendingLabel="Genereren…">
               Reset-link genereren →
-            </EBtn>
+            </EBtnSubmit>
           </form>
 
           <form action={setPasswordAction}>
@@ -1045,9 +1040,9 @@ export default async function AdminUserDetailPage({
                 style={inputStyle}
               />
             </div>
-            <EBtn kind="primary" size="md" type="submit">
+            <EBtnSubmit kind="primary" size="md" pendingLabel="Instellen…">
               Wachtwoord instellen →
-            </EBtn>
+            </EBtnSubmit>
           </form>
         </div>
       </section>
@@ -1120,30 +1115,30 @@ export default async function AdminUserDetailPage({
             />
           </div>
           <div>
-            <EBtn kind="primary" size="md" type="submit">
+            <EBtnSubmit kind="primary" size="md" pendingLabel="Opslaan…">
               Opslaan →
-            </EBtn>
+            </EBtnSubmit>
           </div>
         </form>
         {user.subscription && (
           <form action={deleteSubscriptionAction} style={{ marginTop: 16 }}>
             <input type="hidden" name="userId" value={user.id} />
-            <button
-              type="submit"
+            <EBtnSubmit
+              kind="ghost"
+              size="sm"
+              pendingLabel="Bezig…"
               style={{
                 background: "transparent",
                 border: "none",
                 padding: 0,
-                fontFamily: V2.ui,
-                fontSize: 13,
                 color: V2.inkMute,
-                cursor: "pointer",
                 textDecoration: "underline",
                 textUnderlineOffset: 3,
+                minHeight: "auto",
               }}
             >
               Abonnement verwijderen
-            </button>
+            </EBtnSubmit>
           </form>
         )}
         {user.subscription && (
@@ -1433,9 +1428,9 @@ export default async function AdminUserDetailPage({
               style={inputStyle}
             />
           </div>
-          <EBtn kind="primary" size="sm" type="submit">
+          <EBtnSubmit kind="primary" size="sm" pendingLabel="Bezig…">
             <IconV2 name="plus" size={14} /> Toevoegen
-          </EBtn>
+          </EBtnSubmit>
         </form>
         {user.adminNotes.length === 0 ? (
           <p
@@ -1640,23 +1635,17 @@ export default async function AdminUserDetailPage({
                   style={inputStyle}
                 />
               </div>
-              <button
-                type="submit"
+              <EBtnSubmit
+                kind="primary"
+                size="md"
+                pendingLabel="Verwijderen…"
                 style={{
-                  padding: "12px 24px",
                   background: V2.heart,
                   color: V2.paper,
-                  border: "none",
-                  fontFamily: V2.ui,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  letterSpacing: 0.2,
-                  cursor: "pointer",
-                  borderRadius: 2,
                 }}
               >
                 Account definitief verwijderen
-              </button>
+              </EBtnSubmit>
             </form>
           </details>
         )}

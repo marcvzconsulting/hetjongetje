@@ -1,6 +1,7 @@
 import { ContentPage, Lead } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { submitContactFormAction } from "./actions";
 
 export const metadata = {
@@ -221,9 +222,9 @@ export default async function ContactPage({
               />
             </div>
 
-            <EBtn kind="primary" size="md" type="submit">
+            <EBtnSubmit kind="primary" size="md" pendingLabel="Versturen…">
               Versturen
-            </EBtn>
+            </EBtnSubmit>
           </form>
         )}
       </div>

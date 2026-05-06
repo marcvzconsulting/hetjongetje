@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
 import { validateResetToken } from "@/lib/password-reset";
@@ -134,14 +135,14 @@ export default async function ResetPasswordPage({
           autoComplete="new-password"
         />
 
-        <EBtn
+        <EBtnSubmit
           kind="primary"
           size="lg"
-          type="submit"
+          pendingLabel="Instellen…"
           style={{ width: "100%", justifyContent: "center" }}
         >
           Wachtwoord instellen →
-        </EBtn>
+        </EBtnSubmit>
       </form>
     </AuthShell>
   );
