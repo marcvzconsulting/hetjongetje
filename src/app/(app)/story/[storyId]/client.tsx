@@ -43,8 +43,10 @@ export function StoryPageClient({
   const [regenError, setRegenError] = useState<string>("");
   const [regenInFlight, setRegenInFlight] = useState(false);
   const [, startTransition] = useTransition();
+  const [reactOpen, setReactOpen] = useState(false);
 
   const canRegenerate = regenerationCount < regenerationLimit;
+  const hasFeedback = feedbackKind !== null;
 
   async function toggleFavorite() {
     const newValue = !isFavorite;
@@ -77,8 +79,7 @@ export function StoryPageClient({
       });
       setFeedbackSavedAt(new Date());
     } catch {
-      // Best-effort — keep optimistic state, don't roll back to avoid
-      // confusing the user mid-typing.
+      // Best-effort — keep optimistic state.
     }
   }
 
@@ -105,7 +106,8 @@ export function StoryPageClient({
         setRegenInFlight(false);
         return;
       }
-      // Success — refresh server-rendered page so the new story loads.
+      // Success — close the modal and refresh.
+      setReactOpen(false);
       startTransition(() => router.refresh());
     } catch {
       setRegenError("Verbindingsfout — probeer het zo opnieuw.");
@@ -125,194 +127,284 @@ export function StoryPageClient({
         onToggleFavorite={toggleFavorite}
       />
 
-      {/* Footer-strip below the book — actions and feedback. Sits in
-          normal flow under the viewer; admins running BookViewer in a
-          modal can still see it after closing. */}
-      <section
+      {/* Floating button bottom-right of the reader. The reader itself
+          uses position:fixed for chrome and full-screen layout, so a
+          fixed button on top is the only way to surface these actions
+          without scrolling out of the immersive view. */}
+      <button
+        type="button"
+        aria-label="Reageren of opnieuw genereren"
+        onClick={() => setReactOpen(true)}
         style={{
-          background: V2.paper,
-          borderTop: `1px solid ${V2.paperShade}`,
-          padding: "32px 24px 56px",
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          zIndex: 50,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 16px",
+          background: V2.ink,
+          color: V2.paper,
+          border: "none",
+          borderRadius: 999,
+          fontFamily: V2.ui,
+          fontSize: 13,
+          fontWeight: 500,
+          letterSpacing: "0.04em",
+          cursor: "pointer",
+          boxShadow: "0 6px 20px rgba(20,20,46,0.25)",
         }}
       >
-        <div
-          style={{
-            maxWidth: 720,
-            margin: "0 auto",
-            display: "grid",
-            gap: 32,
-          }}
-        >
-          {/* Feedback */}
-          <div>
-            <h2
-              style={{
-                fontFamily: V2.display,
-                fontWeight: 300,
-                fontSize: 22,
-                letterSpacing: -0.4,
-                margin: "0 0 6px",
-                color: V2.ink,
-              }}
-            >
-              Hoe vond je dit verhaal?
-            </h2>
-            <p
-              style={{
-                fontFamily: V2.body,
-                fontSize: 14,
-                color: V2.inkSoft,
-                margin: "0 0 14px",
-                lineHeight: 1.55,
-              }}
-            >
-              Korte reactie helpt ons betere verhalen maken.
-            </p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <ThumbButton
-                label="Mooi"
-                glyph="👍"
-                active={feedbackKind === "up"}
-                onClick={() =>
-                  submitFeedback(feedbackKind === "up" ? null : "up")
-                }
-              />
-              <ThumbButton
-                label="Minder"
-                glyph="👎"
-                active={feedbackKind === "down"}
-                onClick={() =>
-                  submitFeedback(feedbackKind === "down" ? null : "down")
-                }
-              />
-              {feedbackSavedAt && feedbackKind && (
-                <span
-                  style={{
-                    fontFamily: V2.mono,
-                    fontSize: 11,
-                    color: V2.inkMute,
-                    alignSelf: "center",
-                    letterSpacing: "0.06em",
-                  }}
-                >
-                  ✓ opgeslagen
-                </span>
-              )}
-            </div>
-            {feedbackKind && (
-              <textarea
-                placeholder={
-                  feedbackKind === "up"
-                    ? "Wat vond je het mooist? (optioneel)"
-                    : "Wat klopte er niet? (optioneel)"
-                }
-                value={feedbackNote}
-                onChange={(e) => setFeedbackNote(e.target.value)}
-                onBlur={() => submitFeedback(feedbackKind, feedbackNote)}
-                rows={3}
-                maxLength={1000}
-                style={{
-                  width: "100%",
-                  marginTop: 12,
-                  padding: "10px 12px",
-                  fontFamily: V2.body,
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                  color: V2.ink,
-                  background: V2.paperDeep,
-                  border: `1px solid ${V2.paperShade}`,
-                  outline: "none",
-                  resize: "vertical",
-                }}
-              />
-            )}
-          </div>
+        <span aria-hidden style={{ fontSize: 14 }}>
+          {hasFeedback ? "✓" : "✱"}
+        </span>
+        <span>Reageren</span>
+      </button>
 
-          {/* Regenerate */}
-          <div
-            style={{
-              borderTop: `1px solid ${V2.paperShade}`,
-              paddingTop: 24,
-            }}
-          >
-            <h2
-              style={{
-                fontFamily: V2.display,
-                fontWeight: 300,
-                fontSize: 22,
-                letterSpacing: -0.4,
-                margin: "0 0 6px",
-                color: V2.ink,
-              }}
-            >
-              Niet helemaal goed?
-            </h2>
-            <p
-              style={{
-                fontFamily: V2.body,
-                fontSize: 14,
-                color: V2.inkSoft,
-                margin: "0 0 14px",
-                lineHeight: 1.55,
-              }}
-            >
-              Eén keer per verhaal kun je opnieuw laten genereren met
-              dezelfde instellingen. Je{" "}
-              <strong>raakt het huidige verhaal kwijt</strong>; de nieuwe
-              versie komt ervoor in de plaats.{" "}
-              {!canRegenerate && (
-                <span style={{ color: V2.inkMute }}>
-                  Je hebt deze keuze al gebruikt voor dit verhaal.
-                </span>
-              )}
-            </p>
-            <button
-              type="button"
-              disabled={!canRegenerate || regenInFlight}
-              onClick={handleRegenerate}
-              style={{
-                fontFamily: V2.ui,
-                fontSize: 14,
-                fontWeight: 500,
-                letterSpacing: "0.04em",
-                padding: "10px 22px",
-                border: `1px solid ${
-                  canRegenerate ? V2.ink : V2.paperShade
-                }`,
-                background: regenInFlight
-                  ? V2.paperDeep
-                  : canRegenerate
-                    ? V2.paper
-                    : V2.paperDeep,
-                color: canRegenerate ? V2.ink : V2.inkMute,
-                cursor:
-                  canRegenerate && !regenInFlight ? "pointer" : "default",
-                opacity: regenInFlight ? 0.7 : 1,
-              }}
-            >
-              {regenInFlight
-                ? "Bezig met genereren… (kan even duren)"
-                : "Opnieuw genereren →"}
-            </button>
-            {regenError && (
-              <div
+      {/* Modal — slides up from bottom on mobile, centered card on
+          desktop. Click outside or press Esc closes. */}
+      {reactOpen && (
+        <ReactModal onClose={() => setReactOpen(false)}>
+          <div style={{ display: "grid", gap: 28 }}>
+            {/* Feedback */}
+            <div>
+              <h2
                 style={{
-                  marginTop: 12,
-                  padding: "10px 14px",
-                  background: "rgba(176,74,65,0.12)",
-                  borderLeft: `3px solid ${V2.heart}`,
-                  fontFamily: V2.body,
-                  fontSize: 13,
+                  fontFamily: V2.display,
+                  fontWeight: 300,
+                  fontSize: 22,
+                  letterSpacing: -0.4,
+                  margin: "0 0 6px",
                   color: V2.ink,
                 }}
               >
-                {regenError}
+                Hoe vond je dit verhaal?
+              </h2>
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.inkSoft,
+                  margin: "0 0 14px",
+                  lineHeight: 1.55,
+                }}
+              >
+                Korte reactie helpt ons betere verhalen maken.
+              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <ThumbButton
+                  label="Mooi"
+                  glyph="👍"
+                  active={feedbackKind === "up"}
+                  onClick={() =>
+                    submitFeedback(feedbackKind === "up" ? null : "up")
+                  }
+                />
+                <ThumbButton
+                  label="Minder"
+                  glyph="👎"
+                  active={feedbackKind === "down"}
+                  onClick={() =>
+                    submitFeedback(feedbackKind === "down" ? null : "down")
+                  }
+                />
+                {feedbackSavedAt && feedbackKind && (
+                  <span
+                    style={{
+                      fontFamily: V2.mono,
+                      fontSize: 11,
+                      color: V2.inkMute,
+                      alignSelf: "center",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    ✓ opgeslagen
+                  </span>
+                )}
               </div>
-            )}
+              {feedbackKind && (
+                <textarea
+                  placeholder={
+                    feedbackKind === "up"
+                      ? "Wat vond je het mooist? (optioneel)"
+                      : "Wat klopte er niet? (optioneel)"
+                  }
+                  value={feedbackNote}
+                  onChange={(e) => setFeedbackNote(e.target.value)}
+                  onBlur={() =>
+                    submitFeedback(feedbackKind, feedbackNote)
+                  }
+                  rows={3}
+                  maxLength={1000}
+                  style={{
+                    width: "100%",
+                    marginTop: 12,
+                    padding: "10px 12px",
+                    fontFamily: V2.body,
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    color: V2.ink,
+                    background: V2.paperDeep,
+                    border: `1px solid ${V2.paperShade}`,
+                    outline: "none",
+                    resize: "vertical",
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Regenerate */}
+            <div
+              style={{
+                borderTop: `1px solid ${V2.paperShade}`,
+                paddingTop: 24,
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: V2.display,
+                  fontWeight: 300,
+                  fontSize: 22,
+                  letterSpacing: -0.4,
+                  margin: "0 0 6px",
+                  color: V2.ink,
+                }}
+              >
+                Niet helemaal goed?
+              </h2>
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.inkSoft,
+                  margin: "0 0 14px",
+                  lineHeight: 1.55,
+                }}
+              >
+                Eén keer per verhaal kun je opnieuw laten genereren met
+                dezelfde instellingen. Je{" "}
+                <strong>raakt het huidige verhaal kwijt</strong>; de
+                nieuwe versie komt ervoor in de plaats.{" "}
+                {!canRegenerate && (
+                  <span style={{ color: V2.inkMute }}>
+                    Je hebt deze keuze al gebruikt voor dit verhaal.
+                  </span>
+                )}
+              </p>
+              <button
+                type="button"
+                disabled={!canRegenerate || regenInFlight}
+                onClick={handleRegenerate}
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: "0.04em",
+                  padding: "10px 22px",
+                  border: `1px solid ${
+                    canRegenerate ? V2.ink : V2.paperShade
+                  }`,
+                  background: regenInFlight
+                    ? V2.paperDeep
+                    : canRegenerate
+                      ? V2.paper
+                      : V2.paperDeep,
+                  color: canRegenerate ? V2.ink : V2.inkMute,
+                  cursor:
+                    canRegenerate && !regenInFlight
+                      ? "pointer"
+                      : "default",
+                  opacity: regenInFlight ? 0.7 : 1,
+                }}
+              >
+                {regenInFlight
+                  ? "Bezig met genereren… (kan even duren)"
+                  : "Opnieuw genereren →"}
+              </button>
+              {regenError && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: "10px 14px",
+                    background: "rgba(176,74,65,0.12)",
+                    borderLeft: `3px solid ${V2.heart}`,
+                    fontFamily: V2.body,
+                    fontSize: 13,
+                    color: V2.ink,
+                  }}
+                >
+                  {regenError}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </ReactModal>
+      )}
     </>
+  );
+}
+
+function ReactModal({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        background: "rgba(20,20,46,0.45)",
+        backdropFilter: "blur(2px)",
+        WebkitBackdropFilter: "blur(2px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          maxWidth: 560,
+          maxHeight: "90vh",
+          overflow: "auto",
+          background: V2.paper,
+          padding: "28px 24px 32px",
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          marginBottom: "env(safe-area-inset-bottom, 0px)",
+          boxShadow: "0 -10px 40px rgba(20,20,46,0.25)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Sluiten"
+          style={{
+            position: "absolute",
+            top: 14,
+            right: 16,
+            background: "transparent",
+            border: "none",
+            fontSize: 22,
+            lineHeight: 1,
+            color: V2.inkMute,
+            cursor: "pointer",
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
   );
 }
 
