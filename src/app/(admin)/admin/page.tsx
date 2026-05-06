@@ -3,9 +3,13 @@ import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { RevenueChart, type ChartMode } from "@/components/v2/admin/RevenueChart";
+import { Funnel } from "@/components/v2/admin/Funnel";
+import { CohortTable } from "@/components/v2/admin/CohortTable";
 import {
   loadDashboardStats,
   loadRevenueTimeSeries,
+  loadFunnelStats,
+  loadCohortRetention,
   AI_COST_CENTS_PER_STORY,
   REVENUE_CUTOFF,
   type DashboardStats,
@@ -103,13 +107,15 @@ export default async function AdminDashboardPage({
     : preset.granularity;
   const chartMode: ChartMode = sp.mode === "split" ? "split" : "total";
 
-  const [stats, buckets] = await Promise.all([
+  const [stats, buckets, funnel, cohorts] = await Promise.all([
     loadDashboardStats(),
     loadRevenueTimeSeries({
       from: rangeFrom,
       to: rangeToExclusive,
       granularity,
     }),
+    loadFunnelStats(),
+    loadCohortRetention({ cohorts: 6 }),
   ]);
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
@@ -244,6 +250,45 @@ export default async function AdminDashboardPage({
             sub={`${eur(stats.margin.aiCostMonthCents)} geschatte AI-kosten`}
           />
         </Grid>
+      </Section>
+
+      {/* ── Conversie-funnel ────────────────────────────── */}
+      <Section title="Conversie-funnel">
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: V2.inkMute,
+            margin: "0 0 14px",
+            lineHeight: 1.5,
+          }}
+        >
+          Van registratie tot recurring revenue, voor accounts sinds{" "}
+          {REVENUE_CUTOFF.toLocaleDateString("nl-NL")}. Elke stap toont
+          absoluut + percentage van top, en conversie vanaf de vorige stap.
+        </p>
+        <Funnel steps={funnel} />
+      </Section>
+
+      {/* ── Cohort-retentie ─────────────────────────────── */}
+      <Section title="Cohort-retentie (verhalen-activiteit)">
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: V2.inkMute,
+            margin: "0 0 14px",
+            lineHeight: 1.5,
+          }}
+        >
+          Per maand-cohort: percentage gebruikers dat in maand M{"<"}n{"> "}
+          minimaal één verhaal heeft gegenereerd. Donkerder = meer
+          actief. Cellen zonder data zijn maanden die voor het cohort
+          nog niet zijn aangebroken.
+        </p>
+        <CohortTable cohorts={cohorts} />
       </Section>
 
       {/* ── Marge & systeem in twee kolommen ────────────── */}

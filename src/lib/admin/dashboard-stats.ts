@@ -427,3 +427,217 @@ function bucketLabel(d: Date, g: Granularity): string {
   }
   return d.toISOString().slice(0, 10);
 }
+
+// ── Conversion funnel ──────────────────────────────────────────────
+
+export type FunnelStep = {
+  /** Display label, e.g. "Registratie" */
+  label: string;
+  /** Optional one-line explanation shown under the label. */
+  description: string;
+  /** Number of users who reached this step. */
+  count: number;
+};
+
+/**
+ * The five-step customer funnel from sign-up to recurring revenue.
+ * Each step's count is users who have *reached* the step — so by
+ * definition counts decrease (or stay equal) down the chain.
+ *
+ * Only counts users (not admins) created since REVENUE_CUTOFF, so the
+ * funnel reflects the live-mode era and not the test phase.
+ */
+export async function loadFunnelStats(): Promise<FunnelStep[]> {
+  const where = { role: "user", createdAt: { gte: REVENUE_CUTOFF } } as const;
+
+  const [registered, withChildProfile, withStory, withPaidOrder, withActiveSub] =
+    await Promise.all([
+      prisma.user.count({ where }),
+      prisma.user.count({
+        where: { ...where, children: { some: {} } },
+      }),
+      prisma.user.count({
+        where: {
+          ...where,
+          children: { some: { stories: { some: {} } } },
+        },
+      }),
+      prisma.user.count({
+        where: {
+          ...where,
+          orders: { some: { status: "paid", paidAt: { gte: REVENUE_CUTOFF } } },
+        },
+      }),
+      prisma.user.count({
+        where: {
+          ...where,
+          subscription: {
+            is: {
+              status: "active",
+              plan: { not: "free" },
+              mollieSubscriptionId: { not: null },
+            },
+          },
+        },
+      }),
+    ]);
+
+  return [
+    {
+      label: "Registratie",
+      description: "Account aangemaakt",
+      count: registered,
+    },
+    {
+      label: "Profiel",
+      description: "Eerste kindprofiel ingevuld",
+      count: withChildProfile,
+    },
+    {
+      label: "Eerste verhaal",
+      description: "Tenminste één verhaal gegenereerd",
+      count: withStory,
+    },
+    {
+      label: "Eerste betaling",
+      description: "Credits of abonnement betaald",
+      count: withPaidOrder,
+    },
+    {
+      label: "Actief abonnement",
+      description: "Recurring billing loopt",
+      count: withActiveSub,
+    },
+  ];
+}
+
+// ── Cohort retention ───────────────────────────────────────────────
+
+export type CohortRow = {
+  /** Inclusive start of the cohort's signup month. */
+  cohortStart: Date;
+  /** Display label, e.g. "Mei 2026". */
+  label: string;
+  /** Cohort size — users who registered in that month. */
+  size: number;
+  /**
+   * Per-month-offset retention.
+   * `retained[k]` = number of cohort users who generated a story in
+   * the calendar month that's k months after cohortStart.
+   *
+   * `retained[0]` is the signup month itself — anyone who generated a
+   * story in their signup month counts as "activated", typically the
+   * most useful single number alongside the eventual retention curve.
+   *
+   * Future months that haven't happened yet are not included; the
+   * UI treats them as "not yet measured" rather than "0% retained".
+   */
+  retained: number[];
+};
+
+/**
+ * Build a monthly cohort retention table.
+ *
+ * Activity signal: a user is "active in month M" if they generated at
+ * least one story whose `createdAt` falls inside that month. Story
+ * generation is the strongest engagement signal we have — login alone
+ * could just be checking, story generation is the actual product use.
+ *
+ * Returns cohorts oldest-first so the table reads top-down by signup
+ * date, with the longest retention curve at the top.
+ */
+export async function loadCohortRetention(opts: {
+  /** Number of recent monthly cohorts to include. Default 6. */
+  cohorts?: number;
+} = {}): Promise<CohortRow[]> {
+  const cohortCount = opts.cohorts ?? 6;
+  const now = new Date();
+  const currentMonth = startOfMonth(now);
+
+  // First cohort starts (cohortCount - 1) months ago.
+  const firstCohort = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() - (cohortCount - 1),
+    1,
+  );
+
+  // Pull users whose signup month ≥ firstCohort. Limit to `user` role.
+  const users = await prisma.user.findMany({
+    where: {
+      role: "user",
+      createdAt: { gte: firstCohort },
+    },
+    select: { id: true, createdAt: true },
+  });
+
+  // Pull all story creation timestamps for those users via children.
+  // We could pre-compute (userId, month) buckets in DB but at our scale
+  // it's fine to bucket in memory.
+  const userIds = users.map((u) => u.id);
+  const stories = userIds.length
+    ? await prisma.story.findMany({
+        where: {
+          createdAt: { gte: firstCohort },
+          childProfile: { userId: { in: userIds } },
+        },
+        select: { createdAt: true, childProfile: { select: { userId: true } } },
+      })
+    : [];
+
+  // Per user → set of "active months" (yyyy-mm strings).
+  const userActiveMonths = new Map<string, Set<string>>();
+  for (const s of stories) {
+    const uid = s.childProfile.userId;
+    const key = `${s.createdAt.getFullYear()}-${s.createdAt.getMonth()}`;
+    let set = userActiveMonths.get(uid);
+    if (!set) {
+      set = new Set();
+      userActiveMonths.set(uid, set);
+    }
+    set.add(key);
+  }
+
+  // Build the cohort buckets oldest-first.
+  const cohorts: CohortRow[] = [];
+  for (let i = 0; i < cohortCount; i++) {
+    const cohortStart = new Date(
+      firstCohort.getFullYear(),
+      firstCohort.getMonth() + i,
+      1,
+    );
+    const monthsSinceCohort = monthsBetween(cohortStart, currentMonth) + 1; // include current
+    const cohortUsers = users.filter(
+      (u) =>
+        u.createdAt.getFullYear() === cohortStart.getFullYear() &&
+        u.createdAt.getMonth() === cohortStart.getMonth(),
+    );
+    const retained: number[] = [];
+    for (let k = 0; k < monthsSinceCohort; k++) {
+      const target = new Date(
+        cohortStart.getFullYear(),
+        cohortStart.getMonth() + k,
+        1,
+      );
+      const targetKey = `${target.getFullYear()}-${target.getMonth()}`;
+      let active = 0;
+      for (const u of cohortUsers) {
+        if (userActiveMonths.get(u.id)?.has(targetKey)) active++;
+      }
+      retained.push(active);
+    }
+    cohorts.push({
+      cohortStart,
+      label: cohortStart.toLocaleDateString("nl-NL", {
+        month: "short",
+        year: "2-digit",
+      }),
+      size: cohortUsers.length,
+      retained,
+    });
+  }
+  return cohorts;
+}
+
+function monthsBetween(a: Date, b: Date): number {
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+}
