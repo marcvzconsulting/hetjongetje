@@ -43,6 +43,11 @@ export interface StoryRequest {
   occasion?: Occasion;
   companion?: string;
   specialDetail?: string;
+  /** Free-text guidance from the parent on what to change vs. the
+   *  previous version. Only set on regenerate calls; null/undefined for
+   *  first-time generation. Sanitised + clamped before splicing into
+   *  the prompt. */
+  regenerationFeedback?: string;
 }
 
 export interface StoryPage {
@@ -282,6 +287,9 @@ function sanitizeRequest(request: StoryRequest): StoryRequest {
     specialDetail: request.specialDetail
       ? sanitizePromptDescription(request.specialDetail)
       : undefined,
+    regenerationFeedback: request.regenerationFeedback
+      ? sanitizePromptDescription(request.regenerationFeedback)
+      : undefined,
   };
 }
 
@@ -373,6 +381,11 @@ ${request.companion ? `- Metgezel op het avontuur: ${request.companion}` : ""}
 ${request.specialDetail ? `- Verwerk dit detail: ${request.specialDetail}` : ""}
 - Slaapverhaaltje: ${request.mood === "bedtime" ? "ja — rustig tempo, zacht einde" : "nee"}
 - Grappig: ${request.mood === "funny" ? "ja — humor en grappige wendingen welkom" : "nee"}
+${request.regenerationFeedback ? `
+HERSCHRIJF-OPDRACHT VAN DE OUDER:
+De ouder vond de vorige versie van dit verhaal niet helemaal goed. Ze gaven deze toelichting:
+"${request.regenerationFeedback}"
+Maak een NIEUWE versie die hier rekening mee houdt: vermijd wat ze niet goed vonden, behoud wat wel werkte, en kies waar nodig een andere invalshoek of toon. Het verhaal moet voelbaar anders zijn dan een eerste poging — anders is het werk verspilling.` : ""}
 
 ${snippets["quality-check"]}
 

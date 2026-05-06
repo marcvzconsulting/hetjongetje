@@ -107,7 +107,24 @@ export async function POST(
     loraUrl: child.loraUrl ?? undefined,
     loraTriggerWord: child.loraTriggerWord ?? undefined,
   };
-  const storyRequest = story.generationParams as unknown as StoryRequest;
+  const baseRequest = story.generationParams as unknown as StoryRequest;
+
+  // Optional parent guidance for THIS regeneration. Body may be empty
+  // (e.g. preflight); read JSON defensively.
+  let regenerationFeedback: string | undefined;
+  try {
+    const body = (await request.json()) as { feedback?: unknown };
+    if (typeof body?.feedback === "string") {
+      regenerationFeedback = body.feedback.trim().slice(0, 1000) || undefined;
+    }
+  } catch {
+    // No body / not JSON — fine, regen without extra feedback.
+  }
+
+  const storyRequest: StoryRequest = {
+    ...baseRequest,
+    regenerationFeedback,
+  };
 
   try {
     let generated = await generateStory(bible, storyRequest);

@@ -42,6 +42,7 @@ export function StoryPageClient({
   );
   const [regenError, setRegenError] = useState<string>("");
   const [regenInFlight, setRegenInFlight] = useState(false);
+  const [regenFeedback, setRegenFeedback] = useState<string>("");
   const [, startTransition] = useTransition();
   const [reactOpen, setReactOpen] = useState(false);
 
@@ -85,17 +86,14 @@ export function StoryPageClient({
 
   async function handleRegenerate() {
     setRegenError("");
-    if (
-      !window.confirm(
-        "Het huidige verhaal wordt vervangen door een nieuwe versie. De oude versie raak je daarmee kwijt. Doorgaan?",
-      )
-    ) {
-      return;
-    }
     setRegenInFlight(true);
     try {
       const res = await fetch(`/api/stories/${storyId}/regenerate`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          feedback: regenFeedback.trim() || undefined,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -283,15 +281,48 @@ export function StoryPageClient({
                 }}
               >
                 Eén keer per verhaal kun je opnieuw laten genereren met
-                dezelfde instellingen. Je{" "}
-                <strong>raakt het huidige verhaal kwijt</strong>; de
-                nieuwe versie komt ervoor in de plaats.{" "}
-                {!canRegenerate && (
+                dezelfde instellingen.{" "}
+                {!canRegenerate ? (
                   <span style={{ color: V2.inkMute }}>
                     Je hebt deze keuze al gebruikt voor dit verhaal.
                   </span>
+                ) : (
+                  <>
+                    Vertel hieronder kort wat er anders moet —{" "}
+                    <strong>het oude verhaal raak je kwijt</strong>, dus
+                    geef het wel mee, anders krijg je waarschijnlijk hetzelfde
+                    soort verhaal terug.
+                  </>
                 )}
               </p>
+              {canRegenerate && (
+                <textarea
+                  placeholder={
+                    feedbackKind === "down" && feedbackNote
+                      ? feedbackNote
+                      : "Bv. te eng, te veel personages, mijn kind houdt niet van regen, laat de oma erin terugkomen…"
+                  }
+                  value={regenFeedback}
+                  onChange={(e) => setRegenFeedback(e.target.value)}
+                  rows={3}
+                  maxLength={1000}
+                  disabled={regenInFlight}
+                  style={{
+                    width: "100%",
+                    marginBottom: 12,
+                    padding: "10px 12px",
+                    fontFamily: V2.body,
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    color: V2.ink,
+                    background: V2.paperDeep,
+                    border: `1px solid ${V2.paperShade}`,
+                    outline: "none",
+                    resize: "vertical",
+                    opacity: regenInFlight ? 0.6 : 1,
+                  }}
+                />
+              )}
               <button
                 type="button"
                 disabled={!canRegenerate || regenInFlight}
@@ -320,7 +351,7 @@ export function StoryPageClient({
               >
                 {regenInFlight
                   ? "Bezig met genereren… (kan even duren)"
-                  : "Opnieuw genereren →"}
+                  : "Maak een nieuwe versie →"}
               </button>
               {regenError && (
                 <div
