@@ -235,7 +235,7 @@ export default async function SubscribePage({
               maxWidth: 520,
             }}
           >
-            Geen automatische incasso, gewoon per pakket. Vanaf €1,50 per
+            Geen automatische incasso, gewoon per pakket. Vanaf €1,95 per
             verhaal of als pakket van 10 voor €12.
           </p>
           <EBtn kind="ghost" size="md" href="/credits">

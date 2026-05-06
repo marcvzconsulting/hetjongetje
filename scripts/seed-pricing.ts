@@ -44,7 +44,7 @@ const CREDIT_PACKS = [
     name: "1 verhaal",
     description: "Eenmalig één extra verhaal.",
     creditAmount: 1,
-    priceCents: 150,
+    priceCents: 195,
     sortOrder: 10,
     badge: null,
   },
