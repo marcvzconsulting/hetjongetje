@@ -145,6 +145,12 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* Low-credits nudge — only when there's a real number to show
+          (admin sees no pill so we skip it for them too). */}
+      {typeof creditsToShow === "number" && creditsToShow <= 3 && (
+        <CreditsBanner credits={creditsToShow} />
+      )}
+
       {/* Child list / empty state */}
       <section
         className="app-section-pad"
@@ -208,6 +214,95 @@ export default async function DashboardPage() {
 }
 
 // ── Sub components ──────────────────────────────────────────────────
+
+function CreditsBanner({ credits }: { credits: number }) {
+  const empty = credits === 0;
+  // Cool gold for "low but not empty", warmer rose for "actually empty"
+  // so the urgency reads at a glance without becoming alarming.
+  const palette = empty
+    ? { bg: "rgba(196,165,168,0.20)", border: V2.heart, accent: V2.heart }
+    : { bg: "rgba(201,169,97,0.18)", border: V2.goldDeep, accent: V2.goldDeep };
+
+  return (
+    <section
+      className="app-section-pad"
+      style={{
+        maxWidth: 1200,
+        margin: "0 auto",
+        padding: "20px 40px 0",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          padding: "20px 28px",
+          background: palette.bg,
+          borderLeft: `3px solid ${palette.border}`,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontFamily: V2.mono,
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: palette.accent,
+            }}
+          >
+            {empty ? "Tegoed is op" : "Bijna geen verhalen meer"}
+          </div>
+          <div
+            style={{
+              fontFamily: V2.display,
+              fontSize: 22,
+              fontWeight: 300,
+              letterSpacing: -0.4,
+              margin: "6px 0 0",
+              color: V2.ink,
+            }}
+          >
+            {empty ? (
+              <>
+                Geen verhalen meer.{" "}
+                <span style={{ fontStyle: "italic" }}>
+                  Koop er een paar bij om vanavond verder te lezen.
+                </span>
+              </>
+            ) : credits === 1 ? (
+              <>
+                Nog <strong>1 verhaal</strong> op je tegoed.{" "}
+                <span style={{ fontStyle: "italic" }}>
+                  Koop er een paar bij voor de avonden hierna.
+                </span>
+              </>
+            ) : (
+              <>
+                Nog <strong>{credits} verhalen</strong> op je tegoed.{" "}
+                <span style={{ fontStyle: "italic" }}>
+                  Koop er een paar bij voor de avonden hierna.
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <EBtn kind="primary" size="md" href="/credits">
+            Verhalen bijkopen →
+          </EBtn>
+          <EBtn kind="ghost" size="md" href="/subscribe">
+            Of een abonnement
+          </EBtn>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function ChildSectionHeader({
   name,

@@ -86,6 +86,14 @@ export default async function AccountPage({
     where: { childProfile: { userId: user.id } },
   });
 
+  // Pull this customer's full order history — newest first. Cap at 50
+  // because nobody scrolls past that and the table stays light.
+  const orders = await prisma.order.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
   const params = await searchParams;
   const savedMessage = params.saved ? SAVED_MESSAGES[params.saved] : null;
   const errorMessage = params.error ? ERROR_MESSAGES[params.error] : null;
@@ -320,6 +328,9 @@ export default async function AccountPage({
           plan={subscriptionPlan}
         />
 
+        {/* Order history */}
+        <OrdersPanel orders={orders} />
+
         {/* Password */}
         <Section
           title="Wachtwoord wijzigen"
@@ -488,6 +499,218 @@ export default async function AccountPage({
 }
 
 // ── Sub components ──────────────────────────────────────────────
+
+type OrderRow = {
+  id: string;
+  kind: string;
+  description: string | null;
+  amountCents: number;
+  status: string;
+  createdAt: Date;
+  paidAt: Date | null;
+  creditAmount: number | null;
+};
+
+function eurosFromCents(cents: number): string {
+  return (cents / 100).toFixed(2).replace(".", ",");
+}
+
+function formatDateNl(date: Date): string {
+  return date.toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+const STATUS_COPY: Record<string, { label: string; color: string }> = {
+  paid: { label: "Betaald", color: V2.goldDeep },
+  pending: { label: "Wacht op betaling", color: V2.inkMute },
+  failed: { label: "Mislukt", color: V2.heart },
+  cancelled: { label: "Geannuleerd", color: V2.inkMute },
+  expired: { label: "Verlopen", color: V2.inkMute },
+};
+
+const KIND_COPY: Record<string, string> = {
+  credits: "Verhalen",
+  subscription: "Abonnement",
+  book: "Boekje",
+};
+
+function OrdersPanel({ orders }: { orders: OrderRow[] }) {
+  return (
+    <Section
+      title="Bestellingen"
+      meta="Je laatste 50 betalingen voor credits, abonnementen of boekjes"
+    >
+      {orders.length === 0 ? (
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 14,
+            color: V2.inkMute,
+            margin: 0,
+            lineHeight: 1.55,
+          }}
+        >
+          Je hebt nog geen bestellingen.{" "}
+          <Link
+            href="/credits"
+            style={{
+              color: V2.goldDeep,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Verhalen bijkopen
+          </Link>{" "}
+          of{" "}
+          <Link
+            href="/subscribe"
+            style={{
+              color: V2.goldDeep,
+              textDecoration: "underline",
+              textUnderlineOffset: 3,
+            }}
+          >
+            een abonnement starten
+          </Link>
+          .
+        </p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontFamily: V2.body,
+              fontSize: 14,
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
+                <Th>Datum</Th>
+                <Th>Soort</Th>
+                <Th>Omschrijving</Th>
+                <Th align="right">Bedrag</Th>
+                <Th>Status</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.map((o) => {
+                const status = STATUS_COPY[o.status] ?? {
+                  label: o.status,
+                  color: V2.inkMute,
+                };
+                const kind = KIND_COPY[o.kind] ?? o.kind;
+                const date = o.paidAt ?? o.createdAt;
+                return (
+                  <tr
+                    key={o.id}
+                    style={{ borderBottom: `1px solid ${V2.paperShade}` }}
+                  >
+                    <Td mono>{formatDateNl(date)}</Td>
+                    <Td>{kind}</Td>
+                    <Td>
+                      <span
+                        style={{
+                          color: V2.ink,
+                        }}
+                      >
+                        {o.description ?? "—"}
+                      </span>
+                      {o.creditAmount && o.creditAmount > 0 && (
+                        <span
+                          style={{
+                            fontFamily: V2.mono,
+                            fontSize: 11,
+                            color: V2.inkMute,
+                            marginLeft: 8,
+                          }}
+                        >
+                          ({o.creditAmount}{" "}
+                          {o.creditAmount === 1 ? "credit" : "credits"})
+                        </span>
+                      )}
+                    </Td>
+                    <Td align="right" mono>
+                      €{eurosFromCents(o.amountCents)}
+                    </Td>
+                    <Td>
+                      <span
+                        style={{
+                          fontFamily: V2.mono,
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          color: status.color,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {status.label}
+                      </span>
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function Th({
+  children,
+  align,
+}: {
+  children?: React.ReactNode;
+  align?: "left" | "right";
+}) {
+  return (
+    <th
+      style={{
+        fontFamily: V2.ui,
+        fontSize: 11,
+        fontWeight: 500,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: V2.inkMute,
+        padding: "10px 12px",
+        textAlign: align ?? "left",
+      }}
+    >
+      {children}
+    </th>
+  );
+}
+
+function Td({
+  children,
+  align,
+  mono,
+}: {
+  children?: React.ReactNode;
+  align?: "left" | "right";
+  mono?: boolean;
+}) {
+  return (
+    <td
+      style={{
+        fontFamily: mono ? V2.mono : V2.body,
+        fontSize: 14,
+        color: V2.ink,
+        padding: "12px 12px",
+        textAlign: align ?? "left",
+        verticalAlign: "top",
+      }}
+    >
+      {children}
+    </td>
+  );
+}
 
 function SubscriptionPanel({
   subscription,
