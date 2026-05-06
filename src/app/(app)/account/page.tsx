@@ -6,7 +6,7 @@ import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
 import { StarField } from "@/components/v2/StarField";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import {
   updateProfileAction,
   updateAddressAction,
@@ -93,10 +93,7 @@ export default async function AccountPage({
       userName={user.name}
       isAdmin={user.role === "admin"}
       credits={credits}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard" },
-        { label: "Account", href: "/account", active: true },
-      ]}
+      nav={buildAppNav("/account")}
     >
       <div
         className="app-page-pad"

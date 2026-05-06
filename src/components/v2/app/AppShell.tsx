@@ -36,8 +36,21 @@ const LOW_CREDIT_THRESHOLD = 3;
 const DEFAULT_NAV: NavItem[] = [
   { label: "Bibliotheek", href: "/dashboard" },
   { label: "Abonnement", href: "/subscribe" },
+  { label: "Credits", href: "/credits" },
   { label: "Account", href: "/account" },
 ];
+
+/**
+ * Returns the standard top-nav with the matching item flagged active.
+ * Pass the page's own pathname (e.g. "/credits") so callers don't have
+ * to hand-roll the nav array — keeps every page consistent when we add
+ * or rename items.
+ */
+export function buildAppNav(activeHref?: string): NavItem[] {
+  return DEFAULT_NAV.map((item) =>
+    activeHref && item.href === activeHref ? { ...item, active: true } : item,
+  );
+}
 
 /**
  * Shared shell for logged-in pages: top nav with logo, links, credits pill,

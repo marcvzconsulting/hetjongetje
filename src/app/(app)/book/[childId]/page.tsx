@@ -6,7 +6,7 @@ import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker } from "@/components/v2";
 import { StarField } from "@/components/v2/StarField";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import {
   BookBuilderV2,
   type BookStoryData,
@@ -82,10 +82,7 @@ export default async function BookPage({ params }: Props) {
       userName={session.user.name ?? "jij"}
       isAdmin={session.user.role === "admin"}
       credits={credits}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard" },
-        { label: "Account", href: "/account" },
-      ]}
+      nav={buildAppNav()}
     >
       {/* Breadcrumb */}
       <div

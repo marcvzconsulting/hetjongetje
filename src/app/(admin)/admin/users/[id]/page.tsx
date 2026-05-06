@@ -182,18 +182,28 @@ async function updateApprovalAction(formData: FormData) {
   let logMetadata: Record<string, unknown> | undefined;
 
   if (action === "approve") {
-    const credits = Math.max(0, parseInt(creditsRaw, 10) || 5);
+    // The form asks for *extra* credits to grant on top of the starter
+    // credit a new account already has from registration. parseInt of "0"
+    // is a legitimate "no extra credits" answer, so we only fall back to 0
+    // when the field is empty or non-numeric.
+    const parsed = parseInt(creditsRaw, 10);
+    const extraCredits = Math.max(0, Number.isFinite(parsed) ? parsed : 0);
     const beforeStatus = await prisma.user.findUnique({
       where: { id: userId },
       select: { status: true },
     });
     const updated = await prisma.user.update({
       where: { id: userId },
-      data: { status: "approved", storyCredits: credits },
+      data: {
+        status: "approved",
+        ...(extraCredits > 0
+          ? { storyCredits: { increment: extraCredits } }
+          : {}),
+      },
       select: { email: true, name: true, storyCredits: true },
     });
     logAction = "user.approve";
-    logMetadata = { credits };
+    logMetadata = { extraCredits };
 
     // Only send the welcome-on-approval mail when this is the *first*
     // approve — moving an already-approved user from suspended → approved
@@ -724,12 +734,12 @@ export default async function AdminUserDetailPage({
                 <input type="hidden" name="userId" value={user.id} />
                 <input type="hidden" name="action" value="approve" />
                 <div style={{ minWidth: 120 }}>
-                  <label style={fieldLabelStyle}>Start-tegoed</label>
+                  <label style={fieldLabelStyle}>Extra start-tegoed</label>
                   <input
                     name="credits"
                     type="number"
                     min={0}
-                    defaultValue={5}
+                    defaultValue={0}
                     style={{
                       ...inputStyle,
                       borderBottomColor: V2.goldDeep,

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { subscribeAction } from "./actions";
 import { SubscribeButton } from "./SubscribeButton";
 
@@ -78,11 +78,7 @@ export default async function SubscribePage({
       userName={session.user.name ?? "jij"}
       isAdmin={gate.isAdmin}
       credits={gate.isAdmin ? null : gate.storyCredits}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard" },
-        { label: "Abonnement", href: "/subscribe", active: true },
-        { label: "Account", href: "/account" },
-      ]}
+      nav={buildAppNav("/subscribe")}
     >
       <link rel="preconnect" href="https://www.mollie.com" />
       <link rel="dns-prefetch" href="https://www.mollie.com" />

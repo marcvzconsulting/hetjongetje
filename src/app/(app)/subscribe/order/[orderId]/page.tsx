@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { applyMolliePaymentStatus } from "@/lib/payments/orders";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 
 interface Props {
   params: Promise<{ orderId: string }>;
@@ -50,11 +50,7 @@ export default async function SubscriptionOrderStatusPage({ params }: Props) {
       userName={session.user.name ?? "jij"}
       isAdmin={session.user.role === "admin"}
       credits={null}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard" },
-        { label: "Abonnement", href: "/subscribe" },
-        { label: "Account", href: "/account" },
-      ]}
+      nav={buildAppNav("/subscribe")}
     >
       <div
         className="app-page-pad"

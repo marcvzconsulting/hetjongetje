@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { GenerateWizardV2 } from "@/components/v2/generation/GenerateWizardV2";
 
 interface Props {
@@ -33,10 +33,7 @@ export default async function GeneratePage({ params }: Props) {
       userName={session.user.name ?? "jij"}
       isAdmin={session.user.role === "admin"}
       credits={credits}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard" },
-        { label: "Account", href: "/account" },
-      ]}
+      nav={buildAppNav()}
     >
       <div
         style={{

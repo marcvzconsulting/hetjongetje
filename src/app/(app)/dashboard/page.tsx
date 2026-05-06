@@ -8,7 +8,7 @@ import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
 import { Avatar } from "@/components/v2/Avatar";
 import { StarField } from "@/components/v2/StarField";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { StoryLibraryV2 } from "@/components/v2/story/StoryLibraryV2";
 import { NewStoryButton } from "@/components/v2/generation/NewStoryButton";
 
@@ -26,10 +26,7 @@ export default async function DashboardPage() {
         userName={session.user.name ?? "jij"}
         isAdmin={session.user.role === "admin"}
         credits={null}
-        nav={[
-          { label: "Bibliotheek", href: "/dashboard", active: true },
-          { label: "Account", href: "/account" },
-        ]}
+        nav={buildAppNav("/dashboard")}
       >
         <div className="app-page-pad" style={{ maxWidth: 680, margin: "0 auto", padding: "80px 40px" }}>
           {gate.status === "suspended" ? (
@@ -82,10 +79,7 @@ export default async function DashboardPage() {
       userName={session.user.name ?? "jij"}
       isAdmin={session.user.role === "admin"}
       credits={creditsToShow}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard", active: true },
-        { label: "Account", href: "/account" },
-      ]}
+      nav={buildAppNav("/dashboard")}
     >
       {/* Hero strip */}
       <section

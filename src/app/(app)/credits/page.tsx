@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
-import { AppShell } from "@/components/v2/app/AppShell";
+import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { buyCreditsAction } from "./actions";
 import { BuyButton } from "./BuyButton";
 
@@ -86,12 +86,7 @@ export default async function CreditsPage({
       userName={session.user.name ?? "jij"}
       isAdmin={gate.isAdmin}
       credits={credits}
-      nav={[
-        { label: "Bibliotheek", href: "/dashboard" },
-        { label: "Abonnement", href: "/subscribe" },
-        { label: "Credits", href: "/credits", active: true },
-        { label: "Account", href: "/account" },
-      ]}
+      nav={buildAppNav("/credits")}
     >
       {/* Open the TCP+TLS handshake to Mollie's checkout host before the
           user clicks Bestellen. Saves ~100-200ms on the first hop. */}
