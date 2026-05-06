@@ -99,7 +99,9 @@ export function RevenueChart({ buckets, mode = "total", height = 240 }: Props) {
     PAD_T + innerH - (cents / maxCents) * innerH;
 
   const yTicks = makeTicks(maxCents, 4);
-  const labelStride = Math.ceil(buckets.length / 12);
+  // Show every bucket label up to ~16 (covers 12-month + 13-week views).
+  // Beyond that we stride to avoid overlap on 30+ day-granularity charts.
+  const labelStride = buckets.length <= 16 ? 1 : Math.ceil(buckets.length / 14);
 
   return (
     <div
