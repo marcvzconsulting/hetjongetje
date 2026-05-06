@@ -112,10 +112,21 @@ export function BookViewerV3({
     [totalUnits],
   );
 
-  // Keyboard
+  // Keyboard — global page-flip shortcuts. Skip when the user is
+  // typing in a form control (input/textarea/select/contenteditable),
+  // otherwise spacebar in our regen-feedback textarea would be eaten by
+  // preventDefault() and arrow keys would jump pages mid-sentence.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement) return;
+      const t = e.target;
+      if (
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLTextAreaElement ||
+        t instanceof HTMLSelectElement ||
+        (t instanceof HTMLElement && t.isContentEditable)
+      ) {
+        return;
+      }
       if (e.key === "ArrowRight") go(1);
       else if (e.key === "ArrowLeft") go(-1);
       else if (e.key === " ") {
