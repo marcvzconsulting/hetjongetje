@@ -212,7 +212,7 @@ async function updateApprovalAction(formData: FormData) {
     if (beforeStatus?.status !== "approved") {
       try {
         const dashboardUrl = await buildAppUrl("/dashboard");
-        const mail = buildAccountApprovedMail({
+        const mail = await buildAccountApprovedMail({
           name: updated.name,
           credits: updated.storyCredits,
           dashboardUrl,

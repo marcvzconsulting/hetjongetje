@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
         }
 
         const storyUrl = await buildAppUrl(`/story/${story.id}`);
-        const mail = buildFirstStoryMail({
+        const mail = await buildFirstStoryMail({
           userName: user.name,
           childName: child.name,
           storyTitle: story.title,

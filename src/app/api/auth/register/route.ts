@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const profileUrl = await buildAppUrl("/profile/new");
-      const mail = buildWelcomeMail({ name: user.name, profileUrl });
+      const mail = await buildWelcomeMail({ name: user.name, profileUrl });
       await sendMail({
         to: user.email,
         toName: user.name,

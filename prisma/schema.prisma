@@ -422,6 +422,31 @@ model RateLimit {
   @@map("rate_limits")
 }
 
+/// Admin-overridable email-template content. One row per template
+/// `code` (matches the file name in src/lib/email/templates). When a row
+/// exists the `build*Mail` builder uses these strings; without a row
+/// the builder uses the inline defaults shipped in code, so missing
+/// rows are not an error.
+///
+/// Variable substitution uses `{{name}}` syntax that gets replaced
+/// with values from the builder's `opts` object at send time.
+model EmailTemplate {
+  /// Stable identifier matching the template-file name, e.g.
+  /// "account-approved" or "subscription-started".
+  code           String   @id
+  subject        String
+  heading        String
+  /// Each entry is one paragraph of body copy. HTML allowed; variables
+  /// in {{name}} form get substituted before send.
+  bodyParagraphs Json     @map("body_paragraphs") // string[]
+  ctaLabel       String?  @map("cta_label")
+  footerNote     String?  @map("footer_note")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  updatedById    String?  @map("updated_by_id")
+
+  @@map("email_templates")
+}
+
 model GenerationJob {
   id           String    @id @default(uuid())
   storyId      String    @map("story_id")

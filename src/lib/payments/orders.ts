@@ -195,7 +195,7 @@ async function applyCreditsPaid(order: {
     });
     if (user) {
       const dashboardUrl = await buildAppUrl("/dashboard");
-      const mail = buildCreditsPurchasedMail({
+      const mail = await buildCreditsPurchasedMail({
         name: user.name,
         creditAmount: order.creditAmount,
         amountCents: order.amountCents,
@@ -286,7 +286,7 @@ async function applySubscriptionFirstPaid(
       ]);
       if (user && plan && sub) {
         const accountUrl = await buildAppUrl("/account");
-        const mail = buildSubscriptionStartedMail({
+        const mail = await buildSubscriptionStartedMail({
           name: user.name,
           planName: plan.name,
           amountCents: order.amountCents,

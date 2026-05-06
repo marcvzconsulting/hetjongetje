@@ -112,8 +112,9 @@ export async function POST(req: NextRequest) {
   // Confirmation mail with unsubscribe link.
   try {
     const unsubscribeUrl = await buildUnsubscribeUrl(email);
-    const mail = buildNewsletterWelcomeMail({
+    const mail = await buildNewsletterWelcomeMail({
       name: displayName,
+      email,
       unsubscribeUrl,
     });
     await sendMail({

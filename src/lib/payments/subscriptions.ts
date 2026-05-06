@@ -257,7 +257,7 @@ export async function cancelSubscription(userId: string): Promise<void> {
     if (user) {
       const accountUrl = await buildAppUrl("/account");
       const subscribeUrl = await buildAppUrl("/subscribe");
-      const mail = buildSubscriptionCancelledMail({
+      const mail = await buildSubscriptionCancelledMail({
         name: user.name,
         planName: plan?.name ?? "abonnement",
         endsAt: updated.endsAt,

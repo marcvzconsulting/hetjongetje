@@ -1,5 +1,8 @@
-import { bodyParagraph, wrapEditorialEmail } from "../layout";
-import { escapeHtml } from "../escape";
+import {
+  renderEditableTemplate,
+  type TemplateContent,
+  type TemplateRender,
+} from "../template-store";
 
 type SubscriptionCancelledMail = {
   name: string;
@@ -19,61 +22,45 @@ function formatDateNl(date: Date): string {
   });
 }
 
-export function buildSubscriptionCancelledMail(
+const DEFAULTS: TemplateContent = {
+  subject: "Je abonnement is opgezegd — bevestiging",
+  heading: "Je abonnement is opgezegd",
+  paragraphs: [
+    "Hallo {{name}},",
+    "We hebben je opzegging van het <strong>{{planName}}</strong>-abonnement ontvangen. Er worden geen nieuwe bedragen meer afgeschreven.",
+    "Je behoudt toegang tot <strong>{{endsAtFormatted}}</strong>. Tot die datum kun je gewoon verhalen blijven maken — daarna stopt het abonnement automatisch.",
+    "Reeds gegenereerde verhalen blijven natuurlijk in je bibliotheek staan, ook nadat je abonnement is afgelopen.",
+    "Mocht je later toch terug willen komen, dan kun je elk moment opnieuw een abonnement starten — je oude verhalen staan dan nog gewoon voor je klaar.",
+  ],
+  ctaLabel: "Opnieuw abonneren",
+  footerNote:
+    "Heb je per ongeluk opgezegd of vragen over de afhandeling? Antwoord op deze mail dan kijken we mee.",
+};
+
+export function subscriptionCancelledDefaults(): TemplateContent {
+  return DEFAULTS;
+}
+
+export async function buildSubscriptionCancelledMail(
   opts: SubscriptionCancelledMail,
-): { subject: string; html: string; text: string } {
-  const subject = `Je abonnement is opgezegd — bevestiging`;
-  const safeName = escapeHtml(opts.name);
-  const safePlan = escapeHtml(opts.planName);
-
-  const accessLine = opts.endsAt
-    ? `Je behoudt toegang tot <strong>${escapeHtml(formatDateNl(opts.endsAt))}</strong>. Tot die datum kun je gewoon verhalen blijven maken — daarna stopt het abonnement automatisch.`
-    : "Je behoudt toegang tot het einde van de lopende periode. Daarna stopt het abonnement automatisch.";
-
-  const html = wrapEditorialEmail({
-    preheader: opts.endsAt
-      ? `Toegang loopt door tot ${formatDateNl(opts.endsAt)}.`
-      : "Geen toekomstige incasso's meer ingepland.",
-    title: subject,
-    heading: "Je abonnement is opgezegd",
-    body:
-      bodyParagraph(`Hallo ${safeName},`) +
-      bodyParagraph(
-        `We hebben je opzegging van het <strong>${safePlan}</strong>-abonnement ontvangen. Er worden geen nieuwe bedragen meer afgeschreven.`,
-      ) +
-      bodyParagraph(accessLine) +
-      bodyParagraph(
-        "Reeds gegenereerde verhalen blijven natuurlijk in je bibliotheek staan, ook nadat je abonnement is afgelopen.",
-      ) +
-      bodyParagraph(
-        `Mocht je later toch terug willen komen, dan kun je elk moment opnieuw een abonnement starten — je oude verhalen staan dan nog gewoon voor je klaar.`,
-      ),
-    cta: { label: "Opnieuw abonneren", url: opts.subscribeUrl },
-    footerNote:
-      "Heb je per ongeluk opgezegd of vragen over de afhandeling? Antwoord op deze mail dan kijken we mee.",
-  });
-
-  const text = [
-    `Hallo ${opts.name},`,
-    "",
-    `We hebben je opzegging van het ${opts.planName}-abonnement ontvangen. Er worden geen nieuwe bedragen meer afgeschreven.`,
-    "",
-    opts.endsAt
-      ? `Je behoudt toegang tot ${formatDateNl(opts.endsAt)}. Daarna stopt het abonnement automatisch.`
-      : "Je behoudt toegang tot het einde van de lopende periode. Daarna stopt het abonnement automatisch.",
-    "",
-    "Reeds gegenereerde verhalen blijven in je bibliotheek staan, ook na afloop.",
-    "",
-    "Wil je later terugkomen? Je kunt elk moment opnieuw abonneren via:",
-    opts.subscribeUrl,
-    "",
-    "Je account:",
-    opts.accountUrl,
-    "",
-    "— Ons Verhaaltje",
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return { subject, html, text };
+): Promise<TemplateRender> {
+  return renderEditableTemplate(
+    "subscription-cancelled",
+    DEFAULTS,
+    {
+      name: opts.name,
+      planName: opts.planName,
+      endsAtFormatted: opts.endsAt
+        ? formatDateNl(opts.endsAt)
+        : "het einde van de lopende periode",
+      accountUrl: opts.accountUrl,
+      subscribeUrl: opts.subscribeUrl,
+    },
+    {
+      ctaUrl: opts.subscribeUrl,
+      preheader: opts.endsAt
+        ? `Toegang loopt door tot ${formatDateNl(opts.endsAt)}.`
+        : "Geen toekomstige incasso's meer ingepland.",
+    },
+  );
 }

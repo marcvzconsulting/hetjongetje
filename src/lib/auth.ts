@@ -33,7 +33,7 @@ async function sendWelcomeMails(user: {
 }): Promise<void> {
   try {
     const profileUrl = await buildAppUrl("/profile/new");
-    const welcome = buildWelcomeMail({ name: user.name, profileUrl });
+    const welcome = await buildWelcomeMail({ name: user.name, profileUrl });
     await sendMail({
       to: user.email,
       toName: user.name,
