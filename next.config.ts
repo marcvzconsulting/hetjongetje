@@ -1,22 +1,76 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 /**
  * Security headers applied to every response. Together they harden the
  * app against XSS amplification, clickjacking, MIME-sniffing, downgrade
- * attacks, and unnecessary feature exposure.
+ * attacks, popup-based tab-jacking, cross-origin asset leeching, and
+ * unnecessary feature exposure.
  *
- * The CSP is intentionally permissive on `script-src` (`unsafe-inline`
- * + `unsafe-eval`) because Next.js inline runtime + Turbopack require
- * it in dev and production. Tightening to a nonce-based CSP is a known
- * future-iteration project — done here would just break the build.
+ * The CSP keeps `'unsafe-inline'` on `style-src` because every page
+ * currently composes inline `<style>` blocks (responsive overrides
+ * etc.). Switching to nonce-based CSP requires per-request nonces from
+ * middleware and component-side <style nonce={...}> wiring — a known
+ * follow-up that's been parked. `'unsafe-eval'` is also still on
+ * `script-src` in both dev and prod because Next.js's Server Components
+ * runtime and the Sentry browser SDK both use new Function() in places.
+ *
+ * Dev only: `ws:`/`wss:` permitted on connect-src for HMR over
+ * WebSocket. Production responses don't include them.
  */
+const PROD_CONNECT = [
+  "'self'",
+  "https://api.brevo.com",
+  "https://*.sentry.io",
+  "https://*.ingest.sentry.io",
+  "https://vitals.vercel-insights.com",
+  "https://va.vercel-scripts.com",
+];
+const DEV_EXTRA_CONNECT = ["ws:", "wss:"];
+
 const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+  // `same-origin-allow-popups` rather than `same-origin` because we use
+  // a Google OAuth flow that may open accounts.google.com in a popup —
+  // strict same-origin would sever the opener relationship and break
+  // sign-in. Still upgrades us from the browser default which leaves
+  // window.opener exposed across tabs.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+  // Block other origins from embedding our resources (images, JSON,
+  // fonts) in their pages. We don't need to be hot-linked.
+  { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  // Old Adobe Flash policy file lookup; explicitly tell crossdomain.xml
+  // consumers there's nothing here.
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  // Deny every browser feature we never use. The empty allowlist `=()`
+  // means no origin (not even our own) can request the feature. Add an
+  // origin like `=("self")` if we ever opt-in to one of these.
+  {
+    key: "Permissions-Policy",
+    value: [
+      "camera=()",
+      "microphone=()",
+      "geolocation=()",
+      "payment=()",
+      "usb=()",
+      "accelerometer=()",
+      "gyroscope=()",
+      "magnetometer=()",
+      "ambient-light-sensor=()",
+      "autoplay=()",
+      "fullscreen=(self)",
+      "picture-in-picture=()",
+      "midi=()",
+      "encrypted-media=()",
+      "sync-xhr=()",
+      "interest-cohort=()",
+    ].join(", "),
+  },
   {
     key: "Content-Security-Policy",
     value: [
@@ -25,10 +79,14 @@ const SECURITY_HEADERS = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.scw.cloud https://*.fal.media https://*.fal.run https://*.fal.ai",
       "font-src 'self' data:",
-      // ws:/wss: are needed for Next.js dev hot-reload over WebSocket;
-      // harmless in production where no WS upgrade happens on these origins.
-      "connect-src 'self' ws: wss: https://api.brevo.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      `connect-src ${[...PROD_CONNECT, ...(isDev ? DEV_EXTRA_CONNECT : [])].join(" ")}`,
+      // Lock down the niche directives explicitly so a browser default
+      // can't widen them silently in a future spec change.
+      "frame-src 'none'",
       "frame-ancestors 'none'",
+      "object-src 'none'",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; "),
