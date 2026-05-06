@@ -5,6 +5,8 @@ import {
   centsToMollieAmount,
 } from "./mollie";
 import { buildAppUrl } from "@/lib/url";
+import { sendMail } from "@/lib/email/client";
+import { buildSubscriptionCancelledMail } from "@/lib/email/templates/subscription-cancelled";
 
 /**
  * Mollie's recurring billing requires a `Customer` object that survives
@@ -234,13 +236,49 @@ export async function cancelSubscription(userId: string): Promise<void> {
     customerId: sub.mollieCustomerId,
   });
 
-  await prisma.subscription.update({
+  const updated = await prisma.subscription.update({
     where: { userId },
     data: {
       status: "cancelled",
       cancelledAt: new Date(),
     },
   });
+
+  // Confirmation mail. Best-effort — never fail the cancel if the mail
+  // bounces. The user already sees the UI confirmation on /account.
+  try {
+    const [user, plan] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      }),
+      prisma.subscriptionPlan.findUnique({ where: { code: updated.plan } }),
+    ]);
+    if (user) {
+      const accountUrl = await buildAppUrl("/account");
+      const subscribeUrl = await buildAppUrl("/subscribe");
+      const mail = buildSubscriptionCancelledMail({
+        name: user.name,
+        planName: plan?.name ?? "abonnement",
+        endsAt: updated.endsAt,
+        accountUrl,
+        subscribeUrl,
+      });
+      await sendMail({
+        to: user.email,
+        toName: user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["subscription-cancelled"],
+      });
+    }
+  } catch (mailError) {
+    console.error(
+      `[subscriptions] cancel-confirmation mail failed for user ${userId}`,
+      mailError instanceof Error ? mailError.message : mailError,
+    );
+  }
 }
 
 /**
