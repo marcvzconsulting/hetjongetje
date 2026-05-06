@@ -82,6 +82,9 @@ export async function loadDashboardStats() {
     recentPaidOrders,
     recentRegistrations,
     recentSubscriptionEvents,
+    feedbackUpCount,
+    feedbackDownCount,
+    recentNegativeFeedback,
   ] = await Promise.all([
     sumOrderAmount({ paidAt: { gte: today } }),
     sumOrderAmount({ paidAt: { gte: monthStart } }),
@@ -139,6 +142,23 @@ export async function loadDashboardStats() {
       orderBy: [{ updatedAt: "desc" }],
       take: 10,
       include: { user: { select: { name: true, email: true } } },
+    }),
+    prisma.story.count({ where: { feedbackKind: "up" } }),
+    prisma.story.count({ where: { feedbackKind: "down" } }),
+    prisma.story.findMany({
+      where: { feedbackKind: "down" },
+      orderBy: { feedbackAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        feedbackNote: true,
+        feedbackAt: true,
+        regenerationCount: true,
+        childProfile: {
+          select: { name: true, userId: true, user: { select: { email: true } } },
+        },
+      },
     }),
   ]);
 
@@ -291,6 +311,11 @@ export async function loadDashboardStats() {
     },
     topCustomers: topCustomersHydrated,
     events: activity,
+    feedback: {
+      upCount: feedbackUpCount,
+      downCount: feedbackDownCount,
+      recentNegative: recentNegativeFeedback,
+    },
     plans, // expose so the dashboard can show plan names not codes
   };
 }

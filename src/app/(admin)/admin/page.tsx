@@ -433,6 +433,136 @@ export default async function AdminDashboardPage({
         )}
       </Section>
 
+      {/* ── Klant-feedback ─────────────────────────────── */}
+      <Section title="Klant-feedback op verhalen">
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          <Stat
+            label="👍 Mooi"
+            value={String(stats.feedback.upCount)}
+            sub="totaal aantal duim-omhoog"
+          />
+          <Stat
+            label="👎 Minder"
+            value={String(stats.feedback.downCount)}
+            sub={
+              stats.feedback.downCount > 0
+                ? "klik op een rij om de notitie te zien"
+                : "geen duim-omlaag (nog)"
+            }
+          />
+        </div>
+
+        {stats.feedback.recentNegative.length === 0 ? (
+          <EmptyState>
+            Nog geen negatieve feedback. Mooi nieuws (of niemand drukt
+            op de knop — beide).
+          </EmptyState>
+        ) : (
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontFamily: V2.body,
+              fontSize: 14,
+              background: V2.paper,
+              border: `1px solid ${V2.paperShade}`,
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
+                <Th>Verhaal</Th>
+                <Th>Kind</Th>
+                <Th>Notitie</Th>
+                <Th>Wanneer</Th>
+                <Th></Th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.feedback.recentNegative.map((f) => (
+                <tr
+                  key={f.id}
+                  style={{ borderBottom: `1px solid ${V2.paperShade}` }}
+                >
+                  <Td>
+                    <div style={{ fontWeight: 500 }}>{f.title}</div>
+                    {f.regenerationCount > 0 && (
+                      <div
+                        style={{
+                          fontFamily: V2.mono,
+                          fontSize: 10,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: V2.goldDeep,
+                          marginTop: 4,
+                        }}
+                      >
+                        Al opnieuw gegenereerd
+                      </div>
+                    )}
+                  </Td>
+                  <Td>
+                    <div>{f.childProfile.name}</div>
+                    <div
+                      style={{
+                        fontFamily: V2.mono,
+                        fontSize: 11,
+                        color: V2.inkMute,
+                      }}
+                    >
+                      {f.childProfile.user.email}
+                    </div>
+                  </Td>
+                  <Td>
+                    {f.feedbackNote ? (
+                      <span
+                        style={{
+                          fontStyle: "italic",
+                          color: V2.inkSoft,
+                          fontSize: 13,
+                        }}
+                      >
+                        &ldquo;{f.feedbackNote}&rdquo;
+                      </span>
+                    ) : (
+                      <span style={{ color: V2.inkMute, fontSize: 12 }}>—</span>
+                    )}
+                  </Td>
+                  <Td mono>
+                    {f.feedbackAt
+                      ? f.feedbackAt.toLocaleDateString("nl-NL", {
+                          day: "numeric",
+                          month: "short",
+                        })
+                      : "—"}
+                  </Td>
+                  <Td align="right">
+                    <Link
+                      href={`/admin/users/${f.childProfile.userId}`}
+                      style={{
+                        fontFamily: V2.ui,
+                        fontSize: 12,
+                        color: V2.goldDeep,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Klant →
+                    </Link>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
       {/* ── Recent activity feed ────────────────────────── */}
       <Section title="Recente activiteit">
         {stats.events.length === 0 ? (

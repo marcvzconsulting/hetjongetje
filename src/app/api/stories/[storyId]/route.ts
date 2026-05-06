@@ -27,6 +27,20 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   if (body.title !== undefined) updates.title = body.title;
   if (body.isFavorite !== undefined) updates.isFavorite = body.isFavorite;
 
+  // Feedback may arrive on its own ({feedbackKind: "up"|"down"|null,
+  // feedbackNote?: string}). Accept either field independently so the
+  // UI can update them together or just the note. `null` means clear.
+  if (body.feedbackKind !== undefined) {
+    const k = body.feedbackKind;
+    updates.feedbackKind =
+      k === "up" || k === "down" ? k : k === null ? null : undefined;
+    updates.feedbackAt = updates.feedbackKind !== null ? new Date() : null;
+  }
+  if (body.feedbackNote !== undefined) {
+    const n = typeof body.feedbackNote === "string" ? body.feedbackNote.slice(0, 1000) : null;
+    updates.feedbackNote = n;
+  }
+
   const updated = await prisma.story.update({
     where: { id: storyId },
     data: updates,

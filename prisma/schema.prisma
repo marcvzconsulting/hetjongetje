@@ -341,6 +341,16 @@ model Story {
   status              String      @default("generating") // "generating" | "ready" | "error"
   generationParams    Json?       @map("generation_params") // questions/answers for this story
   isFavorite          Boolean     @default(false) @map("is_favorite")
+  /// How many times the parent has used "Opnieuw genereren" on this story.
+  /// Capped at MAX_REGENERATIONS_PER_STORY in code. Regenerate replaces
+  /// the current pages destructively — no version history is kept.
+  regenerationCount   Int         @default(0) @map("regeneration_count")
+  /// Parent's reaction to the finished story. Single record; editing
+  /// overwrites. Used to surface bad stories to admin and to drive
+  /// future prompt-tuning decisions.
+  feedbackKind        String?     @map("feedback_kind") // "up" | "down"
+  feedbackNote        String?     @map("feedback_note") @db.Text
+  feedbackAt          DateTime?   @map("feedback_at")
   // Optional marker for landing-page previews. One of: "girl-2" | "girl-4"
   // | "boy-2" | "boy-4" — null = not a preview. Only one story per slot is
   // shown (most recent wins if somehow duplicated).

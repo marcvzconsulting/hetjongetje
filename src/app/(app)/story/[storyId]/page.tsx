@@ -50,6 +50,10 @@ export default async function StoryPage({ params }: Props) {
       storyTitle={story.title}
       spreads={spreads}
       isFavorite={story.isFavorite}
+      regenerationCount={story.regenerationCount}
+      regenerationLimit={1}
+      initialFeedbackKind={story.feedbackKind as "up" | "down" | null}
+      initialFeedbackNote={story.feedbackNote}
     />
   );
 }
