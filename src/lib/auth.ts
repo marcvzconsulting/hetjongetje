@@ -206,6 +206,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               passwordHash: placeholderHash,
               // Same gate as credentials: pending until admin approves.
               status: "pending",
+              // 1 starter credit, identical to the credentials registration
+              // path so the welcome experience is consistent.
+              storyCredits: 1,
               lastLoginAt: new Date(),
             },
           });

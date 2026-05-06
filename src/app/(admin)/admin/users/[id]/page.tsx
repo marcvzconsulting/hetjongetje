@@ -14,6 +14,9 @@ import {
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
 import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
 import { logAdminAction } from "@/lib/admin/audit-log";
+import { sendMail } from "@/lib/email/client";
+import { buildAccountApprovedMail } from "@/lib/email/templates/account-approved";
+import { buildAppUrl } from "@/lib/url";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn, IconV2 } from "@/components/v2";
 
@@ -180,12 +183,45 @@ async function updateApprovalAction(formData: FormData) {
 
   if (action === "approve") {
     const credits = Math.max(0, parseInt(creditsRaw, 10) || 5);
-    await prisma.user.update({
+    const beforeStatus = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { status: true },
+    });
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: { status: "approved", storyCredits: credits },
+      select: { email: true, name: true, storyCredits: true },
     });
     logAction = "user.approve";
     logMetadata = { credits };
+
+    // Only send the welcome-on-approval mail when this is the *first*
+    // approve — moving an already-approved user from suspended → approved
+    // is handled by the unsuspend branch below and doesn't deserve a
+    // "welcome" mail.
+    if (beforeStatus?.status !== "approved") {
+      try {
+        const dashboardUrl = await buildAppUrl("/dashboard");
+        const mail = buildAccountApprovedMail({
+          name: updated.name,
+          credits: updated.storyCredits,
+          dashboardUrl,
+        });
+        await sendMail({
+          to: updated.email,
+          toName: updated.name,
+          subject: mail.subject,
+          html: mail.html,
+          text: mail.text,
+          tags: ["account-approved"],
+        });
+      } catch (mailError) {
+        console.error(
+          `[admin] account-approved mail failed for user ${userId}`,
+          mailError instanceof Error ? mailError.message : mailError,
+        );
+      }
+    }
   } else if (action === "suspend") {
     await prisma.user.update({
       where: { id: userId },

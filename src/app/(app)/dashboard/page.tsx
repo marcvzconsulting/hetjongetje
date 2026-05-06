@@ -24,6 +24,7 @@ export default async function DashboardPage() {
     return (
       <AppShell
         userName={session.user.name ?? "jij"}
+        isAdmin={session.user.role === "admin"}
         credits={null}
         nav={[
           { label: "Bibliotheek", href: "/dashboard", active: true },
@@ -79,6 +80,7 @@ export default async function DashboardPage() {
   return (
     <AppShell
       userName={session.user.name ?? "jij"}
+      isAdmin={session.user.role === "admin"}
       credits={creditsToShow}
       nav={[
         { label: "Bibliotheek", href: "/dashboard", active: true },

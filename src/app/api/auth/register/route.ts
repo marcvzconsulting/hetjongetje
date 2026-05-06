@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { name, email, passwordHash },
+      // 1 starter credit so a brand-new tester can immediately try the
+      // generator after their account is approved — no awkward "you're
+      // in! …now pay €1.95" moment.
+      data: { name, email, passwordHash, storyCredits: 1 },
     });
 
     try {

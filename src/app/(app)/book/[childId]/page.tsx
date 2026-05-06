@@ -80,6 +80,7 @@ export default async function BookPage({ params }: Props) {
   return (
     <AppShell
       userName={session.user.name ?? "jij"}
+      isAdmin={session.user.role === "admin"}
       credits={credits}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },

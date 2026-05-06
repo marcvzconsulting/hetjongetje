@@ -48,6 +48,7 @@ export default async function SubscriptionOrderStatusPage({ params }: Props) {
   return (
     <AppShell
       userName={session.user.name ?? "jij"}
+      isAdmin={session.user.role === "admin"}
       credits={null}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },

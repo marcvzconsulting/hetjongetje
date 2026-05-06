@@ -20,8 +20,18 @@ type Props = {
   credits?: number | null;
   /** Show "verhalen over" label in the pill */
   showCreditsLabel?: boolean;
+  /** Show the "Naar admin"-shortcut. Page passes `true` only for admin users. */
+  isAdmin?: boolean;
   children: ReactNode;
 };
+
+/**
+ * When the credit balance drops to or below this value, the shell shows
+ * an extra "Koop verhalen +"-button next to the credits-pill so the
+ * top-up flow is one click away. Tuned conservatively: at 3 the
+ * customer still has buffer, but the choice is now visible.
+ */
+const LOW_CREDIT_THRESHOLD = 3;
 
 const DEFAULT_NAV: NavItem[] = [
   { label: "Bibliotheek", href: "/dashboard" },
@@ -38,8 +48,11 @@ export function AppShell({
   nav = DEFAULT_NAV,
   credits,
   showCreditsLabel = true,
+  isAdmin = false,
   children,
 }: Props) {
+  const showLowCreditCta =
+    typeof credits === "number" && credits <= LOW_CREDIT_THRESHOLD;
   return (
     <div
       className="v2-root"
@@ -110,29 +123,72 @@ export function AppShell({
           ))}
 
           {credits !== null && credits !== undefined && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <Link
+                href="/credits"
+                title={
+                  credits > 0
+                    ? "Aantal verhalen dat je nog kunt maken — klik om bij te kopen"
+                    : "Geen credits meer — klik om bij te kopen"
+                }
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "6px 12px",
+                  border: `1px solid ${
+                    credits > 0 ? V2.paperShade : V2.rose
+                  }`,
+                  color: credits > 0 ? V2.inkMute : V2.ink,
+                  background: credits > 0 ? "transparent" : "rgba(196,165,168,0.15)",
+                  textDecoration: "none",
+                }}
+              >
+                {credits} {showCreditsLabel && (credits === 1 ? "verhaal over" : "verhalen over")}
+              </Link>
+              {showLowCreditCta && (
+                <Link
+                  href="/credits"
+                  title="Verhalen bijkopen"
+                  style={{
+                    fontFamily: V2.ui,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    letterSpacing: "0.04em",
+                    padding: "6px 12px",
+                    background: V2.gold,
+                    color: V2.ink,
+                    textDecoration: "none",
+                    border: `1px solid ${V2.goldDeep}`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  + Koop bij
+                </Link>
+              )}
+            </span>
+          )}
+
+          {isAdmin && (
             <Link
-              href="/credits"
-              title={
-                credits > 0
-                  ? "Aantal verhalen dat je nog kunt maken — klik om bij te kopen"
-                  : "Geen credits meer — klik om bij te kopen"
-              }
+              href="/admin"
+              title="Naar het admin-paneel"
               style={{
-                fontFamily: V2.ui,
-                fontSize: 12,
+                fontFamily: V2.mono,
+                fontSize: 11,
                 fontWeight: 500,
-                letterSpacing: "0.08em",
+                letterSpacing: "0.16em",
                 textTransform: "uppercase",
-                padding: "6px 12px",
-                border: `1px solid ${
-                  credits > 0 ? V2.paperShade : V2.rose
-                }`,
-                color: credits > 0 ? V2.inkMute : V2.ink,
-                background: credits > 0 ? "transparent" : "rgba(196,165,168,0.15)",
+                padding: "6px 10px",
+                color: V2.goldDeep,
+                background: V2.goldSoft,
+                border: `1px solid ${V2.goldDeep}`,
                 textDecoration: "none",
               }}
             >
-              {credits} {showCreditsLabel && (credits === 1 ? "verhaal over" : "verhalen over")}
+              Admin
             </Link>
           )}
 

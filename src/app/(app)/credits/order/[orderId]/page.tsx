@@ -51,6 +51,7 @@ export default async function OrderStatusPage({ params }: Props) {
   return (
     <AppShell
       userName={session.user.name ?? "jij"}
+      isAdmin={session.user.role === "admin"}
       credits={null}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },

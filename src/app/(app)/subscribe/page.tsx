@@ -76,6 +76,7 @@ export default async function SubscribePage({
   return (
     <AppShell
       userName={session.user.name ?? "jij"}
+      isAdmin={gate.isAdmin}
       credits={gate.isAdmin ? null : gate.storyCredits}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },

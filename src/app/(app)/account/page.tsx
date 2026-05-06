@@ -91,6 +91,7 @@ export default async function AccountPage({
   return (
     <AppShell
       userName={user.name}
+      isAdmin={user.role === "admin"}
       credits={credits}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },

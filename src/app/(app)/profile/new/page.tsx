@@ -17,6 +17,7 @@ export default async function NewProfilePage() {
   return (
     <AppShell
       userName={session.user.name ?? "jij"}
+      isAdmin={!!gate?.isAdmin}
       credits={credits}
       nav={[
         { label: "Bibliotheek", href: "/dashboard" },
