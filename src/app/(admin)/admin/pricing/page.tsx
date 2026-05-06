@@ -1,8 +1,9 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
+import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import {
   createCreditPackAction,
   updateCreditPackAction,
@@ -48,45 +49,24 @@ export default async function PricingPage({
     }),
   ]);
 
+  const session = await auth();
+  const nav = ADMIN_NAV.map((n) => ({
+    ...n,
+    active: n.href === "/admin/pricing",
+  }));
+
   return (
-    <div
-      style={{
-        maxWidth: 1100,
-        margin: "0 auto",
-        padding: "40px 32px 80px",
-        fontFamily: V2.body,
-        color: V2.ink,
-      }}
+    <AdminShell
+      section="Pricing"
+      title={
+        <>
+          Wat verkopen we, en{" "}
+          <span style={{ fontStyle: "italic" }}>voor hoeveel?</span>
+        </>
+      }
+      nav={nav}
+      adminEmail={session?.user?.email ?? undefined}
     >
-      {/* Breadcrumb */}
-      <div
-        style={{
-          fontFamily: V2.ui,
-          fontSize: 13,
-          color: V2.inkMute,
-          marginBottom: 24,
-        }}
-      >
-        <Link href="/admin" style={{ color: V2.inkMute, textDecoration: "none" }}>
-          ← Admin
-        </Link>
-      </div>
-
-      <Kicker>Admin · Prijs-catalogus</Kicker>
-      <h1
-        style={{
-          fontFamily: V2.display,
-          fontWeight: 300,
-          fontSize: 44,
-          margin: "12px 0 32px",
-          letterSpacing: -1.2,
-          lineHeight: 1.05,
-        }}
-      >
-        Wat verkopen we, en{" "}
-        <span style={{ fontStyle: "italic" }}>voor hoeveel?</span>
-      </h1>
-
       {flash && <Flash kind="success">{flash}</Flash>}
       {error && <Flash kind="error">{error}</Flash>}
 
@@ -123,7 +103,7 @@ export default async function PricingPage({
 
         <NewSubscriptionPlanForm />
       </section>
-    </div>
+    </AdminShell>
   );
 }
 

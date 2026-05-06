@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
-import { Kicker, IconV2 } from "@/components/v2";
+import { IconV2 } from "@/components/v2";
+import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 
 type SearchParams = Promise<{
   q?: string;
@@ -247,33 +249,24 @@ export default async function AdminUsersPage({
 
   const exportHref = `/api/admin/users/export${q || plan || activity ? `?${new URLSearchParams({ ...(q && { q }), ...(plan && { plan }), ...(activity && { activity }) }).toString()}` : ""}`;
 
+  const session = await auth();
+  const pendingCount = await prisma.user.count({
+    where: { role: "user", status: "pending" },
+  });
+  const nav = ADMIN_NAV.map((n) => ({
+    ...n,
+    active: n.href === "/admin/users",
+    badge:
+      n.href === "/admin/users" && pendingCount > 0 ? pendingCount : undefined,
+  }));
+
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "space-between",
-          gap: 20,
-          marginBottom: 32,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <Kicker>Admin · accounts</Kicker>
-          <h1
-            style={{
-              fontFamily: V2.display,
-              fontWeight: 300,
-              fontSize: "clamp(32px, 4vw, 44px)",
-              letterSpacing: -1.2,
-              margin: "10px 0 0",
-              lineHeight: 1.05,
-            }}
-          >
-            Gebruikers
-          </h1>
-        </div>
+    <AdminShell
+      section="Klanten"
+      title="Gebruikers"
+      nav={nav}
+      adminEmail={session?.user?.email ?? undefined}
+      actions={
         <a
           href={exportHref}
           style={{
@@ -294,8 +287,8 @@ export default async function AdminUsersPage({
           <IconV2 name="arrow" size={14} />
           CSV export
         </a>
-      </div>
-
+      }
+    >
       {deletedEmail && (
         <div
           style={{
@@ -604,6 +597,6 @@ export default async function AdminUsersPage({
           </tbody>
         </table>
       </div>
-    </div>
+    </AdminShell>
   );
 }

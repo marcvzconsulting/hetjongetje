@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { requireAdmin } from "@/lib/admin";
+import { auth } from "@/lib/auth";
+import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { prisma } from "@/lib/db";
 import { calculateAge } from "@/lib/utils/age";
 import {
@@ -558,57 +560,47 @@ export default async function AdminUserDetailPage({
     0
   );
 
+  const session = await auth();
+  const adminNav = ADMIN_NAV.map((n) => ({
+    ...n,
+    active: n.href === "/admin/users",
+  }));
+
   return (
-    <div>
-      {/* Back link */}
-      <div
-        style={{
-          fontFamily: V2.ui,
-          fontSize: 13,
-          color: V2.inkMute,
-          marginBottom: 24,
-        }}
-      >
+    <AdminShell
+      section="Klanten"
+      eyebrow={user.email}
+      title={user.name}
+      nav={adminNav}
+      adminEmail={session?.user?.email ?? undefined}
+      actions={
         <Link
           href="/admin/users"
-          style={{ color: V2.inkMute, textDecoration: "none" }}
+          style={{
+            fontFamily: "var(--font-inter), system-ui, sans-serif",
+            fontSize: 12,
+            fontWeight: 500,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            padding: "8px 14px",
+            border: `1px solid ${V2.paperShade}`,
+            color: V2.ink,
+            textDecoration: "none",
+            background: V2.paper,
+          }}
         >
-          ← Terug naar gebruikers
+          ← Terug naar overzicht
         </Link>
-      </div>
-
-      {/* Header */}
-      <div style={{ marginBottom: 40 }}>
-        <Kicker>Admin · gebruiker</Kicker>
-        <h1
-          style={{
-            fontFamily: V2.display,
-            fontWeight: 300,
-            fontSize: "clamp(32px, 4.4vw, 44px)",
-            letterSpacing: -1.2,
-            margin: "10px 0 4px",
-            lineHeight: 1.05,
-          }}
-        >
-          {user.name}
-        </h1>
-        <p
-          style={{
-            fontFamily: V2.mono,
-            fontSize: 13,
-            color: V2.inkMute,
-            margin: 0,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {user.email}
-        </p>
+      }
+    >
+      {/* Status row */}
+      <div style={{ marginBottom: 32 }}>
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
             gap: 10,
-            marginTop: 20,
+            marginTop: 4,
           }}
         >
           <StatusPill status={user.status} role={user.role} />
@@ -1623,7 +1615,7 @@ export default async function AdminUserDetailPage({
           </details>
         )}
       </section>
-    </div>
+    </AdminShell>
   );
 }
 

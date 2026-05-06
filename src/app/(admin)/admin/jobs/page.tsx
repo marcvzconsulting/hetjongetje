@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
+import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
-import { Kicker, IconV2 } from "@/components/v2";
+import { IconV2 } from "@/components/v2";
+import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 
 type SearchParams = Promise<{ status?: string; type?: string }>;
 
@@ -132,24 +134,20 @@ export default async function AdminJobsPage({
     counts.map((c) => [c.status, c._count._all])
   );
 
-  return (
-    <div>
-      <div style={{ marginBottom: 32 }}>
-        <Kicker>Admin · systeem</Kicker>
-        <h1
-          style={{
-            fontFamily: V2.display,
-            fontWeight: 300,
-            fontSize: "clamp(32px, 4vw, 44px)",
-            letterSpacing: -1.2,
-            margin: "10px 0 0",
-            lineHeight: 1.05,
-          }}
-        >
-          Generation <span style={{ fontStyle: "italic" }}>jobs</span>
-        </h1>
-      </div>
+  const session = await auth();
+  const nav = ADMIN_NAV.map((n) => ({ ...n, active: n.href === "/admin/jobs" }));
 
+  return (
+    <AdminShell
+      section="Systeem"
+      title={
+        <>
+          Generation <span style={{ fontStyle: "italic" }}>jobs</span>
+        </>
+      }
+      nav={nav}
+      adminEmail={session?.user?.email ?? undefined}
+    >
       {/* Status tabs as filter tiles */}
       <div
         style={{
@@ -420,6 +418,6 @@ export default async function AdminJobsPage({
           </tbody>
         </table>
       </div>
-    </div>
+    </AdminShell>
   );
 }
