@@ -103,6 +103,27 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  /**
+   * Apex → www redirect. Done in Next.js (not at the Vercel domain
+   * level) so the 308 response carries our SECURITY_HEADERS — Vercel's
+   * edge redirect would emit a bare response. The `host` matcher fires
+   * on the apex hostname and any other variants we own, so visitors
+   * land on the canonical URL with HSTS + COOP + CSP intact.
+   *
+   * Requires the apex domain in Vercel to be an *alias* of the project,
+   * not a redirect — otherwise Vercel's edge redirect wins before this
+   * config runs.
+   */
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "onsverhaaltje.nl" }],
+        destination: "https://www.onsverhaaltje.nl/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 // Only wrap with Sentry when a DSN is configured. Keeps local dev painless
