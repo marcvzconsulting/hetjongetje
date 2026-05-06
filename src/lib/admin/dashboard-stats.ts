@@ -313,6 +313,10 @@ export type RevenueBucket = {
   label: string;
   /** Sum of paid Order.amountCents falling inside the bucket. */
   totalCents: number;
+  /** Split per Order.kind so the chart can stack credits / subs separately. */
+  creditsCents: number;
+  subscriptionCents: number;
+  bookCents: number;
   /** Count of paid orders for tooltip detail. */
   orderCount: number;
 };
@@ -339,7 +343,7 @@ export async function loadRevenueTimeSeries(opts: {
       status: "paid",
       paidAt: { gte: from, lt: to },
     },
-    select: { paidAt: true, amountCents: true },
+    select: { paidAt: true, amountCents: true, kind: true },
     orderBy: { paidAt: "asc" },
   });
 
@@ -351,6 +355,9 @@ export async function loadRevenueTimeSeries(opts: {
       start: new Date(cursor),
       label: bucketLabel(cursor, opts.granularity),
       totalCents: 0,
+      creditsCents: 0,
+      subscriptionCents: 0,
+      bookCents: 0,
       orderCount: 0,
     });
     cursor = bucketAdvance(cursor, opts.granularity);
@@ -368,6 +375,10 @@ export async function loadRevenueTimeSeries(opts: {
     }
     buckets[bi].totalCents += o.amountCents;
     buckets[bi].orderCount += 1;
+    if (o.kind === "credits") buckets[bi].creditsCents += o.amountCents;
+    else if (o.kind === "subscription")
+      buckets[bi].subscriptionCents += o.amountCents;
+    else if (o.kind === "book") buckets[bi].bookCents += o.amountCents;
   }
   return buckets;
 }

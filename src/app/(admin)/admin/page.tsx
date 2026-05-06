@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
-import { RevenueChart } from "@/components/v2/admin/RevenueChart";
+import { RevenueChart, type ChartMode } from "@/components/v2/admin/RevenueChart";
 import {
   loadDashboardStats,
   loadRevenueTimeSeries,
@@ -20,6 +20,8 @@ type SearchParams = Promise<{
   granularity?: string;
   from?: string;
   to?: string;
+  /** "total" (default) or "split" — splits the line per Order.kind. */
+  mode?: string;
 }>;
 
 const RANGE_PRESETS: Record<
@@ -99,6 +101,7 @@ export default async function AdminDashboardPage({
   const granularity: Granularity = isGranularity(sp.granularity)
     ? sp.granularity
     : preset.granularity;
+  const chartMode: ChartMode = sp.mode === "split" ? "split" : "total";
 
   const [stats, buckets] = await Promise.all([
     loadDashboardStats(),
@@ -138,10 +141,11 @@ export default async function AdminDashboardPage({
         <RangeControls
           presetKey={presetKey}
           granularity={granularity}
+          chartMode={chartMode}
           customFrom={customFrom ? isoDate(customFrom) : ""}
           customTo={customTo ? isoDate(customTo) : ""}
         />
-        <RevenueChart buckets={buckets} />
+        <RevenueChart buckets={buckets} mode={chartMode} />
         <p
           style={{
             fontFamily: V2.body,
@@ -691,15 +695,36 @@ function FootNote({ children }: { children: React.ReactNode }) {
 function RangeControls({
   presetKey,
   granularity,
+  chartMode,
   customFrom,
   customTo,
 }: {
   presetKey: string;
   granularity: Granularity;
+  chartMode: ChartMode;
   customFrom: string;
   customTo: string;
 }) {
   const usingCustom = !!(customFrom && customTo);
+
+  /** Build a /admin URL that preserves all controls except those overridden. */
+  function buildHref(overrides: Record<string, string>): string {
+    const params = new URLSearchParams();
+    if (usingCustom) {
+      params.set("from", customFrom);
+      params.set("to", customTo);
+    } else {
+      params.set("range", presetKey);
+    }
+    params.set("granularity", granularity);
+    if (chartMode !== "total") params.set("mode", chartMode);
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v) params.set(k, v);
+      else params.delete(k);
+    }
+    return `/admin?${params.toString()}`;
+  }
+
   return (
     <div
       style={{
@@ -717,7 +742,7 @@ function RangeControls({
           return (
             <Link
               key={key}
-              href={`/admin?range=${key}`}
+              href={buildHref({ range: key, from: "", to: "" })}
               style={{
                 fontFamily: V2.ui,
                 fontSize: 12,
@@ -737,21 +762,13 @@ function RangeControls({
       </div>
 
       {/* Granularity pills */}
-      <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+      <div style={{ display: "flex", gap: 6 }}>
         {(["day", "week", "month", "quarter"] as const).map((g) => {
           const active = g === granularity;
-          const params = new URLSearchParams();
-          if (usingCustom) {
-            params.set("from", customFrom);
-            params.set("to", customTo);
-          } else {
-            params.set("range", presetKey);
-          }
-          params.set("granularity", g);
           return (
             <Link
               key={g}
-              href={`/admin?${params.toString()}`}
+              href={buildHref({ granularity: g })}
               style={{
                 fontFamily: V2.mono,
                 fontSize: 11,
@@ -776,6 +793,34 @@ function RangeControls({
         })}
       </div>
 
+      {/* Total / split toggle */}
+      <div style={{ display: "flex", gap: 6, marginLeft: "auto" }}>
+        {([
+          { v: "total", label: "Totaal" },
+          { v: "split", label: "Per kategorie" },
+        ] as const).map((m) => {
+          const active = m.v === chartMode;
+          return (
+            <Link
+              key={m.v}
+              href={buildHref({ mode: m.v === "total" ? "" : m.v })}
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 12,
+                fontWeight: active ? 500 : 400,
+                padding: "6px 12px",
+                border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                background: active ? V2.paper : "transparent",
+                color: V2.ink,
+                textDecoration: "none",
+              }}
+            >
+              {m.label}
+            </Link>
+          );
+        })}
+      </div>
+
       {/* Custom date-range form */}
       <form
         method="get"
@@ -792,6 +837,9 @@ function RangeControls({
         }}
       >
         <input type="hidden" name="granularity" value={granularity} />
+        {chartMode !== "total" && (
+          <input type="hidden" name="mode" value={chartMode} />
+        )}
         <label
           style={{
             fontFamily: V2.mono,
@@ -833,7 +881,7 @@ function RangeControls({
         </button>
         {usingCustom && (
           <Link
-            href={`/admin?range=30d`}
+            href={buildHref({ range: "30d", from: "", to: "" })}
             style={{
               fontFamily: V2.ui,
               fontSize: 12,

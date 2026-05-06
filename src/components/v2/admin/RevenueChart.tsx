@@ -1,45 +1,104 @@
 import { V2 } from "@/components/v2/tokens";
 import type { RevenueBucket } from "@/lib/admin/dashboard-stats";
 
+export type ChartMode = "total" | "split";
+
 type Props = {
   buckets: RevenueBucket[];
-  /** Width of the SVG viewBox; height is fixed. */
+  /** "total" draws one line; "split" draws one line per category. */
+  mode?: ChartMode;
+  /** Height of the SVG in CSS pixels. */
   height?: number;
 };
 
+type Series = {
+  key: "total" | "credits" | "subscription" | "book";
+  label: string;
+  color: string;
+  values: number[];
+};
+
 /**
- * Inline SVG bar chart — no client JS, no library dependency. Bars are
- * drawn relative to the largest bucket so the chart auto-scales to
- * whatever range the dashboard requested.
+ * Inline SVG line chart — no client JS, no library dependency.
  *
- * Rendered server-side so it's already painted on first load. Hover-
- * tooltips use the SVG <title>-element which all browsers honour.
+ * `mode="total"` draws a single gold line with a soft area fill so a
+ * year of data with one busy month still shows the empty months
+ * clearly along the x-axis.
+ *
+ * `mode="split"` overlays one line per Order.kind (credits / abonnement /
+ * boekje), so you can see which revenue stream is moving.
  */
-export function RevenueChart({ buckets, height = 220 }: Props) {
+export function RevenueChart({ buckets, mode = "total", height = 240 }: Props) {
   if (buckets.length === 0) {
     return <EmptyChart height={height} />;
   }
 
-  const maxCents = Math.max(...buckets.map((b) => b.totalCents), 1);
+  const splitSeries: Series[] = [
+    {
+      key: "subscription",
+      label: "Abonnementen",
+      color: V2.gold,
+      values: buckets.map((b) => b.subscriptionCents),
+    },
+    {
+      key: "credits",
+      label: "Losse credits",
+      color: V2.goldDeep,
+      values: buckets.map((b) => b.creditsCents),
+    },
+    {
+      key: "book",
+      label: "Boekjes",
+      color: V2.heart,
+      values: buckets.map((b) => b.bookCents),
+    },
+  ];
+  const totalSeries: Series[] = [
+    {
+      key: "total",
+      label: "Totaal",
+      color: V2.gold,
+      values: buckets.map((b) => b.totalCents),
+    },
+  ];
+  const series: Series[] =
+    mode === "split"
+      ? splitSeries.filter((s) => s.values.some((v) => v > 0))
+      : totalSeries;
+
+  // Drop empty series in split mode so the legend stays useful.
+  if (mode === "split" && series.length === 0) {
+    // Fall back to a single zero-line so the chart frame still renders.
+    series.push({
+      key: "total",
+      label: "Totaal",
+      color: V2.gold,
+      values: buckets.map(() => 0),
+    });
+  }
+
+  const allValues = series.flatMap((s) => s.values);
+  const maxCents = Math.max(...allValues, 100);
   const totalCents = buckets.reduce((s, b) => s + b.totalCents, 0);
   const totalOrders = buckets.reduce((s, b) => s + b.orderCount, 0);
 
-  // Layout — paddings reserve room for axis labels.
-  const PAD_L = 56;
-  const PAD_R = 16;
-  const PAD_T = 12;
-  const PAD_B = 36;
-  const W = 960; // logical viewBox width — SVG scales to container
+  // Layout
+  const PAD_L = 64;
+  const PAD_R = 24;
+  const PAD_T = 16;
+  const PAD_B = 40;
+  const W = 960;
   const H = height;
   const innerW = W - PAD_L - PAD_R;
   const innerH = H - PAD_T - PAD_B;
-  const barGap = 6;
-  const barW = Math.max(2, innerW / buckets.length - barGap);
+  const stepX = buckets.length > 1 ? innerW / (buckets.length - 1) : 0;
 
-  // Y-axis ticks — 0, max/2, max.
-  const yTicks = [0, maxCents / 2, maxCents];
+  const xAt = (i: number) =>
+    buckets.length === 1 ? PAD_L + innerW / 2 : PAD_L + i * stepX;
+  const yAt = (cents: number) =>
+    PAD_T + innerH - (cents / maxCents) * innerH;
 
-  // Decide which x-labels to show — too many labels overlap.
+  const yTicks = makeTicks(maxCents, 4);
   const labelStride = Math.ceil(buckets.length / 12);
 
   return (
@@ -77,6 +136,7 @@ export function RevenueChart({ buckets, height = 220 }: Props) {
           betaling{totalOrders === 1 ? "" : "en"}
         </div>
       </div>
+
       <svg
         viewBox={`0 0 ${W} ${H}`}
         preserveAspectRatio="none"
@@ -86,7 +146,7 @@ export function RevenueChart({ buckets, height = 220 }: Props) {
       >
         {/* Y-axis grid + labels */}
         {yTicks.map((v, i) => {
-          const y = PAD_T + innerH - (v / maxCents) * innerH;
+          const y = yAt(v);
           return (
             <g key={i}>
               <line
@@ -95,7 +155,7 @@ export function RevenueChart({ buckets, height = 220 }: Props) {
                 y1={y}
                 y2={y}
                 stroke={V2.paperShade}
-                strokeDasharray={i === 0 ? undefined : "2 4"}
+                strokeDasharray={v === 0 ? undefined : "2 4"}
               />
               <text
                 x={PAD_L - 8}
@@ -111,39 +171,64 @@ export function RevenueChart({ buckets, height = 220 }: Props) {
           );
         })}
 
-        {/* Bars */}
-        {buckets.map((b, i) => {
-          const x = PAD_L + i * (barW + barGap);
-          const h = (b.totalCents / maxCents) * innerH;
-          const y = PAD_T + innerH - h;
+        {/* Series — area fill behind the line for the primary series only */}
+        {series.map((s, idx) => {
+          const points = s.values
+            .map((v, i) => `${xAt(i)},${yAt(v)}`)
+            .join(" ");
+          const isPrimary = idx === 0;
+          const areaPath = isPrimary
+            ? `M ${xAt(0)},${yAt(0)} L ${s.values
+                .map((v, i) => `${xAt(i)},${yAt(v)}`)
+                .join(" L ")} L ${xAt(s.values.length - 1)},${yAt(0)} Z`
+            : null;
           return (
-            <g key={i}>
-              <rect
-                x={x}
-                y={y}
-                width={barW}
-                height={Math.max(h, b.totalCents > 0 ? 2 : 0)}
-                fill={b.totalCents > 0 ? V2.gold : V2.paperShade}
-                opacity={b.totalCents > 0 ? 1 : 0.5}
-              >
-                <title>
-                  {b.label}: {formatEur(b.totalCents)} ({b.orderCount}
-                  {b.orderCount === 1 ? " order" : " orders"})
-                </title>
-              </rect>
+            <g key={s.key}>
+              {areaPath && mode === "total" && (
+                <path d={areaPath} fill={s.color} fillOpacity={0.12} />
+              )}
+              <polyline
+                points={points}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {/* Dots — one per data point, only when there's actual revenue
+                  in the bucket so empty months don't get peppered. */}
+              {s.values.map((v, i) =>
+                v > 0 ? (
+                  <circle
+                    key={i}
+                    cx={xAt(i)}
+                    cy={yAt(v)}
+                    r={3}
+                    fill={s.color}
+                    stroke={V2.paper}
+                    strokeWidth={1.5}
+                  >
+                    <title>
+                      {buckets[i].label} · {s.label}: {formatEur(v)}
+                      {s.key === "total"
+                        ? ` (${buckets[i].orderCount} order${buckets[i].orderCount === 1 ? "" : "s"})`
+                        : ""}
+                    </title>
+                  </circle>
+                ) : null,
+              )}
             </g>
           );
         })}
 
         {/* X-axis labels */}
         {buckets.map((b, i) => {
-          if (i % labelStride !== 0) return null;
-          const x = PAD_L + i * (barW + barGap) + barW / 2;
+          if (i % labelStride !== 0 && i !== buckets.length - 1) return null;
           return (
             <text
               key={i}
-              x={x}
-              y={H - 12}
+              x={xAt(i)}
+              y={H - 16}
               textAnchor="middle"
               fontFamily={V2.mono}
               fontSize={10}
@@ -154,8 +239,64 @@ export function RevenueChart({ buckets, height = 220 }: Props) {
           );
         })}
       </svg>
+
+      {/* Legend — only when more than one series */}
+      {series.length > 1 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 18,
+            marginTop: 12,
+            paddingTop: 12,
+            borderTop: `1px dashed ${V2.paperShade}`,
+            fontFamily: V2.ui,
+            fontSize: 12,
+            color: V2.inkSoft,
+            flexWrap: "wrap",
+          }}
+        >
+          {series.map((s) => (
+            <span
+              key={s.key}
+              style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 14,
+                  height: 2,
+                  background: s.color,
+                }}
+              />
+              {s.label}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+/** Pick "nice" round Y-axis values up to max, including 0. */
+function makeTicks(max: number, target: number): number[] {
+  if (max <= 0) return [0];
+  const step = niceStep(max / target);
+  const out: number[] = [];
+  for (let v = 0; v <= max + step / 2; v += step) {
+    out.push(v);
+  }
+  return out;
+}
+
+/** Round a step-size up to the nearest 1/2/5 × power-of-10. */
+function niceStep(raw: number): number {
+  const exp = Math.floor(Math.log10(raw));
+  const base = Math.pow(10, exp);
+  const norm = raw / base;
+  if (norm <= 1) return 1 * base;
+  if (norm <= 2) return 2 * base;
+  if (norm <= 5) return 5 * base;
+  return 10 * base;
 }
 
 function EmptyChart({ height }: { height: number }) {
