@@ -447,6 +447,21 @@ model EmailTemplate {
   @@map("email_templates")
 }
 
+/// Admin-overridable AI-prompt fragments. Same shape and lifecycle as
+/// EmailTemplate: rows in this table override the inline defaults that
+/// ship with the prompt-builder, falling through to defaults when no
+/// row exists. Lets us tune the storyteller voice without a deploy.
+model AiPromptOverride {
+  /// Stable identifier matching the snippet key in
+  /// src/lib/ai/prompts/store.ts (e.g. "age.5-7", "illustration.style").
+  code        String   @id
+  value       String   @db.Text
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by_id")
+
+  @@map("ai_prompt_overrides")
+}
+
 model GenerationJob {
   id           String    @id @default(uuid())
   storyId      String    @map("story_id")

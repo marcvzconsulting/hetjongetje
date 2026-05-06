@@ -37,6 +37,7 @@ export const ADMIN_NAV: Omit<NavItem, "active">[] = [
   { label: "Klanten", href: "/admin/users", icon: "◇" },
   { label: "Pricing", href: "/admin/pricing", icon: "◯" },
   { label: "Mails", href: "/admin/email-templates", icon: "✉" },
+  { label: "AI-prompts", href: "/admin/ai-prompts", icon: "✦" },
   { label: "Jobs", href: "/admin/jobs", icon: "◮" },
 ];
 

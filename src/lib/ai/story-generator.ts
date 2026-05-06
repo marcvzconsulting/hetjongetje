@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { STORY_SETTINGS, ADVENTURE_TYPES, STORY_MOODS, OCCASIONS, type StorySetting, type AdventureType, type StoryMood, type Occasion } from "./prompts/story-request";
+import { loadAiPromptSnippets, type AiPromptValues } from "./prompts/store";
 import { calculateAge } from "@/lib/utils/age";
 import {
   sanitizePromptShort,
@@ -63,22 +64,24 @@ export interface GeneratedStory {
 
 // —— Leeftijdsgroep → schrijfinstructies ——————————————————————————————
 
-function ageInstructions(age: number): string {
-  if (age <= 1) return `
-    LEEFTIJD 0-1: Heel korte zinnen van 3-5 woorden. Veel herhaling. Klankwoorden (Boem! Woef! Giechel!).
-    Concreet en visueel. Maximaal één ding per pagina. Geen abstracties. Denk aan Nijntje-niveau.`;
-  if (age <= 2) return `
-    LEEFTIJD 1-2: Heel korte zinnen van 3-6 woorden. Veel herhaling. Klankwoorden (Boem! Woef! Giechel!).
-    Concreet en visueel. Maximaal één ding per pagina. Geen abstracties.`;
-  if (age <= 4) return `
-    LEEFTIJD 3-4: Korte zinnen van 5-8 woorden. Simpele gebeurtenissen. Veel emoties benoemen.
-    Herhaling en ritme. Eenvoudige woordenschat.`;
-  if (age <= 7) return `
-    LEEFTIJD 5-7: Zinnen van 8-15 woorden. Duidelijk begin-midden-einde. Wat spanning en oplossing.
-    Dialogen welkom. Rijkere woordenschat maar toegankelijk.`;
-  return `
-    LEEFTIJD 8-10: Langere zinnen, echte plot, bijzinnen. Humor en spanning. Karakterontwikkeling.
-    Uitgebreide woordenschat, figuurlijk taalgebruik welkom.`;
+/**
+ * Pick the right per-age writing instruction from the loaded snippets
+ * map. Boundaries:
+ *   age <= 1  → age.0-1
+ *   age <= 2  → age.1-2
+ *   age <= 4  → age.3-4
+ *   age <= 7  → age.5-7
+ *   else      → age.8-10
+ *
+ * The snippets themselves are admin-editable in /admin/ai-prompts; the
+ * map here just routes to the matching code.
+ */
+function ageInstructions(age: number, snippets: AiPromptValues): string {
+  if (age <= 1) return snippets["age.0-1"];
+  if (age <= 2) return snippets["age.1-2"];
+  if (age <= 4) return snippets["age.3-4"];
+  if (age <= 7) return snippets["age.5-7"];
+  return snippets["age.8-10"];
 }
 
 // —— Aquarel stijl-handtekening voor illustraties ————————————————————
@@ -173,7 +176,20 @@ export function buildSideCharacterDescriptions(bible: CharacterBible): string {
     : "";
 }
 
-export function buildIllustrationStyle(bible: CharacterBible): string {
+/**
+ * Compose the per-image style hint that gets pasted into every
+ * illustration prompt. Combines:
+ *   - the locked main-character description
+ *   - any side-character pinned descriptions for consistency
+ *   - the admin-editable visual style line (defaults to soft watercolor)
+ *
+ * `snippets` is optional so callers that haven't loaded the override
+ * map yet (e.g. tests) still get the production default.
+ */
+export function buildIllustrationStyle(
+  bible: CharacterBible,
+  snippets?: AiPromptValues,
+): string {
   const sideChars = buildSideCharacterDescriptions(bible);
 
   const styleParts = [
@@ -184,12 +200,12 @@ export function buildIllustrationStyle(bible: CharacterBible): string {
     styleParts.push(sideChars);
   }
 
-  styleParts.push(
-    "STYLE: soft watercolor illustration, children's picture book, Ernest et Célestine animation aesthetic",
-    "warm pastel palette, gentle brushstrokes, visible paper texture",
-    "cozy tender atmosphere, consistent character design across all images",
-    "no text, no watermark, no words",
-  );
+  // Fall back to the in-code default so this function still works in
+  // the rare path that calls it without first loading the snippet map.
+  const styleLine =
+    snippets?.["illustration.style"] ??
+    "STYLE: soft watercolor illustration, children's picture book, Ernest et Célestine animation aesthetic | warm pastel palette, gentle brushstrokes, visible paper texture | cozy tender atmosphere, consistent character design across all images | no text, no watermark, no words";
+  styleParts.push(styleLine);
 
   return styleParts.join(" | ");
 }
@@ -278,7 +294,10 @@ export async function generateStory(
 
   const age = calculateAge(characterBible.dateOfBirth) ?? 1;
   const charDescription = buildCharacterDescription(characterBible);
-  const styleHint = buildIllustrationStyle(characterBible);
+  // Load admin-editable snippets once per generation. Defaults are used
+  // when no override row exists, so this is safe even on a fresh DB.
+  const snippets = await loadAiPromptSnippets();
+  const styleHint = buildIllustrationStyle(characterBible, snippets);
 
   const settingInfo = STORY_SETTINGS[request.setting as StorySetting];
   const adventureInfo = ADVENTURE_TYPES[request.adventureType];
@@ -332,7 +351,7 @@ export async function generateStory(
   const prompt = `
 Je bent een Nederlandse kinderboekenauteur. Schrijf een persoonlijk kinderverhaaltje voor ${characterBible.childName} (${age} jaar).
 
-${ageInstructions(age)}
+${ageInstructions(age, snippets)}
 
 KINDPROFIEL:
 - Naam: ${characterBible.childName}
@@ -355,12 +374,7 @@ ${request.specialDetail ? `- Verwerk dit detail: ${request.specialDetail}` : ""}
 - Slaapverhaaltje: ${request.mood === "bedtime" ? "ja — rustig tempo, zacht einde" : "nee"}
 - Grappig: ${request.mood === "funny" ? "ja — humor en grappige wendingen welkom" : "nee"}
 
-KWALITEITSCONTROLE:
-Controleer je eigen tekst na het schrijven op:
-• de/het-fouten  • kommafouten  • onnatuurlijke zinnen voor een Nederlands kind
-• LOGICA: alles wat gebeurt MOET passen bij de setting. Onder water kun je niet eten, in de ruimte kun je niet zwemmen in een meer, in het bos zijn geen liften, etc. Favoriete dingen van het kind (eten, speelgoed, etc.) mogen ALLEEN voorkomen als ze logisch passen in de setting. Verwerk ze creatief als het past, maar forceer ze nooit.
-• Controleer elke scène: "Kan dit echt gebeuren op deze plek?" — zo nee, pas het aan of laat het weg.
-Geef alleen de gecorrigeerde versie terug.
+${snippets["quality-check"]}
 
 ILLUSTRATIE-INSTRUCTIES:
 Elke illustratiebeschrijving MOET in het Engels zijn en MOET beginnen met exact deze karakteromschrijving:
@@ -368,20 +382,7 @@ Elke illustratiebeschrijving MOET in het Engels zijn en MOET beginnen met exact 
 
 Voeg daarna de scène toe. Het karakter moet er in ELKE illustratie IDENTIEK uitzien — zelfde gezicht, zelfde lichaamsbouw, zelfde stijl.
 
-BIJPERSONAGES — HEEL BELANGRIJK VOOR CONSISTENTIE:
-Als er bijpersonages in het verhaal voorkomen (metgezel, broertje/zusje, huisdier), moet je EERST in je JSON een "sideCharacters" object opnemen met een vaste Engelse beschrijving per personage. Gebruik die beschrijving dan LETTERLIJK (copy-paste) in ELKE illustratie waar dat personage voorkomt.
-
-BELANGRIJK: als de ouder hierboven onder "Huisdieren" of "Vriendjes" een uiterlijk-beschrijving heeft opgegeven (achter "— uiterlijk:"), gebruik die dan ONGEWIJZIGD als basis van de beschrijving in "sideCharacters". Vertaal alleen naar het Engels en vul aan met specifieke kleding/kleuren; verzin GEEN ander uiterlijk.
-
-Voorbeeld: als Sam (broertje, 3 jaar) meegaat:
-"sideCharacters": { "Sam": "a 3 year old boy, fair skin, short blonde hair, blue eyes, wearing a red sweater and blue jeans" }
-Dan moet ELKE illustratie waar Sam in voorkomt exact die zin bevatten.
-
-Zelfde voor huisdieren: "Ofilantje": "a small orange and white guinea pig with round ears"
-Gebruik EXACT dezelfde beschrijving in elke illustratie.
-
-ALLEEN personages die als metgezel gekozen zijn of expliciet in de tekst voorkomen mogen in illustraties verschijnen. Geen extra personages verzinnen!
-Het EXACTE aantal personages in de illustratie moet kloppen met de tekst. Als er in de tekst 2 personages zijn, teken er dan precies 2, niet meer.
+${snippets["side-characters"]}
 
 BELANGRIJK: illustraties moeten ook logisch passen bij de setting! Geen huisdieren of aardse dieren in de ruimte, geen alledaagse voorwerpen onder water, etc. Alleen dingen die in de gekozen wereld thuishoren.
 

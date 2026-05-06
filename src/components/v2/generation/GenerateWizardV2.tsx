@@ -43,13 +43,10 @@ interface ChildData {
   loraTriggerWord: string | null;
 }
 
-type Length = "short" | "medium" | "long";
-
 interface Params {
   specialDetail: string;
   mainCharacterType: string;
   mainCharacterDescription: string;
-  length: Length;
   setting: string;
   adventureType: string;
   mood: string;
@@ -75,12 +72,6 @@ const HERO_TYPES = [
   },
 ] as const;
 
-const LENGTHS: { value: Length; label: string; sub: string }[] = [
-  { value: "short", label: "Kort", sub: "± 3 min" },
-  { value: "medium", label: "Normaal", sub: "± 6 min" },
-  { value: "long", label: "Lang", sub: "± 10 min" },
-];
-
 const TOTAL_STEPS = 4;
 
 // ── Main ────────────────────────────────────────────────────────
@@ -94,7 +85,6 @@ export function GenerateWizardV2({ child }: { child: ChildData }) {
     specialDetail: "",
     mainCharacterType: child.mainCharacterType || "self",
     mainCharacterDescription: child.mainCharacterDescription ?? "",
-    length: "medium",
     setting: "",
     adventureType: "",
     mood: "",
@@ -144,7 +134,6 @@ export function GenerateWizardV2({ child }: { child: ChildData }) {
             mood: params.mood,
             occasion:
               params.occasion !== "none" ? params.occasion : undefined,
-            length: params.length,
             specialDetail: params.specialDetail || undefined,
           },
         }),
@@ -479,63 +468,6 @@ function Step1({
           )}
         </div>
 
-        <div>
-          <Kicker>Hoe lang?</Kicker>
-          <div
-            style={{
-              display: "flex",
-              gap: 0,
-              marginTop: 14,
-              border: `1px solid ${V2.paperShade}`,
-            }}
-          >
-            {LENGTHS.map((L, i) => {
-              const active = params.length === L.value;
-              return (
-                <button
-                  key={L.value}
-                  type="button"
-                  onClick={() => update({ length: L.value })}
-                  style={{
-                    flex: 1,
-                    padding: "16px 12px",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    background: active ? V2.ink : "transparent",
-                    color: active ? V2.paper : V2.ink,
-                    borderLeft:
-                      i > 0
-                        ? `1px solid ${active ? V2.ink : V2.paperShade}`
-                        : "none",
-                    border: "none",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: V2.display,
-                      fontSize: 18,
-                      fontStyle: active ? "italic" : "normal",
-                    }}
-                  >
-                    {L.label}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: V2.mono,
-                      fontSize: 10,
-                      opacity: 0.7,
-                      letterSpacing: "0.1em",
-                      marginTop: 4,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {L.sub}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </>
   );
