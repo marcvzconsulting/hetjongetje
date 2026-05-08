@@ -98,13 +98,10 @@ export function StoryPageClient({
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
-          debug?: string;
         };
-        const baseMsg = data.error ?? "Genereren mislukt — probeer het zo opnieuw.";
-        // Tijdelijk: toon de server-debug-message direct, zodat we tijdens
-        // het stabiliseren van de regen-flow snel kunnen zien wat er stuk
-        // ging zonder Vercel-logs te hoeven openen.
-        setRegenError(data.debug ? `${baseMsg} (${data.debug})` : baseMsg);
+        setRegenError(
+          data.error ?? "Genereren mislukt — probeer het zo opnieuw.",
+        );
         setRegenInFlight(false);
         return;
       }

@@ -199,16 +199,9 @@ export async function POST(
 
     return NextResponse.json({ ok: true, storyId });
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
     console.error(`[regen] failed for story ${storyId}`, err);
     return NextResponse.json(
-      {
-        error: "Genereren mislukt — probeer het zo opnieuw.",
-        // Tijdelijk: stuur de message mee zodat we in de Network-tab
-        // direct zien wat er stuk ging. Niet ideaal voor security; weghalen
-        // zodra de regen-flow stabiel is.
-        debug: detail,
-      },
+      { error: "Genereren mislukt — probeer het zo opnieuw." },
       { status: 500 },
     );
   }
