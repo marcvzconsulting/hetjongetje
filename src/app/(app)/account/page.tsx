@@ -18,7 +18,12 @@ import {
   cancelSubscriptionAction,
 } from "./actions";
 
-type SearchParams = Promise<{ saved?: string; error?: string }>;
+type SearchParams = Promise<{
+  saved?: string;
+  error?: string;
+  /** "reason" → toon de opzeg-survey i.p.v. de losse opzeg-knop. */
+  cancelStep?: string;
+}>;
 
 const SAVED_MESSAGES: Record<string, string> = {
   profile: "Persoonsgegevens opgeslagen",
@@ -326,6 +331,7 @@ export default async function AccountPage({
         <SubscriptionPanel
           subscription={user.subscription}
           plan={subscriptionPlan}
+          cancelStep={params.cancelStep === "reason" ? "reason" : null}
         />
 
         {/* Order history */}
@@ -715,6 +721,7 @@ function Td({
 function SubscriptionPanel({
   subscription,
   plan,
+  cancelStep,
 }: {
   subscription: {
     plan: string;
@@ -730,9 +737,12 @@ function SubscriptionPanel({
     priceCents: number;
     creditsPerInterval: number | null;
   } | null;
+  cancelStep: "reason" | null;
 }) {
-  // No active paid subscription — show CTA to /subscribe.
-  if (!subscription || subscription.plan === "free" || !subscription.mollieSubscriptionId) {
+  // No active paid subscription — show CTA to /subscribe. Admin-comped
+  // subs (no mollieSubscriptionId) DO show as active; only `plan=free` or
+  // a missing row count as "no subscription".
+  if (!subscription || subscription.plan === "free") {
     return (
       <Section
         title="Abonnement"
@@ -760,6 +770,8 @@ function SubscriptionPanel({
   }
 
   const isCancelled = subscription.status === "cancelled";
+  // "Managed" = admin-comped, no recurring billing through Mollie.
+  const isManaged = !subscription.mollieSubscriptionId;
   const planName = plan?.name ?? subscription.plan;
   const intervalNl =
     plan?.interval?.toLowerCase() === "1 month"
@@ -780,6 +792,7 @@ function SubscriptionPanel({
 
   return (
     <Section
+      id="abonnement"
       title="Abonnement"
       meta={
         isCancelled
@@ -843,15 +856,35 @@ function SubscriptionPanel({
               ? endsAtStr
                 ? `Actief tot ${endsAtStr}`
                 : "Opgezegd"
-              : endsAtStr
-                ? `Volgende incasso ${endsAtStr}`
-                : "Actief"}
+              : isManaged
+                ? endsAtStr
+                  ? `Actief tot ${endsAtStr}`
+                  : "Actief (handmatig)"
+                : endsAtStr
+                  ? `Volgende incasso ${endsAtStr}`
+                  : "Actief"}
           </div>
         </div>
+        {isManaged && !isCancelled && (
+          <p
+            style={{
+              marginTop: 14,
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 12,
+              color: V2.inkMute,
+              lineHeight: 1.5,
+            }}
+          >
+            Dit abonnement is door ons toegekend en wordt niet automatisch
+            geïncasseerd. Verlenging gaat via ons — neem gerust contact op
+            als je iets wilt aanpassen.
+          </p>
+        )}
       </div>
 
-      {!isCancelled ? (
-        <form action={cancelSubscriptionAction}>
+      {!isCancelled && cancelStep !== "reason" ? (
+        <div>
           <p
             style={{
               fontFamily: V2.body,
@@ -866,10 +899,12 @@ function SubscriptionPanel({
             het einde van de lopende periode; daarna wordt er niets
             meer afgeschreven.
           </p>
-          <EBtnSubmit kind="ghost" size="md" pendingLabel="Opzeggen…">
+          <EBtn kind="ghost" size="md" href="/account?cancelStep=reason#abonnement">
             Abonnement opzeggen
-          </EBtnSubmit>
-        </form>
+          </EBtn>
+        </div>
+      ) : !isCancelled && cancelStep === "reason" ? (
+        <CancelReasonForm />
       ) : (
         <p
           style={{
@@ -896,21 +931,140 @@ function SubscriptionPanel({
   );
 }
 
+const CANCEL_REASON_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "te_duur", label: "Te duur" },
+  { value: "weinig_gebruikt", label: "Te weinig gebruikt" },
+  { value: "tijdelijk", label: "Tijdelijke pauze — kom misschien later terug" },
+  { value: "anders", label: "Anders, namelijk…" },
+];
+
+function CancelReasonForm() {
+  return (
+    <form action={cancelSubscriptionAction}>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 14,
+          color: V2.inkSoft,
+          margin: "0 0 16px",
+          lineHeight: 1.55,
+          maxWidth: "60ch",
+        }}
+      >
+        Voor we je abonnement opzeggen — kort: waarom stop je? Het helpt
+        ons enorm bij het verbeteren. Niets is verplicht; je kunt ook
+        gewoon doorklikken.
+      </p>
+      <fieldset
+        style={{
+          border: "none",
+          padding: 0,
+          margin: "0 0 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        {CANCEL_REASON_OPTIONS.map((opt) => (
+          <label
+            key={opt.value}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              fontFamily: V2.body,
+              fontSize: 14,
+              color: V2.ink,
+              cursor: "pointer",
+            }}
+          >
+            <input
+              type="radio"
+              name="reason"
+              value={opt.value}
+              style={{ accentColor: V2.gold }}
+            />
+            {opt.label}
+          </label>
+        ))}
+      </fieldset>
+      <label
+        style={{
+          display: "block",
+          fontFamily: V2.ui,
+          fontSize: 11,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: V2.inkMute,
+          marginBottom: 6,
+        }}
+      >
+        Toelichting (optioneel)
+      </label>
+      <textarea
+        name="reasonNote"
+        rows={3}
+        maxLength={1000}
+        placeholder="Bijvoorbeeld: ik mis een functie X, of de prijs ging onverwacht omhoog…"
+        style={{
+          width: "100%",
+          maxWidth: 560,
+          padding: 12,
+          fontFamily: V2.body,
+          fontSize: 14,
+          color: V2.ink,
+          background: V2.paper,
+          border: `1px solid ${V2.paperShade}`,
+          resize: "vertical",
+          lineHeight: 1.5,
+          marginBottom: 18,
+          outline: "none",
+        }}
+      />
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <EBtnSubmit
+          kind="ghost"
+          size="md"
+          pendingLabel="Opzeggen…"
+        >
+          Bevestig opzegging
+        </EBtnSubmit>
+        <Link
+          href="/account#abonnement"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+          }}
+        >
+          Toch niet
+        </Link>
+      </div>
+    </form>
+  );
+}
+
 function Section({
   title,
   meta,
   children,
+  id,
 }: {
   title: string;
   meta?: string;
   children: React.ReactNode;
+  id?: string;
 }) {
   return (
     <section
+      id={id}
       style={{
         marginTop: 48,
         paddingTop: 32,
         borderTop: `1px solid ${V2.paperShade}`,
+        scrollMarginTop: 24,
       }}
     >
       <div style={{ marginBottom: 28 }}>

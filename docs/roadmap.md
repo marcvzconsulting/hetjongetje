@@ -1,6 +1,6 @@
 # Ons Verhaaltje — Roadmap
 
-Laatst bijgewerkt: 2026-05-08
+Laatst bijgewerkt: 2026-05-08 (cookie-melding toegevoegd)
 
 Lijst van besloten verbeteringen, gegroepeerd in fases. Volg ze van boven naar beneden, of pak per fase iets eruit. Per item: wat het inhoudt + waarom het in deze fase staat.
 
@@ -23,6 +23,7 @@ Status: live en getest, geen openstaande bugs.
 4. **Cancellation-reason survey** — bij abonnement-opzegging een radiobutton-stap ("te duur", "weinig gebruikt", "tijdelijk", "anders + tekstveld"). Opslaan op nieuwe `Subscription.cancellationReason` + `cancellationReasonNote`. Admin-rapport per maand op het dashboard.
 5. **Customer-support inbox** — `/admin/inbox` met inkomende contact-form-berichten + `info@`-mail-replies via Brevo inbox-API; status open/closed. Vereist Brevo IMAP-key of inbound webhook.
 6. **Refund-flow vanuit admin** — knop op user-detail om Mollie-payment terug te boeken (Mollie-API: `payments.refund`), met logging via auditlog + automatische credit-correctie als het credit-order betrof.
+7. **Cookie-melding / consent-banner** — eenvoudige banner onderaan bij eerste bezoek met "akkoord" + link naar privacy/cookie-pagina. Strikt-noodzakelijke cookies (NextAuth-session, CSRF) zijn vrijgesteld, dus geen blokkerende consent-gate; dit is vooral transparantie + AVG-cover. Vercel Analytics is cookieloos en hoeft niets, maar als we ooit Plausible/GA toevoegen moet de banner ook daadwerkelijk consent gaten gaan stellen. Keuze opslaan in `localStorage` + niet meer tonen na akkoord.
 
 ---
 
@@ -30,16 +31,16 @@ Status: live en getest, geen openstaande bugs.
 
 > Doel: vertrouwen voor groei. Deze dingen worden pas zichtbaar wanneer er iets stuk is — beter nu inrichten dan met een kapotte productie.
 
-7. **AI-kostentracking per verhaal** — `Story.aiCostCents` veld, gevuld met **echte** Anthropic + fal.ai usage uit de response-headers / billing-API. Vervangt de €0,15-schatting met feiten. Update de marge-card op het admin-dashboard.
-8. **Sentry-alerts** — email naar `admin@onsverhaaltje.nl` bij nieuwe issue. Voornamelijk Sentry-UI vinkjes; documenteren waar het zit.
-9. **Uptime-monitoring** — BetterStack of UptimeRobot pingt `/api/health` elke minuut, sms/email als 'ie wegvalt. Ik bouw het health-endpoint, jij maakt het account.
-10. **Backup-restore-test** — script dat een test-klant aanmaakt, snapshot maakt via Neon, klant verwijdert, en restore valideert. Bewijs dat we kunnen recoveren.
+8. **AI-kostentracking per verhaal** — `Story.aiCostCents` veld, gevuld met **echte** Anthropic + fal.ai usage uit de response-headers / billing-API. Vervangt de €0,15-schatting met feiten. Update de marge-card op het admin-dashboard.
+9. **Sentry-alerts** — email naar `admin@onsverhaaltje.nl` bij nieuwe issue. Voornamelijk Sentry-UI vinkjes; documenteren waar het zit.
+10. **Uptime-monitoring** — BetterStack of UptimeRobot pingt `/api/health` elke minuut, sms/email als 'ie wegvalt. Ik bouw het health-endpoint, jij maakt het account.
+11. **Backup-restore-test** — script dat een test-klant aanmaakt, snapshot maakt via Neon, klant verwijdert, en restore valideert. Bewijs dat we kunnen recoveren.
 
 ---
 
 ## Fase 4 — Onboarding (~1 uur)
 
-11. **Onboarding-tour** — eerste keer na goedkeuring: 4-staps modal die uitlegt "vul profiel in → kies aanleiding → wij maken verhaal → bundel boekje". Eenmalig, dismiss-baar, opgeslagen op `User.onboardedAt`.
+12. **Onboarding-tour** — eerste keer na goedkeuring: 4-staps modal die uitlegt "vul profiel in → kies aanleiding → wij maken verhaal → bundel boekje". Eenmalig, dismiss-baar, opgeslagen op `User.onboardedAt`.
 
 ---
 
@@ -47,10 +48,10 @@ Status: live en getest, geen openstaande bugs.
 
 > Doel: features die pas waardevol zijn bij actief werven van klanten.
 
-12. **Publieke share-link voor gedeelde verhalen** — `/s/[token]` met unguessable token, leesbaar zonder login (opa/oma op telefoon), rate-limited en optioneel met opt-out per verhaal.
-13. **OG-images per verhaal** — automatisch een 1200×630 preview met titel + cover-illustratie, voor WhatsApp/Facebook-shares. Vercel OG-image-license is gratis op Hobby-tier.
-14. **SEO-metadata + structured data** — meta-tags + JSON-LD op de landing, zodat Google een rich snippet kan tonen.
-15. **Referral-systeem** — invitee-code per user, "stuur een vriend, beide een gratis verhaal", tracking + auto-credit-grant bij eerste betaling van de uitgenodigde.
+13. **Publieke share-link voor gedeelde verhalen** — `/s/[token]` met unguessable token, leesbaar zonder login (opa/oma op telefoon), rate-limited en optioneel met opt-out per verhaal.
+14. **OG-images per verhaal** — automatisch een 1200×630 preview met titel + cover-illustratie, voor WhatsApp/Facebook-shares. Vercel OG-image-license is gratis op Hobby-tier.
+15. **SEO-metadata + structured data** — meta-tags + JSON-LD op de landing, zodat Google een rich snippet kan tonen.
+16. **Referral-systeem** — invitee-code per user, "stuur een vriend, beide een gratis verhaal", tracking + auto-credit-grant bij eerste betaling van de uitgenodigde.
 
 ---
 

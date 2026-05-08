@@ -4,7 +4,7 @@ import {
   centsToMollieAmount,
   mollieStatusToOrderStatus,
 } from "./mollie";
-import { buildAppUrl } from "@/lib/url";
+import { buildAppUrl, buildWebhookUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildCreditsPurchasedMail } from "@/lib/email/templates/credits-purchased";
 import {
@@ -67,7 +67,7 @@ export async function createCreditsCheckout(opts: {
   //    that requires a tunnel.
   const redirectUrl = await buildAppUrl(`/credits/order/${order.id}`);
   const cancelUrl = await buildAppUrl(`/credits`);
-  const webhookUrl = await buildAppUrl(`/api/payments/mollie/webhook`);
+  const webhookUrl = await buildWebhookUrl(`/api/payments/mollie/webhook`);
 
   const client = getMollieClient();
   const payment = await client.payments.create({

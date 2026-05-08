@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { RevenueChart, type ChartMode } from "@/components/v2/admin/RevenueChart";
@@ -107,7 +108,18 @@ export default async function AdminDashboardPage({
     : preset.granularity;
   const chartMode: ChartMode = sp.mode === "split" ? "split" : "total";
 
-  const [stats, buckets, funnel, cohorts] = await Promise.all([
+  // Start van de huidige kalendermaand voor het opzeg-redenen-rapport.
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const [
+    stats,
+    buckets,
+    funnel,
+    cohorts,
+    cancelReasonsThisMonth,
+    recentCancelNotes,
+    openInboxCount,
+  ] = await Promise.all([
     loadDashboardStats(),
     loadRevenueTimeSeries({
       from: rangeFrom,
@@ -116,13 +128,36 @@ export default async function AdminDashboardPage({
     }),
     loadFunnelStats(),
     loadCohortRetention({ cohorts: 6 }),
+    prisma.subscription.groupBy({
+      by: ["cancellationReason"],
+      where: { status: "cancelled", cancelledAt: { gte: monthStart } },
+      _count: { _all: true },
+    }),
+    prisma.subscription.findMany({
+      where: {
+        status: "cancelled",
+        cancelledAt: { gte: monthStart },
+        cancellationReasonNote: { not: null },
+      },
+      orderBy: { cancelledAt: "desc" },
+      take: 10,
+      select: {
+        cancelledAt: true,
+        cancellationReason: true,
+        cancellationReasonNote: true,
+      },
+    }),
+    prisma.contactMessage.count({ where: { status: "open" } }),
   ]);
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
     active: n.href === "/admin",
-    badge: n.href === "/admin/users" && stats.health.pendingUsers > 0
-      ? stats.health.pendingUsers
-      : undefined,
+    badge:
+      n.href === "/admin/users" && stats.health.pendingUsers > 0
+        ? stats.health.pendingUsers
+        : n.href === "/admin/inbox" && openInboxCount > 0
+          ? openInboxCount
+          : undefined,
   }));
 
   return (
@@ -227,6 +262,14 @@ export default async function AdminDashboardPage({
             }
           />
         </Grid>
+      </Section>
+
+      {/* ── Opzeg-redenen ───────────────────────────────── */}
+      <Section title="Opzeg-redenen (deze maand)">
+        <CancelReasons
+          buckets={cancelReasonsThisMonth}
+          notes={recentCancelNotes}
+        />
       </Section>
 
       {/* ── Activiteit ──────────────────────────────────── */}
@@ -652,6 +695,183 @@ export default async function AdminDashboardPage({
         )}
       </Section>
     </AdminShell>
+  );
+}
+
+// ── Opzeg-redenen rapport ─────────────────────────────────────────────
+
+const CANCEL_REASON_LABELS: Record<string, string> = {
+  te_duur: "Te duur",
+  weinig_gebruikt: "Te weinig gebruikt",
+  tijdelijk: "Tijdelijke pauze",
+  anders: "Anders",
+};
+
+function CancelReasons({
+  buckets,
+  notes,
+}: {
+  buckets: { cancellationReason: string | null; _count: { _all: number } }[];
+  notes: {
+    cancelledAt: Date | null;
+    cancellationReason: string | null;
+    cancellationReasonNote: string | null;
+  }[];
+}) {
+  const total = buckets.reduce((sum, b) => sum + b._count._all, 0);
+
+  if (total === 0) {
+    return (
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontStyle: "italic",
+          fontSize: 14,
+          color: V2.inkMute,
+          margin: 0,
+        }}
+      >
+        Nog geen opzeggingen deze maand.
+      </p>
+    );
+  }
+
+  // Sort by count desc, push "onbekend" (null) to the end.
+  const sorted = [...buckets].sort((a, b) => {
+    if (a.cancellationReason === null) return 1;
+    if (b.cancellationReason === null) return -1;
+    return b._count._all - a._count._all;
+  });
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "grid",
+          gap: 10,
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          marginBottom: 18,
+        }}
+      >
+        {sorted.map((b) => {
+          const label = b.cancellationReason
+            ? (CANCEL_REASON_LABELS[b.cancellationReason] ??
+              b.cancellationReason)
+            : "Onbekend (vóór survey)";
+          const pct = Math.round((b._count._all / total) * 100);
+          return (
+            <div
+              key={b.cancellationReason ?? "_null"}
+              style={{
+                padding: "14px 16px",
+                background: V2.paperDeep,
+                border: `1px solid ${V2.paperShade}`,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: V2.inkMute,
+                  marginBottom: 6,
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  fontFamily: V2.display,
+                  fontWeight: 300,
+                  fontSize: 28,
+                  lineHeight: 1,
+                  color: V2.ink,
+                  letterSpacing: -0.6,
+                }}
+              >
+                {b._count._all}
+                <span
+                  style={{
+                    fontFamily: V2.mono,
+                    fontSize: 12,
+                    color: V2.inkMute,
+                    marginLeft: 8,
+                    letterSpacing: 0,
+                  }}
+                >
+                  {pct}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {notes.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: V2.inkMute,
+              marginBottom: 10,
+            }}
+          >
+            Recente toelichtingen
+          </div>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            {notes.map((n, i) => (
+              <li
+                key={i}
+                style={{
+                  padding: "10px 14px",
+                  background: V2.paperDeep,
+                  border: `1px solid ${V2.paperShade}`,
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.ink,
+                  lineHeight: 1.5,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: V2.mono,
+                    fontSize: 11,
+                    color: V2.inkMute,
+                    marginBottom: 4,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {n.cancelledAt
+                    ? n.cancelledAt.toLocaleDateString("nl-NL")
+                    : "—"}
+                  {" · "}
+                  {n.cancellationReason
+                    ? (CANCEL_REASON_LABELS[n.cancellationReason] ??
+                      n.cancellationReason)
+                    : "geen reden"}
+                </div>
+                {n.cancellationReasonNote}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

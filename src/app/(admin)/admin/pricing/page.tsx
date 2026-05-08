@@ -607,36 +607,38 @@ function SaveButton({ label = "Opslaan" }: { label?: string }) {
 
 function DeleteInline({
   deleteAction,
-  id,
   label,
 }: {
   deleteAction: (formData: FormData) => Promise<void>;
   id: string;
   label: string;
 }) {
+  // Rendered inside a parent <form> (which already has hidden `id`),
+  // so we use formAction on a plain button instead of a nested <form>
+  // (illegal HTML). formNoValidate skips the parent's required-field
+  // checks since deleting doesn't need a valid edit-form.
   return (
-    <form action={deleteAction} style={{ display: "inline-block" }}>
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        title={`Verwijder ${label}`}
-        style={{
-          background: "transparent",
-          border: "none",
-          padding: 0,
-          color: V2.heart,
-          fontFamily: V2.ui,
-          fontSize: 12,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          cursor: "pointer",
-          textDecoration: "underline",
-          textUnderlineOffset: 3,
-        }}
-      >
-        Verwijderen
-      </button>
-    </form>
+    <button
+      type="submit"
+      formAction={deleteAction}
+      formNoValidate
+      title={`Verwijder ${label}`}
+      style={{
+        background: "transparent",
+        border: "none",
+        padding: 0,
+        color: V2.heart,
+        fontFamily: V2.ui,
+        fontSize: 12,
+        letterSpacing: "0.06em",
+        textTransform: "uppercase",
+        cursor: "pointer",
+        textDecoration: "underline",
+        textUnderlineOffset: 3,
+      }}
+    >
+      Verwijderen
+    </button>
   );
 }
 

@@ -16,7 +16,10 @@ import {
   subscribeToNewsletter,
 } from "@/lib/email/brevo-contacts";
 import { validatePassword } from "@/lib/auth/password-policy";
-import { cancelSubscription } from "@/lib/payments/subscriptions";
+import {
+  cancelSubscription,
+  isCancellationReason,
+} from "@/lib/payments/subscriptions";
 
 async function requireUser() {
   const session = await auth();
@@ -280,11 +283,16 @@ export async function deleteAccountAction(formData: FormData) {
  * future renewals immediately, but the user keeps access until the end
  * of the period they already paid for (subscription.endsAt).
  */
-export async function cancelSubscriptionAction() {
+export async function cancelSubscriptionAction(formData: FormData) {
   const userId = await requireUser();
 
+  const rawReason = formData.get("reason");
+  const reason = isCancellationReason(rawReason) ? rawReason : null;
+  const noteRaw = formData.get("reasonNote");
+  const note = typeof noteRaw === "string" ? noteRaw : "";
+
   try {
-    await cancelSubscription(userId);
+    await cancelSubscription(userId, { reason, note });
   } catch (err) {
     const message = err instanceof Error ? err.message : "cancel_failed";
     if (message === "no_active_subscription") {

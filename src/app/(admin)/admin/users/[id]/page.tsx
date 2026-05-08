@@ -14,6 +14,7 @@ import {
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
 import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
 import { logAdminAction } from "@/lib/admin/audit-log";
+import { getMollieClient, centsToMollieAmount } from "@/lib/payments/mollie";
 import { sendMail } from "@/lib/email/client";
 import { buildAccountApprovedMail } from "@/lib/email/templates/account-approved";
 import { buildAppUrl } from "@/lib/url";
@@ -119,6 +120,109 @@ async function deleteSubscriptionAction(formData: FormData) {
     targetId: userId,
   });
   revalidatePath(`/admin/users/${userId}`);
+}
+
+/**
+ * Refund a paid order via Mollie. Idempotent at the our-DB level: if the
+ * order is already marked refunded we no-op. If `kind=credits`, we also
+ * decrement the user's storyCredits by the original creditAmount,
+ * floored at 0 (in case credits were already spent).
+ *
+ * Mollie's refund API errors if the payment isn't refundable (too old,
+ * wrong status, etc.); we let those errors surface via the redirect-with-error
+ * pattern so the admin sees what went wrong.
+ */
+async function refundOrderAction(formData: FormData) {
+  "use server";
+  const { audit } = await requireAdminWithIdentity();
+  const userId = String(formData.get("userId") ?? "");
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!userId || !orderId) return;
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) {
+    redirect(`/admin/users/${userId}?refundError=not_found`);
+  }
+  if (order.userId !== userId) {
+    redirect(`/admin/users/${userId}?refundError=mismatch`);
+  }
+  if (order.status === "refunded") {
+    redirect(`/admin/users/${userId}?refundError=already_refunded`);
+  }
+  if (order.status !== "paid") {
+    redirect(`/admin/users/${userId}?refundError=not_paid`);
+  }
+  if (!order.molliePaymentId) {
+    redirect(`/admin/users/${userId}?refundError=no_mollie_id`);
+  }
+
+  // Mollie refund. If this throws (e.g. payment too old), we log and
+  // surface a generic error to the admin — the order stays "paid" so
+  // they can retry or escalate.
+  try {
+    const client = getMollieClient();
+    await client.paymentRefunds.create({
+      paymentId: order.molliePaymentId,
+      amount: {
+        currency: order.currency,
+        value: centsToMollieAmount(order.amountCents),
+      },
+      description: `Admin refund: ${order.description}`,
+    });
+  } catch (err) {
+    console.error(
+      `[refund] Mollie refund failed for order ${order.id}`,
+      err instanceof Error ? err.message : err,
+    );
+    redirect(`/admin/users/${userId}?refundError=mollie_failed`);
+  }
+
+  // Update order + user. Wrap in a transaction so credits + status flip
+  // together. For non-credit orders we just mark refunded.
+  const decrement =
+    order.kind === "credits" && order.creditAmount && order.creditAmount > 0
+      ? order.creditAmount
+      : 0;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.order.update({
+      where: { id: order.id },
+      data: { status: "refunded", refundedAt: new Date() },
+    });
+    if (decrement > 0) {
+      // Floor at 0: if the user already spent some/all credits, we
+      // don't go negative. Audit-log captures the discrepancy.
+      const u = await tx.user.findUnique({
+        where: { id: userId },
+        select: { storyCredits: true },
+      });
+      const before = u?.storyCredits ?? 0;
+      const after = Math.max(0, before - decrement);
+      if (before !== after) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { storyCredits: after },
+        });
+      }
+    }
+  });
+
+  await logAdminAction({
+    ...audit,
+    action: "order.refund",
+    targetType: "order",
+    targetId: order.id,
+    metadata: {
+      userId,
+      kind: order.kind,
+      amountCents: order.amountCents,
+      creditsDecrement: decrement,
+      molliePaymentId: order.molliePaymentId,
+    },
+  });
+
+  revalidatePath(`/admin/users/${userId}`);
+  redirect(`/admin/users/${userId}?refunded=${order.id}`);
 }
 
 async function generateResetLinkAction(formData: FormData) {
@@ -566,6 +670,8 @@ export default async function AdminUserDetailPage({
     pwSet?: string;
     pwError?: string;
     delError?: string;
+    refunded?: string;
+    refundError?: string;
   }>;
 }) {
   const { id } = await params;
@@ -606,6 +712,29 @@ export default async function AdminUserDetailPage({
     (sum, c) => sum + c.stories.length,
     0
   );
+
+  // Bestellingen — laatste 50 voor de "Bestellingen / refund"-sectie.
+  const orders = await prisma.order.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  // Plan-catalog voor de admin-abonnement-dropdown. Toont elke actieve
+  // SubscriptionPlan + houdt het huidige plan altijd in de lijst — ook
+  // als het inmiddels gedeactiveerd is, anders verlies je de selectie.
+  const subscriptionPlanCatalog = await prisma.subscriptionPlan.findMany({
+    where: {
+      OR: [
+        { active: true },
+        ...(user.subscription?.plan && user.subscription.plan !== "free"
+          ? [{ code: user.subscription.plan }]
+          : []),
+      ],
+    },
+    orderBy: { sortOrder: "asc" },
+    select: { code: true, name: true, priceCents: true, interval: true },
+  });
 
   const session = await auth();
   const adminNav = ADMIN_NAV.map((n) => ({
@@ -1062,7 +1191,9 @@ export default async function AdminUserDetailPage({
           <div>
             <h2 style={sectionTitleStyle}>Abonnement</h2>
             <p style={sectionMetaStyle}>
-              Placeholder: nog geen betaalprovider gekoppeld
+              Handmatig toekennen — bypassed Mollie. Voor comp-abonnementen,
+              support-credits en testen. Echte betaalde abonnementen lopen
+              via /subscribe en zetten zichzelf op.
             </p>
           </div>
         </div>
@@ -1083,9 +1214,12 @@ export default async function AdminUserDetailPage({
               defaultValue={user.subscription?.plan ?? "free"}
               style={selectStyle}
             >
-              <option value="free">Free</option>
-              <option value="basic">Basic</option>
-              <option value="premium">Premium</option>
+              <option value="free">Free (geen abonnement)</option>
+              {subscriptionPlanCatalog.map((p) => (
+                <option key={p.code} value={p.code}>
+                  {p.name} (€{(p.priceCents / 100).toFixed(2)} / {p.interval})
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -1155,6 +1289,228 @@ export default async function AdminUserDetailPage({
             {user.subscription.cancelledAt &&
               ` · geannuleerd op ${formatDate(user.subscription.cancelledAt)}`}
           </p>
+        )}
+      </section>
+
+      {/* Bestellingen / refunds */}
+      <section style={sectionStyle}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={sectionTitleStyle}>Bestellingen</h2>
+          <p style={sectionMetaStyle}>
+            Betalingen via Mollie. Bij een paid credit-order kun je
+            terugboeken — credits worden dan ook van de gebruiker afgetrokken
+            (gefloord op 0 als ze al uitgegeven zijn).
+          </p>
+        </div>
+
+        {query.refunded && (
+          <div
+            style={{
+              padding: "10px 14px",
+              background: "rgba(42,157,140,0.1)",
+              borderLeft: `2px solid ${V2.goldDeep}`,
+              fontFamily: V2.body,
+              fontSize: 13,
+              color: V2.ink,
+              marginBottom: 16,
+            }}
+          >
+            Order {query.refunded} is teruggeboekt.
+          </div>
+        )}
+        {query.refundError && (
+          <div
+            style={{
+              padding: "10px 14px",
+              background: "rgba(196,165,168,0.18)",
+              borderLeft: `2px solid ${V2.heart}`,
+              fontFamily: V2.body,
+              fontSize: 13,
+              color: V2.ink,
+              marginBottom: 16,
+            }}
+          >
+            Refund mislukt:{" "}
+            {{
+              not_found: "order niet gevonden",
+              mismatch: "order hoort niet bij deze gebruiker",
+              already_refunded: "deze order is al teruggeboekt",
+              not_paid: "alleen betaalde orders kunnen worden teruggeboekt",
+              no_mollie_id: "deze order heeft geen Mollie-payment-id",
+              mollie_failed:
+                "Mollie weigerde de refund — check de logs of Mollie-dashboard",
+            }[query.refundError] ?? query.refundError}
+          </div>
+        )}
+
+        {orders.length === 0 ? (
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: V2.inkMute,
+              margin: 0,
+            }}
+          >
+            Nog geen bestellingen.
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontFamily: V2.body,
+                fontSize: 14,
+              }}
+            >
+              <thead>
+                <tr>
+                  {["Datum", "Soort", "Omschrijving", "Bedrag", "Status", ""].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        style={{
+                          fontFamily: V2.ui,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          color: V2.inkMute,
+                          padding: "12px 14px",
+                          textAlign: "left",
+                          background: V2.paperDeep,
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => {
+                  const refundable = o.status === "paid" && !!o.molliePaymentId;
+                  return (
+                    <tr key={o.id}>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                          fontFamily: V2.mono,
+                          fontSize: 12,
+                          color: V2.inkSoft,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatDateTime(o.createdAt)}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                          fontFamily: V2.mono,
+                          fontSize: 12,
+                          color: V2.ink,
+                        }}
+                      >
+                        {o.kind}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                          color: V2.ink,
+                          maxWidth: 320,
+                        }}
+                      >
+                        <div>{o.description}</div>
+                        {o.kind === "credits" && o.creditAmount ? (
+                          <div
+                            style={{
+                              fontFamily: V2.mono,
+                              fontSize: 11,
+                              color: V2.inkMute,
+                              marginTop: 3,
+                            }}
+                          >
+                            {o.creditAmount} credit{o.creditAmount === 1 ? "" : "s"}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                          fontFamily: V2.mono,
+                          fontSize: 13,
+                          color: V2.ink,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        €{(o.amountCents / 100).toFixed(2).replace(".", ",")}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "3px 10px",
+                            background:
+                              o.status === "paid"
+                                ? "rgba(42,157,140,0.12)"
+                                : o.status === "refunded"
+                                  ? "rgba(196,165,168,0.18)"
+                                  : V2.paperDeep,
+                            color:
+                              o.status === "paid"
+                                ? V2.goldDeep
+                                : o.status === "refunded"
+                                  ? V2.heart
+                                  : V2.inkMute,
+                            fontFamily: V2.ui,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {o.status}
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 14px",
+                          borderBottom: `1px solid ${V2.paperShade}`,
+                          textAlign: "right",
+                        }}
+                      >
+                        {refundable && (
+                          <form action={refundOrderAction}>
+                            <input type="hidden" name="userId" value={user.id} />
+                            <input type="hidden" name="orderId" value={o.id} />
+                            <EBtnSubmit
+                              kind="ghost"
+                              size="sm"
+                              pendingLabel="Bezig…"
+                            >
+                              Refund
+                            </EBtnSubmit>
+                          </form>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 

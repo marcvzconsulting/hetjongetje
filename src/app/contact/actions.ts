@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { sendMail } from "@/lib/email/client";
 import { buildContactFormMail } from "@/lib/email/templates/contact-form";
+import { prisma } from "@/lib/db";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -49,6 +50,22 @@ export async function submitContactFormAction(formData: FormData) {
     redirect("/contact?error=ratelimit");
   }
 
+  // Sla het bericht eerst op in de DB — dan kan de admin het altijd
+  // zien in /admin/inbox, ook als de Brevo-mail later faalt. Een
+  // mislukte DB-insert is wel blokkerend (zonder DB-rij is het bericht
+  // verloren als de mail óók faalt).
+  let messageRowId: string;
+  try {
+    const row = await prisma.contactMessage.create({
+      data: { name, email, body: message, ip, status: "open" },
+      select: { id: true },
+    });
+    messageRowId = row.id;
+  } catch (err) {
+    console.error("[contact-form] DB write failed", err);
+    redirect("/contact?error=send");
+  }
+
   const mail = buildContactFormMail({ fromName: name, fromEmail: email, message, ip });
 
   try {
@@ -62,7 +79,12 @@ export async function submitContactFormAction(formData: FormData) {
       tags: ["contact-form"],
     });
   } catch (err) {
-    console.error("[contact-form] send failed", err);
+    // Mail mislukt, maar de admin ziet het bericht nog in /admin/inbox.
+    // We loggen + tonen de gebruiker een nette fout.
+    console.error(
+      `[contact-form] mail send failed (DB row=${messageRowId})`,
+      err,
+    );
     redirect("/contact?error=send");
   }
 

@@ -35,10 +35,12 @@ type Props = {
 export const ADMIN_NAV: Omit<NavItem, "active">[] = [
   { label: "Dashboard", href: "/admin", icon: "◐" },
   { label: "Klanten", href: "/admin/users", icon: "◇" },
+  { label: "Inbox", href: "/admin/inbox", icon: "✎" },
   { label: "Pricing", href: "/admin/pricing", icon: "◯" },
   { label: "Mails", href: "/admin/email-templates", icon: "✉" },
   { label: "AI-prompts", href: "/admin/ai-prompts", icon: "✦" },
   { label: "Jobs", href: "/admin/jobs", icon: "◮" },
+  { label: "Audit", href: "/admin/audit", icon: "▤" },
 ];
 
 /**

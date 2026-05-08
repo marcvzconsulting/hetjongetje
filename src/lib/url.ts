@@ -33,3 +33,19 @@ export async function buildAppUrl(path: string): Promise<string> {
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${base}${normalized}`;
 }
+
+/**
+ * Build a URL voor publieke webhooks (Mollie e.d.). In productie identiek
+ * aan `buildAppUrl`; in dev kun je `MOLLIE_WEBHOOK_BASE_URL` zetten op een
+ * tunnel-host (bv. cloudflared/ngrok) zodat Mollie de webhook kan bereiken
+ * terwijl je browser zelf via localhost blijft werken.
+ */
+export async function buildWebhookUrl(path: string): Promise<string> {
+  const override = process.env.MOLLIE_WEBHOOK_BASE_URL;
+  if (override) {
+    const base = override.replace(/\/$/, "");
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    return `${base}${normalized}`;
+  }
+  return buildAppUrl(path);
+}

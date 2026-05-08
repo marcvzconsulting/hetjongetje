@@ -4,7 +4,7 @@ import {
   getMollieClient,
   centsToMollieAmount,
 } from "./mollie";
-import { buildAppUrl } from "@/lib/url";
+import { buildAppUrl, buildWebhookUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildSubscriptionCancelledMail } from "@/lib/email/templates/subscription-cancelled";
 
@@ -107,7 +107,7 @@ export async function createSubscriptionCheckout(opts: {
 
   const redirectUrl = await buildAppUrl(`/subscribe/order/${order.id}`);
   const cancelUrl = await buildAppUrl(`/subscribe`);
-  const webhookUrl = await buildAppUrl(`/api/payments/mollie/webhook`);
+  const webhookUrl = await buildWebhookUrl(`/api/payments/mollie/webhook`);
 
   const client = getMollieClient();
   // sequenceType=first tells Mollie this is the inaugural payment of
@@ -171,7 +171,7 @@ export async function startRecurringSubscription(opts: {
     throw new Error("no_mollie_customer");
   }
 
-  const webhookUrl = await buildAppUrl(`/api/payments/mollie/webhook`);
+  const webhookUrl = await buildWebhookUrl(`/api/payments/mollie/webhook`);
   const client = getMollieClient();
 
   const subscription = await client.customerSubscriptions.create({
@@ -222,25 +222,57 @@ export async function startRecurringSubscription(opts: {
 }
 
 /**
- * Cancel an active Mollie subscription. The user keeps access until the
- * end of the period they already paid for.
+ * Allowed values for `Subscription.cancellationReason`. The UI uses a
+ * radio-set with these four codes; null means "opgezegd vóór de survey
+ * werd ingebouwd".
  */
-export async function cancelSubscription(userId: string): Promise<void> {
+export const CANCELLATION_REASONS = [
+  "te_duur",
+  "weinig_gebruikt",
+  "tijdelijk",
+  "anders",
+] as const;
+export type CancellationReason = (typeof CANCELLATION_REASONS)[number];
+
+export function isCancellationReason(v: unknown): v is CancellationReason {
+  return (
+    typeof v === "string" &&
+    (CANCELLATION_REASONS as readonly string[]).includes(v)
+  );
+}
+
+/**
+ * Cancel an active Mollie subscription. The user keeps access until the
+ * end of the period they already paid for. Optionally records the
+ * survey answer (reason + free-text note) on the Subscription row.
+ */
+export async function cancelSubscription(
+  userId: string,
+  opts?: { reason?: CancellationReason | null; note?: string | null },
+): Promise<void> {
   const sub = await prisma.subscription.findUnique({ where: { userId } });
-  if (!sub?.mollieCustomerId || !sub.mollieSubscriptionId) {
+  // No row, free plan, or already cancelled = nothing to do.
+  if (!sub || sub.plan === "free" || sub.status === "cancelled") {
     throw new Error("no_active_subscription");
   }
 
-  const client = getMollieClient();
-  await client.customerSubscriptions.cancel(sub.mollieSubscriptionId, {
-    customerId: sub.mollieCustomerId,
-  });
+  // Only call Mollie if there's an actual recurring billing arrangement.
+  // Admin-comped subs (no Mollie IDs) just get marked cancelled in our DB.
+  if (sub.mollieCustomerId && sub.mollieSubscriptionId) {
+    const client = getMollieClient();
+    await client.customerSubscriptions.cancel(sub.mollieSubscriptionId, {
+      customerId: sub.mollieCustomerId,
+    });
+  }
 
+  const note = opts?.note?.trim() ?? "";
   const updated = await prisma.subscription.update({
     where: { userId },
     data: {
       status: "cancelled",
       cancelledAt: new Date(),
+      cancellationReason: opts?.reason ?? null,
+      cancellationReasonNote: note.length > 0 ? note.slice(0, 1000) : null,
     },
   });
 
