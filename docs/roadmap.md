@@ -1,6 +1,6 @@
 # Ons Verhaaltje — Roadmap
 
-Laatst bijgewerkt: 2026-05-08 (cookie-melding toegevoegd)
+Laatst bijgewerkt: 2026-05-08 (fase 2 voltooid + AEO-item toegevoegd aan fase 5)
 
 Lijst van besloten verbeteringen, gegroepeerd in fases. Volg ze van boven naar beneden, of pak per fase iets eruit. Per item: wat het inhoudt + waarom het in deze fase staat.
 
@@ -51,7 +51,14 @@ Status: live en getest, geen openstaande bugs.
 13. **Publieke share-link voor gedeelde verhalen** — `/s/[token]` met unguessable token, leesbaar zonder login (opa/oma op telefoon), rate-limited en optioneel met opt-out per verhaal.
 14. **OG-images per verhaal** — automatisch een 1200×630 preview met titel + cover-illustratie, voor WhatsApp/Facebook-shares. Vercel OG-image-license is gratis op Hobby-tier.
 15. **SEO-metadata + structured data** — meta-tags + JSON-LD op de landing, zodat Google een rich snippet kan tonen.
-16. **Referral-systeem** — invitee-code per user, "stuur een vriend, beide een gratis verhaal", tracking + auto-credit-grant bij eerste betaling van de uitgenodigde.
+16. **AEO (Answer Engine Optimization) — vindbaarheid voor AI** — getriggerd door een Framer-rapport dat de huidige site op 73/100 scoort. Concrete punten:
+    - **Freshness signals** — `datePublished` / `dateModified` op de landing, blog-achtige content en evt. de FAQ. AI-bots zien content zonder datum als "verouderd".
+    - **Citation-links** — minimaal 3 externe links uit de body naar gezaghebbende bronnen (kindergeneeskunde, voorleescultuur, taalontwikkeling) zodat we als hub-pagina herkenbaar worden.
+    - **Author / byline** — duidelijk wie er achter de site zit (MVZ Consulting + persoon), met JSON-LD `Person` of `Organization`.
+    - **AI-crawlers** — `robots.txt` expliciet `Allow` zetten voor `GPTBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended` (nu impliciet, maar kan strakker).
+    - **FAQ-style content** — bestaande `/veelgestelde-vragen` als JSON-LD `FAQPage` markup uitleveren.
+    - Overlapt met item 15; zou samen in één PR kunnen.
+17. **Referral-systeem** — invitee-code per user, "stuur een vriend, beide een gratis verhaal", tracking + auto-credit-grant bij eerste betaling van de uitgenodigde.
 
 ---
 

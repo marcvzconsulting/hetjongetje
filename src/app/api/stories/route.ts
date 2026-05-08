@@ -8,6 +8,7 @@ import {
   type StoryRequest,
 } from "@/lib/ai/story-generator";
 import { generateIllustrations } from "@/lib/ai/illustration-generator";
+import { computeStoryAiCostCents } from "@/lib/ai/pricing";
 import {
   uploadFromUrl,
   storyPageKey,
@@ -157,6 +158,18 @@ export async function POST(request: NextRequest) {
       },
     ];
 
+    // AI-kosten optellen op basis van usage-info die de generators
+    // hebben meegegeven. Als één van beide ontbreekt (bv. tekst-call
+    // mislukt en we hebben fallback content), valt aiCostCents terug
+    // op null en gebruikt het dashboard de schatting.
+    const aiCostCents =
+      generatedStory.textUsage && generatedStory.imageUsage
+        ? computeStoryAiCostCents(
+            generatedStory.textUsage,
+            generatedStory.imageUsage,
+          )
+        : null;
+
     const story = await prisma.story.create({
       data: {
         id: storyId,
@@ -167,6 +180,7 @@ export async function POST(request: NextRequest) {
         setting: storyRequest.setting,
         status: "ready",
         generationParams: JSON.parse(JSON.stringify(storyRequest)),
+        aiCostCents,
         pages: {
           create: allPages.map(({ pageNumber, text, illustrationUrl, illustrationPrompt, illustrationDescription }) => ({
             pageNumber,

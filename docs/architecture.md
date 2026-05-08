@@ -324,6 +324,22 @@ flowchart LR
 - Sentry scrubt automatisch kindernamen, foto's, verhaalteksten vóór verzenden
 - Speed Insights aggregeert alleen, geen individuele user tracking
 
+### Sentry email-alerts
+
+Twee actieve alert-rules in [de.sentry.io](https://de.sentry.io) → project → **Alerts**:
+
+| Naam | Trigger | Filter | Naar | Cooldown |
+|---|---|---|---|---|
+| Production – nieuwe error | Issue first seen | env=production · level≥error | admin@onsverhaaltje.nl | 60 min |
+| Production – regressie | Issue regresses | env=production · level≥error | admin@onsverhaaltje.nl | 60 min |
+
+Bewuste keuzes:
+- **Geen warnings** — anders volledige inbox bij elke noisy SDK-deprecation
+- **60-min cooldown** — voorkomt 100 mails als één pagina kapot is voor heel veel users
+- **Alleen production** — dev-tests zouden anders elke dag pingen
+
+Aanpassen of uitbreiden: Sentry-UI → Alerts → klik de rule. Code-side niets nodig.
+
 ## 🚨 Wat te doen als er iets stuk gaat
 
 | Symptoom | Eerst kijken bij | Volgende stap |

@@ -385,6 +385,12 @@ model Story {
   // | "boy-2" | "boy-4" — null = not a preview. Only one story per slot is
   // shown (most recent wins if somehow duplicated).
   landingPreviewSlot  String?     @map("landing_preview_slot")
+  /// Werkelijke AI-kosten van dit verhaal in eurocenten (Anthropic
+  /// tokens + fal.ai images), berekend in computeStoryAiCostCents() op
+  /// het moment van opslaan. Null voor verhalen van vóór deze tracking.
+  /// Dashboard-marge gebruikt SUM(aiCostCents) voor stories die het
+  /// hebben en valt voor de rest terug op de €0,15-schatting.
+  aiCostCents         Int?        @map("ai_cost_cents")
   createdAt           DateTime    @default(now()) @map("created_at")
   updatedAt           DateTime    @updatedAt @map("updated_at")
 

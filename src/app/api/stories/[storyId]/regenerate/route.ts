@@ -7,6 +7,7 @@ import {
   type StoryRequest,
 } from "@/lib/ai/story-generator";
 import { generateIllustrations } from "@/lib/ai/illustration-generator";
+import { computeStoryAiCostCents } from "@/lib/ai/pricing";
 import {
   uploadFromUrl,
   storyPageKey,
@@ -177,6 +178,19 @@ export async function POST(
       },
     ];
 
+    // AI-kosten van de regen optellen bij wat we al hadden — een
+    // regenerate kost de generatie van een nieuw verhaal bovenop het
+    // origineel. Bij ontbrekende usage-info (bv. tekst-generatie ging
+    // mis) tellen we niets bij; dan blijft het oude bedrag staan.
+    const regenCostCents =
+      generated.textUsage && generated.imageUsage
+        ? computeStoryAiCostCents(generated.textUsage, generated.imageUsage)
+        : 0;
+    const newAiCostCents =
+      regenCostCents > 0
+        ? (story.aiCostCents ?? 0) + regenCostCents
+        : story.aiCostCents;
+
     // Replace pages atomically — wipe the old set, insert the new one,
     // bump counter + title in case Claude renamed the story.
     await prisma.$transaction([
@@ -187,6 +201,7 @@ export async function POST(
           title: generated.title,
           subtitle: generated.tag,
           regenerationCount: newCount,
+          aiCostCents: newAiCostCents,
           // Wipe any earlier feedback — the parent is reacting to the
           // OLD version; we want a fresh judgment on the new one.
           feedbackKind: null,

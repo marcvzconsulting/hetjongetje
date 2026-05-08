@@ -65,6 +65,13 @@ export interface GeneratedStory {
   endingIllustrationPrompt: string; // closing scene illustration
   endingImageUrl?: string | null;
   characterBibleUpdate?: string;
+  /** Anthropic-token-usage uit deze generatie. Wordt gebruikt voor
+   *  kostentracking; null kan voorkomen als de Claude-call faalde. */
+  textUsage?: { inputTokens: number; outputTokens: number };
+  /** Aantal succesvolle illustraties + welk fal.ai-pad gebruikt is.
+   *  Wordt door generateIllustrations gevuld; bij 0 = generatie sloeg
+   *  over of mislukte. */
+  imageUsage?: { imageCount: number; model: "lora" | "pro" };
 }
 
 // —— Leeftijdsgroep → schrijfinstructies ——————————————————————————————
@@ -477,5 +484,9 @@ Regels:
       text: p.text,
       illustrationPrompt: p.illustrationPrompt,
     })),
+    textUsage: {
+      inputTokens: message.usage.input_tokens,
+      outputTokens: message.usage.output_tokens,
+    },
   };
 }

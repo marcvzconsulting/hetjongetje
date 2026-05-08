@@ -101,9 +101,14 @@ export async function generateIllustrations(
     imageUrl: results[i],
   }));
 
+  // Tel succesvolle (non-null) results — gefaalde images kosten ook
+  // niets bij fal.ai dus we tellen ze niet mee in de billing.
+  const imageCount = results.filter((r) => r !== null).length;
+
   return {
     ...story,
     pages: updatedPages,
     endingImageUrl: results[results.length - 1],
+    imageUsage: { imageCount, model: lora ? "lora" : "pro" },
   };
 }

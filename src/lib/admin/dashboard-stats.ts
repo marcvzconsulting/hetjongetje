@@ -85,6 +85,10 @@ export async function loadDashboardStats() {
     feedbackUpCount,
     feedbackDownCount,
     recentNegativeFeedback,
+    aiCostMonthAgg,
+    aiCostLifetimeAgg,
+    storiesMonthWithCost,
+    storiesLifetimeWithCost,
   ] = await Promise.all([
     sumOrderAmount({ paidAt: { gte: today } }),
     sumOrderAmount({ paidAt: { gte: monthStart } }),
@@ -160,6 +164,21 @@ export async function loadDashboardStats() {
         },
       },
     }),
+    // AI-kosten — alleen verhalen die werkelijk getrackt zijn (aiCostCents != null).
+    // Verhalen van vóór deze tracking vallen in `*WithCost` op 0 zodat we
+    // ze met de oude estimate kunnen aanvullen.
+    prisma.story.aggregate({
+      where: { aiCostCents: { not: null }, createdAt: { gte: monthStart } },
+      _sum: { aiCostCents: true },
+    }),
+    prisma.story.aggregate({
+      where: { aiCostCents: { not: null } },
+      _sum: { aiCostCents: true },
+    }),
+    prisma.story.count({
+      where: { aiCostCents: { not: null }, createdAt: { gte: monthStart } },
+    }),
+    prisma.story.count({ where: { aiCostCents: { not: null } } }),
   ]);
 
   // MRR — sum of normalised monthly contribution per active subscription.
@@ -270,10 +289,21 @@ export async function loadDashboardStats() {
   events.sort((a, b) => b.at.getTime() - a.at.getTime());
   const activity = events.slice(0, 20);
 
-  // Margin estimate — only stories cost AI right now (book PDFs are
-  // priced per print). Not perfect but a useful directional number.
-  const aiCostMonthCents = storiesMonth * AI_COST_CENTS_PER_STORY;
-  const aiCostYearCents = storiesLifetime * AI_COST_CENTS_PER_STORY;
+  // AI-kosten: gebruik werkelijke `Story.aiCostCents` voor verhalen die
+  // het hebben (na deploy van item 8). Voor verhalen van daarvóór, vul
+  // aan met de €0,15-schatting per verhaal — dan staat het maandcijfer
+  // niet kunstmatig laag tijdens de overgangsperiode.
+  const trackedMonth = aiCostMonthAgg._sum.aiCostCents ?? 0;
+  const untrackedMonth =
+    Math.max(0, storiesMonth - storiesMonthWithCost) * AI_COST_CENTS_PER_STORY;
+  const aiCostMonthCents = trackedMonth + untrackedMonth;
+
+  const trackedLifetime = aiCostLifetimeAgg._sum.aiCostCents ?? 0;
+  const untrackedLifetime =
+    Math.max(0, storiesLifetime - storiesLifetimeWithCost) *
+    AI_COST_CENTS_PER_STORY;
+  const aiCostYearCents = trackedLifetime + untrackedLifetime;
+
   const grossMarginMonthCents = revenueMonth - aiCostMonthCents;
 
   return {
@@ -303,6 +333,12 @@ export async function loadDashboardStats() {
       aiCostMonthCents,
       aiCostYearCents,
       grossMarginMonthCents,
+      /** Hoeveel verhalen van deze maand een echte aiCostCents-meting
+       *  hebben (rest valt terug op de €0,15-schatting). */
+      storiesMonthWithCost,
+      /** Som van werkelijke meet-cents voor deze maand (zonder
+       *  fallback-component). Handig voor "X getrackt"-tekstjes. */
+      trackedAiCostMonthCents: trackedMonth,
     },
     health: {
       pendingUsers,

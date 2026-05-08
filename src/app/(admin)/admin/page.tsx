@@ -290,7 +290,18 @@ export default async function AdminDashboardPage({
           <Stat
             label="Verhalen (maand)"
             value={String(stats.activity.storiesMonth)}
-            sub={`${eur(stats.margin.aiCostMonthCents)} geschatte AI-kosten`}
+            sub={(() => {
+              const tracked = stats.margin.storiesMonthWithCost;
+              const total = stats.activity.storiesMonth;
+              if (total === 0) return `${eur(0)} AI-kosten`;
+              if (tracked === total) {
+                return `${eur(stats.margin.aiCostMonthCents)} AI-kosten (gemeten)`;
+              }
+              if (tracked === 0) {
+                return `${eur(stats.margin.aiCostMonthCents)} geschatte AI-kosten`;
+              }
+              return `${eur(stats.margin.aiCostMonthCents)} AI-kosten (${tracked}/${total} gemeten, rest geschat)`;
+            })()}
           />
         </Grid>
       </Section>
@@ -345,15 +356,27 @@ export default async function AdminDashboardPage({
       >
         <Panel title="Marge deze maand">
           <Row label="Bruto-omzet (paid orders)">{eur(stats.revenue.monthCents)}</Row>
-          <Row label={`AI-kosten (${stats.activity.storiesMonth} × ${eur(AI_COST_CENTS_PER_STORY)})`}>
+          <Row
+            label={(() => {
+              const tracked = stats.margin.storiesMonthWithCost;
+              const total = stats.activity.storiesMonth;
+              if (tracked === total && total > 0) {
+                return `AI-kosten (${total} verhalen, gemeten)`;
+              }
+              if (tracked === 0) {
+                return `AI-kosten (${total} × ${eur(AI_COST_CENTS_PER_STORY)} schatting)`;
+              }
+              return `AI-kosten (${tracked} gemeten + ${total - tracked} × ${eur(AI_COST_CENTS_PER_STORY)} geschat)`;
+            })()}
+          >
             − {eur(stats.margin.aiCostMonthCents)}
           </Row>
           <Row label="Geschatte bruto-marge" emphasised>
             {eur(stats.margin.grossMarginMonthCents)}
           </Row>
           <FootNote>
-            Exclusief Mollie-fees, hosting en drukkosten. Indicatief voor de
-            verhouding AI-kosten ↔ omzet.
+            Exclusief Mollie-fees, hosting en drukkosten. Verhalen van vóór
+            de kostentracking-deploy vallen op een €0,15-schatting terug.
           </FootNote>
         </Panel>
 
