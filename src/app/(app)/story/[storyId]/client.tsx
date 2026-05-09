@@ -166,59 +166,8 @@ export function StoryPageClient({
       {reactOpen && (
         <ReactModal onClose={() => setReactOpen(false)}>
           <div style={{ display: "grid", gap: 28 }}>
-            {/* Download als PDF */}
-            <div>
-              <h2
-                style={{
-                  fontFamily: V2.display,
-                  fontWeight: 300,
-                  fontSize: 22,
-                  letterSpacing: -0.4,
-                  margin: "0 0 6px",
-                  color: V2.ink,
-                }}
-              >
-                Bewaren of printen
-              </h2>
-              <p
-                style={{
-                  fontFamily: V2.body,
-                  fontSize: 14,
-                  color: V2.inkSoft,
-                  margin: "0 0 14px",
-                  lineHeight: 1.55,
-                }}
-              >
-                Download het verhaal als PDF — handig om thuis te
-                printen of voor in de archief van later.
-              </p>
-              <a
-                href={`/api/stories/${storyId}/pdf`}
-                download
-                style={{
-                  display: "inline-block",
-                  fontFamily: V2.ui,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  letterSpacing: "0.04em",
-                  padding: "10px 22px",
-                  border: `1px solid ${V2.ink}`,
-                  background: V2.paper,
-                  color: V2.ink,
-                  textDecoration: "none",
-                }}
-              >
-                Download als PDF ↓
-              </a>
-            </div>
-
             {/* Feedback */}
-            <div
-              style={{
-                borderTop: `1px solid ${V2.paperShade}`,
-                paddingTop: 24,
-              }}
-            >
+            <div>
               <h2
                 style={{
                   fontFamily: V2.display,

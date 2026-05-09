@@ -108,7 +108,7 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
           background: V2.paperDeep,
         }}
       >
-        <Kicker>{childName}&rsquo;s plankje</Kicker>
+        <Kicker size="lg">{childName}&rsquo;s plankje</Kicker>
         <p
           style={{
             fontFamily: V2.display,

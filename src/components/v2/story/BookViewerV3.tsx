@@ -215,14 +215,24 @@ export function BookViewerV3({
           <Link
             href="/dashboard"
             style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
               fontFamily: V2.ui,
-              fontSize: 12,
-              color: V2.inkMute,
+              fontSize: 13,
+              fontWeight: 500,
+              color: V2.ink,
               textDecoration: "none",
               whiteSpace: "nowrap",
+              padding: "7px 14px",
+              border: `1.5px solid ${V2.goldDeep}`,
+              background: V2.paper,
+              borderRadius: 999,
+              letterSpacing: "0.02em",
             }}
           >
-            ← {isMobile ? "Plankje" : "Plankje"}
+            <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>←</span>
+            <span>Plankje</span>
           </Link>
         </div>
 
@@ -262,6 +272,30 @@ export function BookViewerV3({
             onClick={onToggleFavorite}
             compact={isMobile}
           />
+          <a
+            href={`/api/stories/${storyId}/pdf`}
+            download
+            aria-label="Download als PDF"
+            title="Download als PDF"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: V2.inkMute,
+              fontFamily: V2.ui,
+              fontSize: 13,
+              fontWeight: 400,
+              padding: isMobile ? "8px 6px" : "8px 4px",
+              minHeight: 36,
+              textDecoration: "none",
+            }}
+          >
+            <ButtonIcon name="download" color={V2.inkMute} active={false} />
+            {!isMobile && <span>PDF</span>}
+          </a>
           {!isMobile && (
             <Link
               href={`/generate/${childId}`}
@@ -1145,13 +1179,29 @@ function ButtonIcon({
   color,
   active,
 }: {
-  name: "heart" | "speaker" | "x";
+  name: "heart" | "speaker" | "x" | "download";
   color: string;
   active: boolean;
 }) {
   if (name === "heart") {
     return (
       <IconV2 name="heart" size={16} color={color} filled={active} />
+    );
+  }
+  if (name === "download") {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 4v12M6 12l6 6 6-6M5 20h14" />
+      </svg>
     );
   }
   if (name === "x") {

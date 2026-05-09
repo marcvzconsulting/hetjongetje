@@ -331,7 +331,7 @@ function ChildSectionHeader({
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
         <Avatar name={name} size={64} />
         <div>
-          <Kicker>{name}&rsquo;s plankje</Kicker>
+          <Kicker size="lg">{name}&rsquo;s plankje</Kicker>
           <h2
             style={{
               fontFamily: V2.display,

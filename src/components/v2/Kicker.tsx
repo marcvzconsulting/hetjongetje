@@ -1,21 +1,31 @@
 import type { ReactNode } from "react";
 import { V2 } from "./tokens";
 
-type Props = { children: ReactNode; color?: string };
+type Props = {
+  children: ReactNode;
+  color?: string;
+  /**
+   * "default" = 11px (gebruik in admin/secundaire labels);
+   * "lg" = 13px met iets minder letterspacing — voor labels die bovenaan
+   * een sectie staan en op tablet niet weg mogen vallen.
+   */
+  size?: "default" | "lg";
+};
 
 /**
  * Kleine uppercase label boven secties — editorial meta / kicker.
  * Staat in mono/Inter met grote letterspacing.
  */
-export function Kicker({ children, color }: Props) {
+export function Kicker({ children, color, size = "default" }: Props) {
+  const isLg = size === "lg";
   return (
     <span
       style={{
         display: "inline-block",
         fontFamily: V2.ui,
-        fontSize: 11,
+        fontSize: isLg ? 13 : 11,
         fontWeight: 500,
-        letterSpacing: "0.22em",
+        letterSpacing: isLg ? "0.18em" : "0.22em",
         textTransform: "uppercase",
         color: color ?? V2.inkMute,
       }}
