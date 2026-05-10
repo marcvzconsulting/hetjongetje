@@ -83,6 +83,26 @@ export function BookViewerV3({
   // Touch-swipe tracker voor tablet (DesktopBookFrame route).
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Fullscreen-state — gehouden in sync met de browser's fullscreen-API
+  // zodat ook ESC-uittreden de knop terugdraait.
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const onChange = () =>
+      setIsFullscreen(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      void document.documentElement.requestFullscreen().catch(() => {
+        // iOS Safari heeft geen volledige fullscreen-API; we slikken
+        // de error en de knop blijft "Volledig scherm" tonen.
+      });
+    }
+  };
+
   useEffect(() => {
     const key = `ov_reader_v3_${storyId}_${isMobile ? "m" : "d"}`;
     const saved =
@@ -298,6 +318,14 @@ export function BookViewerV3({
             <ButtonIcon name="download" color={V2.inkMute} active={false} />
             {!isMobile && <span>PDF</span>}
           </a>
+          <ChromeButton
+            label={isFullscreen ? "Verlaten" : "Volledig scherm"}
+            iconName={isFullscreen ? "fullscreen-exit" : "fullscreen"}
+            active={isFullscreen}
+            onClick={toggleFullscreen}
+            compact={isMobile}
+          />
+
           {!isMobile && (
             <Link
               href={`/generate/${childId}`}
@@ -467,6 +495,50 @@ export function BookViewerV3({
             size={isMobile ? 48 : 52}
           />
         </div>
+
+        {/* Op de laatste pagina: prominente herstart-knop voor de
+            "nog een keer!"-momentjes. */}
+        {idx === totalUnits - 1 && (
+          <button
+            type="button"
+            onClick={() => {
+              setDirection(-1);
+              setIdx(0);
+            }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 22px",
+              background: V2.ink,
+              color: V2.paper,
+              border: "none",
+              borderRadius: 999,
+              fontFamily: V2.ui,
+              fontSize: 14,
+              fontWeight: 500,
+              letterSpacing: "0.04em",
+              cursor: "pointer",
+              boxShadow: "0 4px 16px rgba(20,20,46,0.20)",
+            }}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            <span>Lees opnieuw vanaf het begin</span>
+          </button>
+        )}
       </div>
 
       {/* Floating bookmark ribbon when favorited */}
@@ -1173,7 +1245,7 @@ function ChromeButton({
   compact,
 }: {
   label: string;
-  iconName: "heart" | "speaker" | "x";
+  iconName: "heart" | "speaker" | "x" | "fullscreen" | "fullscreen-exit";
   active: boolean;
   activeColor?: string;
   onClick: () => void;
@@ -1212,13 +1284,45 @@ function ButtonIcon({
   color,
   active,
 }: {
-  name: "heart" | "speaker" | "x" | "download";
+  name: "heart" | "speaker" | "x" | "download" | "fullscreen" | "fullscreen-exit";
   color: string;
   active: boolean;
 }) {
   if (name === "heart") {
     return (
       <IconV2 name="heart" size={16} color={color} filled={active} />
+    );
+  }
+  if (name === "fullscreen") {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+      </svg>
+    );
+  }
+  if (name === "fullscreen-exit") {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+      </svg>
     );
   }
   if (name === "download") {
