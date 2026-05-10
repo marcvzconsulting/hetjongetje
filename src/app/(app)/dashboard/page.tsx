@@ -11,6 +11,8 @@ import { StarField } from "@/components/v2/StarField";
 import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { StoryLibraryV2 } from "@/components/v2/story/StoryLibraryV2";
 import { NewStoryButton } from "@/components/v2/generation/NewStoryButton";
+import { OnboardingTour } from "@/components/v2/onboarding/OnboardingTour";
+import { markOnboardedAction } from "./actions";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -53,6 +55,14 @@ export default async function DashboardPage() {
   }
 
   // ── Approved: load data ────────────────────────────────────
+  // Onboarding-state: alleen tour tonen voor approved users die 'm
+  // nog niet gezien hebben. Eén kleine query.
+  const userMeta = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { onboardedAt: true },
+  });
+  const showOnboardingTour = userMeta?.onboardedAt === null;
+
   const children = await prisma.childProfile.findMany({
     where: { userId: session.user.id },
     include: {
@@ -81,6 +91,13 @@ export default async function DashboardPage() {
       credits={creditsToShow}
       nav={buildAppNav("/dashboard")}
     >
+      {showOnboardingTour && (
+        <OnboardingTour
+          finishAction={markOnboardedAction}
+          primaryHref={children.length === 0 ? "/profile/new" : "/dashboard"}
+        />
+      )}
+
       {/* Hero strip */}
       <section
         className="app-section-pad"

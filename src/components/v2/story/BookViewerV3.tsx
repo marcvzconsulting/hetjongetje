@@ -80,6 +80,8 @@ export function BookViewerV3({
   // ── Position (saved per story) ───────────────────────────────
   const [idx, setIdx] = useState(0);
   const [direction, setDirection] = useState<1 | -1>(1);
+  // Touch-swipe tracker voor tablet (DesktopBookFrame route).
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const key = `ov_reader_v3_${storyId}_${isMobile ? "m" : "d"}`;
@@ -331,14 +333,45 @@ export function BookViewerV3({
       {/* Stage */}
       <div
         style={{
-          padding: isMobile ? "12px 0 80px" : "40px 24px 96px",
+          padding: isMobile ? "12px 0 80px" : "40px 24px 140px",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           position: "relative",
           zIndex: 2,
           minHeight: isMobile ? "calc(100svh - 120px)" : "auto",
+          touchAction: isMobile ? undefined : "pan-y",
         }}
+        // Touch-swipe op tablet (waar de DesktopBookFrame draait maar
+        // de gebruiker wel met vingers bladert). Mobile heeft z'n eigen
+        // framer-motion drag, dus daar laten we deze handlers stil.
+        onTouchStart={
+          isMobile
+            ? undefined
+            : (e) => {
+                const t = e.touches[0];
+                if (!t) return;
+                touchStartRef.current = { x: t.clientX, y: t.clientY };
+              }
+        }
+        onTouchEnd={
+          isMobile
+            ? undefined
+            : (e) => {
+                const start = touchStartRef.current;
+                touchStartRef.current = null;
+                if (!start) return;
+                const t = e.changedTouches[0];
+                if (!t) return;
+                const dx = t.clientX - start.x;
+                const dy = t.clientY - start.y;
+                // Alleen reageren op duidelijk horizontale swipe; anders
+                // is 't waarschijnlijk gewoon scrollen.
+                if (Math.abs(dx) < 50) return;
+                if (Math.abs(dy) > Math.abs(dx)) return;
+                go(dx < 0 ? 1 : -1);
+              }
+        }
       >
         {isMobile ? (
           <MobilePager

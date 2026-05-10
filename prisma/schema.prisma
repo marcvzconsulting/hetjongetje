@@ -25,6 +25,11 @@ model User {
   newsletterOptIn    Boolean        @default(false) @map("newsletter_opt_in")
   newsletterOptInAt  DateTime?      @map("newsletter_opt_in_at") // AVG-bewijs van consent
   firstStoryEmailSentAt DateTime?   @map("first_story_email_sent_at") // idempotency-flag
+  /// Wanneer de 4-staps onboarding-tour is voltooid of weggeklikt.
+  /// Null = nog niet gezien; ongelijk null = niet meer tonen op /dashboard.
+  /// Tour-tekst kan later versie krijgen door een aparte kolom of
+  /// dit veld te resetten bij majeure wijzigingen.
+  onboardedAt        DateTime?      @map("onboarded_at")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
   children           ChildProfile[]
