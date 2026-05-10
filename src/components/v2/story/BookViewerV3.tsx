@@ -105,16 +105,21 @@ export function BookViewerV3({
 
   useEffect(() => {
     const key = `ov_reader_v3_${storyId}_${isMobile ? "m" : "d"}`;
-    const saved =
-      typeof window !== "undefined" ? localStorage.getItem(key) : null;
-    if (saved) {
-      const n = parseInt(saved, 10);
-      if (!isNaN(n) && n >= 0 && n < totalUnits) {
-        setIdx(n);
-        return;
+    // queueMicrotask defers de setState uit de effect-body — voorkomt
+    // de "set-state-in-effect"-warning + cascading-render. Gedrag blijft
+    // identiek (de localStorage-lookup is sync genoeg).
+    queueMicrotask(() => {
+      const saved =
+        typeof window !== "undefined" ? localStorage.getItem(key) : null;
+      if (saved) {
+        const n = parseInt(saved, 10);
+        if (!isNaN(n) && n >= 0 && n < totalUnits) {
+          setIdx(n);
+          return;
+        }
       }
-    }
-    setIdx(0);
+      setIdx(0);
+    });
   }, [storyId, isMobile, totalUnits]);
 
   useEffect(() => {
