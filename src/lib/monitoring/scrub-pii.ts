@@ -1,4 +1,4 @@
-import type { ErrorEvent, EventHint } from "@sentry/nextjs";
+import type { ErrorEvent } from "@sentry/nextjs";
 
 /**
  * Strip personally identifiable information from Sentry events before they
@@ -93,7 +93,7 @@ function scrubValue(value: unknown, depth: number): unknown {
   return out;
 }
 
-export function scrubPII(event: ErrorEvent, _hint?: EventHint): ErrorEvent | null {
+export function scrubPII(event: ErrorEvent): ErrorEvent | null {
   // User context: keep only a stable id, never name/email
   if (event.user) {
     event.user = event.user.id ? { id: event.user.id } : undefined;

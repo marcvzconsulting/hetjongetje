@@ -1,6 +1,5 @@
 import { ContentPage, Lead } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
-import { EBtn } from "@/components/v2";
 import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { submitContactFormAction } from "./actions";
 

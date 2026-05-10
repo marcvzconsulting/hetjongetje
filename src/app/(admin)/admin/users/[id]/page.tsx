@@ -19,7 +19,7 @@ import { sendMail } from "@/lib/email/client";
 import { buildAccountApprovedMail } from "@/lib/email/templates/account-approved";
 import { buildAppUrl } from "@/lib/url";
 import { V2 } from "@/components/v2/tokens";
-import { Kicker, EBtn, IconV2 } from "@/components/v2";
+import { Kicker, IconV2 } from "@/components/v2";
 import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 
 function formatDateTime(date: Date | null | undefined): string {

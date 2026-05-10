@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import {
+  childProfileUpdateSchema,
+  parseJsonBody,
+} from "@/lib/validation";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -12,6 +17,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
+  const parsed = await parseJsonBody(request, childProfileUpdateSchema);
+  if (parsed instanceof NextResponse) return parsed;
+
   const { childId } = await params;
 
   const child = await prisma.childProfile.findFirst({
@@ -22,46 +30,30 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Profiel niet gevonden" }, { status: 404 });
   }
 
-  const body = await request.json();
-  const {
-    name,
-    dateOfBirth,
-    gender,
-    interests,
-    pets,
-    friends,
-    favoriteThings,
-    fears,
-    mainCharacterType,
-    mainCharacterDescription,
-    hairColor,
-    hairStyle,
-    eyeColor,
-    skinColor,
-    wearsGlasses,
-    hasFreckles,
-  } = body;
+  // Bouw alleen de velden die expliciet meegegeven zijn — Prisma slaat
+  // 'undefined' over, dus partial-update werkt vanzelf.
+  const data: Prisma.ChildProfileUpdateInput = {
+    name: parsed.name,
+    dateOfBirth: parsed.dateOfBirth ? new Date(parsed.dateOfBirth) : undefined,
+    gender: parsed.gender,
+    interests: parsed.interests,
+    pets: parsed.pets as Prisma.InputJsonValue | undefined,
+    friends: parsed.friends as Prisma.InputJsonValue | undefined,
+    favoriteThings: parsed.favoriteThings as Prisma.InputJsonValue | undefined,
+    fears: parsed.fears,
+    hairColor: parsed.hairColor,
+    hairStyle: parsed.hairStyle,
+    eyeColor: parsed.eyeColor,
+    skinColor: parsed.skinColor,
+    wearsGlasses: parsed.wearsGlasses,
+    hasFreckles: parsed.hasFreckles,
+    mainCharacterType: parsed.mainCharacterType,
+    mainCharacterDescription: parsed.mainCharacterDescription,
+  };
 
   const updated = await prisma.childProfile.update({
     where: { id: childId },
-    data: {
-      ...(name !== undefined && { name }),
-      ...(dateOfBirth !== undefined && { dateOfBirth: new Date(dateOfBirth) }),
-      ...(gender !== undefined && { gender }),
-      ...(interests !== undefined && { interests }),
-      ...(pets !== undefined && { pets }),
-      ...(friends !== undefined && { friends }),
-      ...(favoriteThings !== undefined && { favoriteThings }),
-      ...(fears !== undefined && { fears }),
-      ...(hairColor !== undefined && { hairColor }),
-      ...(hairStyle !== undefined && { hairStyle }),
-      ...(eyeColor !== undefined && { eyeColor }),
-      ...(skinColor !== undefined && { skinColor }),
-      ...(wearsGlasses !== undefined && { wearsGlasses }),
-      ...(hasFreckles !== undefined && { hasFreckles }),
-      ...(mainCharacterType !== undefined && { mainCharacterType }),
-      ...(mainCharacterDescription !== undefined && { mainCharacterDescription }),
-    },
+    data,
   });
 
   return NextResponse.json(updated);

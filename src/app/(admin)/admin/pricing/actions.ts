@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { logAdminAction } from "@/lib/admin/audit-log";
+import { trim } from "@/lib/form";
 
 /**
  * Server actions for /admin/pricing — CRUD on the credit-pack and
@@ -31,10 +32,6 @@ function parsePriceToCents(raw: string): number {
     throw new Error("invalid_price");
   }
   return Math.round(n * 100);
-}
-
-function trim(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim();
 }
 
 function asInt(value: FormDataEntryValue | null, fallback = 0): number {

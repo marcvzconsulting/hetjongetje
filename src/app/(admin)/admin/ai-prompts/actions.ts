@@ -6,10 +6,7 @@ import { requireAdminWithIdentity } from "@/lib/admin/identity";
 import { prisma } from "@/lib/db";
 import { logAdminAction } from "@/lib/admin/audit-log";
 import { findAiPromptSnippet } from "@/lib/ai/prompts/store";
-
-function trim(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim();
-}
+import { trim } from "@/lib/form";
 
 export async function saveAiPromptAction(formData: FormData) {
   const { audit } = await requireAdminWithIdentity();

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   ContentPage,
   Lead,
@@ -68,9 +69,9 @@ export default function VoorwaardenPage() {
         één credit verbruikt. Tijdens de testfase werken we met
         handmatige goedkeuring van accounts en eenmalige tegoed-pakketten;
         de uiteindelijke prijsstructuur staat op de{" "}
-        <a href="/#prijs" style={{ color: "inherit" }}>
+        <Link href="/#prijs" style={{ color: "inherit" }}>
           prijspagina
-        </a>
+        </Link>
         .
       </P>
       <P>

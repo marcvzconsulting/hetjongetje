@@ -8,14 +8,7 @@ import { logAdminAction } from "@/lib/admin/audit-log";
 import { sendMail } from "@/lib/email/client";
 import { findEditableTemplate } from "@/lib/email/template-store";
 import { renderEditableTemplate, type TemplateContent } from "@/lib/email/template-store";
-
-function trim(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim();
-}
-
-function nullIfEmpty(s: string): string | null {
-  return s === "" ? null : s;
-}
+import { trim, nullIfEmpty } from "@/lib/form";
 
 /**
  * Read the form's `paragraphs` field (one paragraph per blank-line

@@ -3,7 +3,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { fal } from "@fal-ai/client";
 import { buildCharacterDescription, buildIllustrationStyle } from "@/lib/ai/story-generator";
-import { calculateAge } from "@/lib/utils/age";
 import {
   uploadFromUrl,
   approvedPreviewKey,

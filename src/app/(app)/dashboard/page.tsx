@@ -63,13 +63,28 @@ export default async function DashboardPage() {
   });
   const showOnboardingTour = userMeta?.onboardedAt === null;
 
+  // Explicit select i.p.v. include zodat we niet onnodig characterBible
+  // (JSON), referenceImages, LoRA-velden, generationParams en feedbackNote
+  // door de wire trekken — die zijn nergens nodig op het dashboard. Per
+  // child: alleen identiteit + 4 leesbare basisvelden. Per verhaal: één
+  // thumbnail-URL via select op pages.
   const children = await prisma.childProfile.findMany({
     where: { userId: session.user.id },
-    include: {
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      dateOfBirth: true,
+      gender: true,
       stories: {
-        orderBy: { createdAt: "desc" },
         where: { status: "ready" },
-        include: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          setting: true,
+          isFavorite: true,
+          createdAt: true,
           pages: {
             where: { illustrationUrl: { not: null } },
             orderBy: { pageNumber: "asc" },
@@ -79,7 +94,6 @@ export default async function DashboardPage() {
         },
       },
     },
-    orderBy: { createdAt: "desc" },
   });
 
   const creditsToShow = gate.isAdmin ? null : gate.storyCredits;

@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
-import { Kicker, EBtn } from "@/components/v2";
+import { Kicker } from "@/components/v2";
 import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import {

@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { PendingButton } from "@/components/v2/PendingButton";
 import {
-  EDITABLE_TEMPLATES,
   findEditableTemplate,
   loadTemplateOverride,
   renderEditableTemplate,

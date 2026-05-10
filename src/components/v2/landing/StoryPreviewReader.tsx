@@ -15,7 +15,9 @@ export function StoryPreviewReader({ spreads, resetKey }: Props) {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    setIdx(0);
+    // queueMicrotask defers de setState uit de effect-body — voorkomt
+    // de "set-state-in-effect"-warning bij wisselen van preview-tab.
+    queueMicrotask(() => setIdx(0));
   }, [resetKey]);
 
   if (spreads.length === 0) return null;

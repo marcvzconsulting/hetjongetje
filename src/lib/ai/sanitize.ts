@@ -20,7 +20,6 @@ const MAX_DESC_LEN = 280; // descriptions, interests
 // All ASCII control characters (0x00-0x1F) plus DEL (0x7F). Covers
 // \n, \r, \t, NUL — the building blocks of "break out of the
 // prompt block" injection attempts.
-// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\x00-\x1F\x7F]/g;
 
 function clean(value: string, maxLen: number): string {

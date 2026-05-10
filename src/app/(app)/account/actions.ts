@@ -3,8 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { auth, signOut } from "@/lib/auth";
+import { signOut } from "@/lib/auth";
+import { requireUser } from "@/lib/admin";
 import { prisma } from "@/lib/db";
+import { trim, nullIfEmpty } from "@/lib/form";
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
 import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
 import { buildAppUrl } from "@/lib/url";
@@ -20,20 +22,6 @@ import {
   cancelSubscription,
   isCancellationReason,
 } from "@/lib/payments/subscriptions";
-
-async function requireUser() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  return session.user.id;
-}
-
-function trim(value: FormDataEntryValue | null): string {
-  return String(value ?? "").trim();
-}
-
-function nullIfEmpty(value: string): string | null {
-  return value === "" ? null : value;
-}
 
 export async function updateProfileAction(formData: FormData) {
   const userId = await requireUser();

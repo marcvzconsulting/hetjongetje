@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { parseJsonBody, updateStorySchema } from "@/lib/validation";
 
 interface Props {
   params: Promise<{ storyId: string }>;
@@ -12,8 +14,10 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
+  const parsed = await parseJsonBody(request, updateStorySchema);
+  if (parsed instanceof NextResponse) return parsed;
+
   const { storyId } = await params;
-  const body = await request.json();
 
   const story = await prisma.story.findFirst({
     where: { id: storyId, childProfile: { userId: session.user.id } },
@@ -23,27 +27,23 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Verhaal niet gevonden" }, { status: 404 });
   }
 
-  const updates: Record<string, unknown> = {};
-  if (body.title !== undefined) updates.title = body.title;
-  if (body.isFavorite !== undefined) updates.isFavorite = body.isFavorite;
-
-  // Feedback may arrive on its own ({feedbackKind: "up"|"down"|null,
-  // feedbackNote?: string}). Accept either field independently so the
-  // UI can update them together or just the note. `null` means clear.
-  if (body.feedbackKind !== undefined) {
-    const k = body.feedbackKind;
-    updates.feedbackKind =
-      k === "up" || k === "down" ? k : k === null ? null : undefined;
-    updates.feedbackAt = updates.feedbackKind !== null ? new Date() : null;
-  }
-  if (body.feedbackNote !== undefined) {
-    const n = typeof body.feedbackNote === "string" ? body.feedbackNote.slice(0, 1000) : null;
-    updates.feedbackNote = n;
-  }
+  // Feedback-update mag los of samen met de note komen. `null` =
+  // expliciet wissen; `undefined` = niet aanraken.
+  const data: Prisma.StoryUpdateInput = {
+    title: parsed.title,
+    isFavorite: parsed.isFavorite,
+    ...(parsed.feedbackKind !== undefined && {
+      feedbackKind: parsed.feedbackKind,
+      feedbackAt: parsed.feedbackKind === null ? null : new Date(),
+    }),
+    ...(parsed.feedbackNote !== undefined && {
+      feedbackNote: parsed.feedbackNote,
+    }),
+  };
 
   const updated = await prisma.story.update({
     where: { id: storyId },
-    data: updates,
+    data,
   });
 
   return NextResponse.json(updated);

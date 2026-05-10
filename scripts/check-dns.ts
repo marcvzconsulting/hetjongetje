@@ -19,7 +19,7 @@ async function main() {
     } else {
       console.log(`  ⚠  wijst niet naar Vercel (verwacht 76.76.x.x)`);
     }
-  } catch (err) {
+  } catch {
     console.log(`A records @:        ❌ niet gevonden (${(err as Error).message})`);
   }
 
@@ -31,7 +31,7 @@ async function main() {
     } else {
       console.log(`  ⚠  wijst niet naar Vercel`);
     }
-  } catch (err) {
+  } catch {
     console.log(`\nCNAME www:          ❌ niet gevonden`);
   }
 

@@ -408,6 +408,12 @@ model Story {
   // Dashboard library query: stories per child filtered by "ready" status,
   // sorted newest first. Composite index covers WHERE + ORDER BY.
   @@index([childProfileId, status, createdAt])
+  // Admin-stats queries doen `count({ where: { createdAt: { gte: X } } })`
+  // op vier plekken (vandaag/maand/lifetime) plus `count({ where:
+  // { feedbackKind: ... } })`. Zonder dit een full table scan; met index
+  // worden 't snelle range/equality lookups.
+  @@index([createdAt])
+  @@index([feedbackKind])
   @@map("stories")
 }
 

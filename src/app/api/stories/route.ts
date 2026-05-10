@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -9,6 +10,7 @@ import {
 } from "@/lib/ai/story-generator";
 import { generateIllustrations } from "@/lib/ai/illustration-generator";
 import { computeStoryAiCostCents } from "@/lib/ai/pricing";
+import { parseJsonBody, createStorySchema } from "@/lib/validation";
 import {
   uploadFromUrl,
   storyPageKey,
@@ -51,21 +53,14 @@ export async function POST(request: NextRequest) {
   const blocked = await enforceRateLimit("storyCreate", session.user.id);
   if (blocked) return blocked;
 
+  const parsed = await parseJsonBody(request, createStorySchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const childId = parsed.childId;
+  const characterBible = parsed.characterBible as CharacterBible;
+  const storyRequest = parsed.storyRequest as StoryRequest;
+
   let creditReserved = false;
   try {
-    const body = await request.json();
-    const { childId, characterBible, storyRequest } = body as {
-      childId: string;
-      characterBible: CharacterBible;
-      storyRequest: StoryRequest;
-    };
-
-    if (!childId || !characterBible || !storyRequest) {
-      return NextResponse.json(
-        { error: "childId, characterBible en storyRequest zijn verplicht" },
-        { status: 400 }
-      );
-    }
 
     const child = await prisma.childProfile.findFirst({
       where: { id: childId, userId: session.user.id },
@@ -179,7 +174,12 @@ export async function POST(request: NextRequest) {
         language: "nl",
         setting: storyRequest.setting,
         status: "ready",
-        generationParams: JSON.parse(JSON.stringify(storyRequest)),
+        // storyRequest is een plain object met alleen string-waarden, dus
+        // veilig als-is naar Prisma's Json-veld te schrijven. De
+        // eerdere JSON.parse(JSON.stringify(...))-omleiding was bedoeld
+        // tegen niet-serialiseerbare velden, maar maskeerde liever
+        // datacorruptie dan dat 't beschermde.
+        generationParams: storyRequest as unknown as Prisma.InputJsonValue,
         aiCostCents,
         pages: {
           create: allPages.map(({ pageNumber, text, illustrationUrl, illustrationPrompt, illustrationDescription }) => ({
