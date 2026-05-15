@@ -834,19 +834,15 @@ async function Pricing() {
         },
       ];
 
-  // Append the "los bijkopen" card if we have at least one pack to point at.
-  if (smallestCreditPack) {
-    const bulkLine = bulkCreditPack
-      ? `Pakket van ${bulkCreditPack.creditAmount} voor €${eurosFromCents(bulkCreditPack.priceCents)}`
-      : "Direct beschikbaar";
-    plans.push({
-      t: "Los bijkopen",
-      p: `€${eurosFromCents(smallestCreditPack.priceCents)}`,
-      u: "per los verhaal",
-      f: ["Bovenop je abonnement", bulkLine, "Direct beschikbaar"],
-      href: "/credits",
-    });
-  }
+  // Single-verhaal pricing wordt onder de abo-cards getoond als slanke
+  // strip — niet in dezelfde rij, want het is een andersoortig product
+  // (los i.p.v. abonnement) en de prijspunten zijn niet vergelijkbaar.
+  const singlePriceLabel = smallestCreditPack
+    ? `€${eurosFromCents(smallestCreditPack.priceCents)}`
+    : null;
+  const bulkLabel = bulkCreditPack
+    ? `pakket van ${bulkCreditPack.creditAmount} voor €${eurosFromCents(bulkCreditPack.priceCents)}`
+    : null;
   return (
     <section
       id="prijs"
@@ -882,7 +878,7 @@ async function Pricing() {
           className="lp-pricing"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gridTemplateColumns: `repeat(${plans.length}, minmax(0, 1fr))`,
             gap: 0,
             background: V2.paper,
             border: `1px solid ${V2.paperShade}`,
@@ -1003,6 +999,59 @@ async function Pricing() {
             );
           })}
         </div>
+
+        {singlePriceLabel && (
+          <div
+            className="lp-credits-strip"
+            style={{
+              marginTop: 16,
+              padding: "20px 28px",
+              background: V2.paper,
+              border: `1px solid ${V2.paperShade}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 24,
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: V2.inkMute,
+                  marginBottom: 6,
+                }}
+              >
+                Liever zonder abonnement?
+              </div>
+              <div
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 15,
+                  color: V2.ink,
+                  lineHeight: 1.5,
+                }}
+              >
+                <span style={{ fontFamily: V2.display, fontSize: 22, fontWeight: 400 }}>
+                  {singlePriceLabel}
+                </span>{" "}
+                per los verhaal
+                {bulkLabel && (
+                  <span style={{ color: V2.inkMute }}> · of {bulkLabel}</span>
+                )}
+              </div>
+            </div>
+            <EBtn kind="ghost" size="sm" href="/credits">
+              Los bijkopen →
+            </EBtn>
+          </div>
+        )}
+
         <p
           style={{
             textAlign: "center",

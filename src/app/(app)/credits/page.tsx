@@ -244,12 +244,11 @@ export default async function CreditsPage({
               }}
             >
               Vanaf €7,95 per maand, of €79 per jaar. Onbeperkt verhalen,
-              kaft-korting voor het boekje. Abonnementen kun je binnenkort
-              hier afsluiten.
+              kaft-korting voor het boekje.
             </p>
           </div>
-          <EBtn kind="ghost" size="md" href="/#prijs">
-            Prijzen bekijken →
+          <EBtn kind="ghost" size="md" href="/subscribe">
+            Naar abonnementen →
           </EBtn>
         </section>
       </div>
