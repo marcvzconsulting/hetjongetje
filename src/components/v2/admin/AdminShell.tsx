@@ -40,6 +40,7 @@ export const ADMIN_NAV: Omit<NavItem, "active">[] = [
   { label: "Pricing", href: "/admin/pricing", icon: "◯" },
   { label: "Mails", href: "/admin/email-templates", icon: "✉" },
   { label: "AI-prompts", href: "/admin/ai-prompts", icon: "✦" },
+  { label: "FAQ", href: "/admin/faq", icon: "?" },
   { label: "Jobs", href: "/admin/jobs", icon: "◮" },
   { label: "Audit", href: "/admin/audit", icon: "▤" },
 ];

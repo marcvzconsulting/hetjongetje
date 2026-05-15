@@ -21,6 +21,7 @@ export default function Home() {
         background: V2.paper,
       }}
     >
+      <LandingJsonLd />
       <ResponsiveStyles />
       <Nav />
       <Hero />
@@ -33,6 +34,82 @@ export default function Home() {
       <SlotCTA />
       <LandingFooter />
     </div>
+  );
+}
+
+/**
+ * Structured data voor SEO + AEO. Eén block met @graph zodat
+ * Organization, WebSite en WebPage aan elkaar gekoppeld zijn.
+ * Search/answer engines hangen hun snippets aan deze entiteiten op.
+ */
+function LandingJsonLd() {
+  const siteUrl = "https://www.onsverhaaltje.nl";
+  const data = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${siteUrl}/#organization`,
+        name: "Ons Verhaaltje",
+        url: siteUrl,
+        logo: `${siteUrl}/icon.svg`,
+        description:
+          "Ons Verhaaltje maakt gepersonaliseerde voorleesverhalen voor kinderen van 2 tot 10. Elk verhaal bevat de naam, knuffel en mensen uit het leven van het kind.",
+        founder: {
+          "@type": "Person",
+          name: "Marc van Zetten",
+        },
+        parentOrganization: {
+          "@type": "Organization",
+          name: "MVZ Consulting",
+        },
+        sameAs: [
+          // Voeg socials hier toe wanneer publiek (LinkedIn / Instagram).
+        ],
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${siteUrl}/#website`,
+        url: siteUrl,
+        name: "Ons Verhaaltje",
+        inLanguage: "nl-NL",
+        publisher: { "@id": `${siteUrl}/#organization` },
+      },
+      {
+        "@type": "WebPage",
+        "@id": `${siteUrl}/#webpage`,
+        url: siteUrl,
+        name: "Ons Verhaaltje — Gepersonaliseerde voorleesverhalen",
+        description:
+          "Gepersonaliseerde voorleesverhalen voor je kind, met de naam, de knuffel en de mensen om hen heen.",
+        isPartOf: { "@id": `${siteUrl}/#website` },
+        about: { "@id": `${siteUrl}/#organization` },
+        datePublished: "2026-01-15",
+        dateModified: new Date().toISOString().slice(0, 10),
+        inLanguage: "nl-NL",
+      },
+      {
+        "@type": "Product",
+        name: "Gepersonaliseerd voorleesverhaal",
+        description:
+          "Een nieuw, op maat geschreven en geïllustreerd voorleesverhaal van 6 pagina's, klaar binnen 5 minuten. Per maand 1 verhaal in het basis-abonnement.",
+        brand: { "@id": `${siteUrl}/#organization` },
+        category: "Children's books",
+        audience: {
+          "@type": "PeopleAudience",
+          suggestedMinAge: 2,
+          suggestedMaxAge: 10,
+        },
+      },
+    ],
+  };
+  return (
+    <script
+      type="application/ld+json"
+      // schema.org JSON-LD wordt door Next.js niet als XSS-risico
+      // behandeld; we maken de data zelf.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
   );
 }
 

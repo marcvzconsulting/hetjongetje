@@ -92,6 +92,42 @@ export default function OverOnsPage() {
         Zodat jouw kind ze later, net als ik nu, nog eens terug kan lezen.
       </P>
 
+      <P>
+        Dat dit ook bij andere kinderen iets doet, is niet alleen ons
+        gevoel.{" "}
+        <a
+          href="https://www.nji.nl/voorlezen"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: V2.ink, textDecoration: "underline", textUnderlineOffset: 3 }}
+        >
+          Het Nederlands Jeugdinstituut
+        </a>{" "}
+        beschrijft hoe voorlezen woordenschat, leesplezier en de band
+        tussen ouder en kind versterkt.{" "}
+        <a
+          href="https://www.lezen.nl/onderzoek/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: V2.ink, textDecoration: "underline", textUnderlineOffset: 3 }}
+        >
+          Stichting Lezen
+        </a>{" "}
+        publiceert al jaren onderzoek waaruit blijkt dat dagelijks
+        voorlezen meetbaar effect heeft op de taalontwikkeling. En de{" "}
+        <a
+          href="https://www.leesmonitor.nu/nl/voorlezen"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: V2.ink, textDecoration: "underline", textUnderlineOffset: 3 }}
+        >
+          Leesmonitor
+        </a>{" "}
+        laat zien hoeveel beter kinderen zich identificeren met een
+        verhaal waarin ze iets herkenbaars terugzien — precies wat een
+        gepersonaliseerd verhaaltje extra kan geven.
+      </P>
+
       <p
         style={{
           marginTop: 56,
@@ -105,8 +141,53 @@ export default function OverOnsPage() {
           lineHeight: 1.5,
         }}
       >
-        Marc, oprichter van Ons Verhaaltje
+        Marc van Zetten, oprichter van Ons Verhaaltje (MVZ Consulting)
       </p>
+
+      {/* JSON-LD: AboutPage + Person, zodat AI- en zoekmachines de byline
+          aan het bedrijf kunnen koppelen. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "AboutPage",
+            "@id": "https://www.onsverhaaltje.nl/over-ons#aboutpage",
+            url: "https://www.onsverhaaltje.nl/over-ons",
+            name: "Over Ons Verhaaltje",
+            inLanguage: "nl-NL",
+            author: {
+              "@type": "Person",
+              name: "Marc van Zetten",
+              jobTitle: "Oprichter",
+              worksFor: {
+                "@type": "Organization",
+                name: "MVZ Consulting",
+              },
+            },
+            mainEntity: {
+              "@id": "https://www.onsverhaaltje.nl/#organization",
+            },
+            citation: [
+              {
+                "@type": "WebPage",
+                name: "Voorlezen — Nederlands Jeugdinstituut",
+                url: "https://www.nji.nl/voorlezen",
+              },
+              {
+                "@type": "WebPage",
+                name: "Onderzoek — Stichting Lezen",
+                url: "https://www.lezen.nl/onderzoek/",
+              },
+              {
+                "@type": "WebPage",
+                name: "Voorlezen — Leesmonitor",
+                url: "https://www.leesmonitor.nu/nl/voorlezen",
+              },
+            ],
+          }),
+        }}
+      />
     </ContentPage>
   );
 }

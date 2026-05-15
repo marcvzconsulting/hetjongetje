@@ -537,3 +537,17 @@ model GenerationJob {
 
   @@map("generation_jobs")
 }
+
+
+model FaqEntry {
+  id          String   @id @default(uuid())
+  question    String   @db.Text
+  answer      String   @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  isPublished Boolean  @default(true) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([isPublished, sortOrder])
+  @@map("faq_entries")
+}
