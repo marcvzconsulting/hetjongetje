@@ -12,6 +12,7 @@ import {
   applyRecurringPayment,
 } from "./subscriptions";
 import { buildSubscriptionStartedMail } from "@/lib/email/templates/subscription-started";
+import { maybeGrantReferralBonus } from "@/lib/referral";
 
 /**
  * Create a credits order + matching Mollie payment in one transaction-
@@ -150,8 +151,10 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   // different handling on the pending → paid transition.
   if (becomesPaid && order.kind === "credits" && order.creditAmount) {
     await applyCreditsPaid(order);
+    await tryGrantReferralBonus(order.userId);
   } else if (becomesPaid && order.kind === "subscription") {
     await applySubscriptionFirstPaid(order, payment);
+    await tryGrantReferralBonus(order.userId);
   } else if (newStatus !== order.status) {
     // Other transition (failed, expired, cancelled) — just update the
     // order row, no credit / subscription change.
@@ -162,6 +165,21 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   }
 
   return { ...order, status: newStatus };
+}
+
+/**
+ * Wrapper rond `maybeGrantReferralBonus` zodat een mislukte bonus de
+ * order-flow niet meeneemt. Logt en gaat door.
+ */
+async function tryGrantReferralBonus(userId: string): Promise<void> {
+  try {
+    await maybeGrantReferralBonus(userId);
+  } catch (err) {
+    console.error(
+      `[orders] referral bonus grant failed for user ${userId}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 }
 
 /**

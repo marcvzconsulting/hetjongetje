@@ -9,6 +9,11 @@ import {
   validatePassword,
   passwordPolicyMessage,
 } from "@/lib/auth/password-policy";
+import {
+  REFERRAL_BONUS_CREDITS,
+  REFERRAL_COOKIE,
+  resolveReferralCode,
+} from "@/lib/referral";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@onsverhaaltje.nl";
 
@@ -41,11 +46,23 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    // Referral: read cookie, resolve to inviter user-id. Onbekende of
+    // ongeldige code wordt stilzwijgend genegeerd.
+    const refCookie = request.cookies.get(REFERRAL_COOKIE)?.value ?? null;
+    const inviterId = await resolveReferralCode(refCookie);
+    const refBonus = inviterId ? REFERRAL_BONUS_CREDITS : 0;
+
     const user = await prisma.user.create({
       // 1 starter credit so a brand-new tester can immediately try the
       // generator after their account is approved — no awkward "you're
-      // in! …now pay €1.95" moment.
-      data: { name, email, passwordHash, storyCredits: 1 },
+      // in! …now pay €1.95" moment. Plus eventuele referral-bonus.
+      data: {
+        name,
+        email,
+        passwordHash,
+        storyCredits: 1 + refBonus,
+        referredByUserId: inviterId,
+      },
     });
 
     try {
@@ -85,10 +102,16 @@ export async function POST(request: NextRequest) {
       console.error("[register] admin notification mail failed", adminMailError);
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { id: user.id, email: user.email, name: user.name },
       { status: 201 }
     );
+    // Cookie heeft z'n werk gedaan; wis zodat er geen kruisbestuiving
+    // ontstaat als deze browser later een ander account aanmaakt.
+    if (refCookie) {
+      response.cookies.delete(REFERRAL_COOKIE);
+    }
+    return response;
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

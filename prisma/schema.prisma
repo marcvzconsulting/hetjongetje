@@ -30,6 +30,19 @@ model User {
   /// Tour-tekst kan later versie krijgen door een aparte kolom of
   /// dit veld te resetten bij majeure wijzigingen.
   onboardedAt        DateTime?      @map("onboarded_at")
+  /// Unieke referral-code voor invite-links (`/r/<code>` → cookie → bij
+  /// registratie wordt de uitgenodigde aan de uitnodiger gekoppeld).
+  /// Lazy-gegenereerd zodat oude accounts er ook één krijgen op het
+  /// moment dat ze 'm voor het eerst opvragen.
+  referralCode             String?     @unique @map("referral_code")
+  /// User-id van de account die deze gebruiker uitnodigde. Null = direct
+  /// binnengekomen. Verwijzing is denormalised (geen FK) zodat de rij
+  /// blijft kloppen als de inviter later verwijderd wordt.
+  referredByUserId         String?     @map("referred_by_user_id")
+  /// Wanneer de inviter de bonus voor déze uitgenodigde heeft gekregen.
+  /// Null = nog niet uitgekeerd. Zorgt dat een terugkerende klant niet
+  /// telkens bonus-credits genereert.
+  referralBonusGrantedAt   DateTime?   @map("referral_bonus_granted_at")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
   children           ChildProfile[]
@@ -47,6 +60,8 @@ model User {
   @@index([role])
   @@index([createdAt])
   @@index([lastLoginAt])
+  // Referral-stats: count invitees per inviter.
+  @@index([referredByUserId])
   @@map("users")
 }
 

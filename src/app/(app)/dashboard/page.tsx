@@ -12,6 +12,9 @@ import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { StoryLibraryV2 } from "@/components/v2/story/StoryLibraryV2";
 import { NewStoryButton } from "@/components/v2/generation/NewStoryButton";
 import { OnboardingTour } from "@/components/v2/onboarding/OnboardingTour";
+import { ReferralCard } from "@/components/v2/app/ReferralCard";
+import { getOrCreateReferralCode } from "@/lib/referral";
+import { buildAppUrl } from "@/lib/url";
 import { markOnboardedAction } from "./actions";
 
 export default async function DashboardPage() {
@@ -97,6 +100,11 @@ export default async function DashboardPage() {
   });
 
   const creditsToShow = gate.isAdmin ? null : gate.storyCredits;
+
+  // Referral-link: lazy-genereer code op het moment dat een ingelogde
+  // klant het dashboard opent. Eénmalige write voor oude accounts.
+  const referralCode = await getOrCreateReferralCode(session.user.id);
+  const referralUrl = await buildAppUrl(`/r/${referralCode}`);
 
   return (
     <AppShell
@@ -240,6 +248,8 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
+
+      <ReferralCard shareUrl={referralUrl} />
     </AppShell>
   );
 }
