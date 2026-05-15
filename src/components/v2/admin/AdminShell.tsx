@@ -3,6 +3,7 @@ import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { Logo } from "@/components/v2";
 import { SignOutButtonV2 } from "@/components/v2/app/SignOutButton";
+import { AdminMobileNav } from "@/components/v2/admin/AdminMobileNav";
 
 type NavItem = {
   label: string;
@@ -62,6 +63,7 @@ export function AdminShell({
 }: Props) {
   return (
     <div
+      className="adm-shell"
       style={{
         fontFamily: V2.body,
         color: V2.ink,
@@ -75,35 +77,64 @@ export function AdminShell({
         dangerouslySetInnerHTML={{
           __html: `
 @media (max-width: 900px) {
-  .adm-grid { grid-template-columns: 1fr !important; }
-  .adm-rail {
-    position: static !important;
-    height: auto !important;
-    border-right: none !important;
-    border-bottom: 1px solid ${V2.paperShade} !important;
-    padding: 16px 20px !important;
+  .adm-shell { display: block !important; grid-template-columns: none !important; }
+  .adm-rail { display: none !important; }
+  .adm-topbar { display: flex !important; }
+  .adm-main-pad { padding: 24px 16px 64px !important; }
+  .adm-header { gap: 12px !important; margin-bottom: 24px !important; padding-bottom: 16px !important; }
+  .adm-header h1 { font-size: 22px !important; letter-spacing: -0.5px !important; line-height: 1.15 !important; }
+  .adm-section { margin-top: 36px !important; }
+  .adm-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+}
+@media (max-width: 700px) {
+  .adm-cards-wrap { overflow: visible !important; border: none !important; background: transparent !important; }
+  .adm-cards { min-width: 0 !important; border: none !important; background: transparent !important; }
+  .adm-cards thead { display: none !important; }
+  .adm-cards tbody, .adm-cards tr, .adm-cards td { display: block !important; }
+  .adm-cards tr {
+    background: ${V2.paper} !important;
+    border: 1px solid ${V2.paperShade} !important;
+    margin-bottom: 12px !important;
+    padding: 14px 16px !important;
   }
-  .adm-rail-inner { flex-direction: row !important; gap: 8px !important; flex-wrap: wrap !important; }
-  .adm-rail-brand { margin-bottom: 0 !important; padding-bottom: 0 !important; border-bottom: none !important; padding-right: 12px !important; border-right: 1px solid ${V2.paperShade} !important; }
-  .adm-rail-link {
-    flex-direction: row !important;
-    gap: 6px !important;
-    padding: 8px 12px !important;
-    font-size: 13px !important;
-    border-left: none !important;
-    border-bottom: 2px solid transparent !important;
+  .adm-cards td {
+    padding: 6px 0 !important;
+    border: none !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    align-items: baseline !important;
+    text-align: left !important;
+    max-width: none !important;
   }
-  .adm-rail-link.active {
-    border-left: none !important;
-    border-bottom-color: ${V2.gold} !important;
-    background: transparent !important;
-    color: ${V2.ink} !important;
+  .adm-cards td::before {
+    content: attr(data-label);
+    font-family: ${V2.ui};
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: ${V2.inkMute};
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
-  .adm-rail-foot { display: none !important; }
-  .adm-main-pad { padding: 32px 20px 64px !important; }
+  .adm-cards td[data-stack="true"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+  .adm-cards td[data-stack="true"]::before {
+    margin-bottom: 4px;
+  }
+  .adm-cards td[data-label=""]::before { display: none; }
 }
 `,
         }}
+      />
+
+      <AdminMobileNav
+        section={section}
+        nav={nav}
+        adminEmail={adminEmail}
       />
 
       {/* ── Left rail ──────────────────────────────── */}
@@ -259,6 +290,7 @@ export function AdminShell({
       {/* ── Main column ───────────────────────────── */}
       <main className="adm-main-pad" style={{ padding: "44px 48px 80px" }}>
         <header
+          className="adm-header"
           style={{
             display: "flex",
             justifyContent: "space-between",

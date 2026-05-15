@@ -461,6 +461,7 @@ export default async function AdminUsersPage({
       </p>
 
       <div
+        className="adm-cards-wrap"
         style={{
           overflowX: "auto",
           background: V2.paper,
@@ -468,8 +469,10 @@ export default async function AdminUsersPage({
         }}
       >
         <table
+          className="adm-cards"
           style={{
             width: "100%",
+            minWidth: 960,
             borderCollapse: "collapse",
             fontFamily: V2.body,
           }}
@@ -494,7 +497,7 @@ export default async function AdminUsersPage({
               const lowCredits = u.storyCredits === 0 && u.status === "approved";
               return (
                 <tr key={u.id}>
-                  <td style={td}>
+                  <td style={td} data-label="" data-stack="true">
                     <div style={{ fontWeight: 500, color: V2.ink }}>{u.name}</div>
                     <div
                       style={{
@@ -502,18 +505,22 @@ export default async function AdminUsersPage({
                         fontSize: 12,
                         color: V2.inkMute,
                         marginTop: 2,
+                        wordBreak: "break-all",
                       }}
                     >
                       {u.email}
                     </div>
                   </td>
-                  <td style={td}>
+                  <td style={td} data-label="Status">
                     <StatusPill status={u.status} />
                   </td>
-                  <td style={{ ...td, textAlign: "right", ...mono, color: lowCredits ? V2.heart : V2.ink, fontWeight: lowCredits ? 600 : 400 }}>
+                  <td
+                    style={{ ...td, textAlign: "right", ...mono, color: lowCredits ? V2.heart : V2.ink, fontWeight: lowCredits ? 600 : 400 }}
+                    data-label="Tegoed"
+                  >
                     {u.storyCredits}
                   </td>
-                  <td style={td}>
+                  <td style={td} data-label="Abonnement">
                     {u.subscription ? (
                       <SubscriptionPill
                         plan={u.subscription.plan}
@@ -532,16 +539,25 @@ export default async function AdminUsersPage({
                       </span>
                     )}
                   </td>
-                  <td style={{ ...td, textAlign: "right", ...mono, color: V2.ink }}>
+                  <td
+                    style={{ ...td, textAlign: "right", ...mono, color: V2.ink }}
+                    data-label="Kinderen"
+                  >
                     {u._count.children}
                   </td>
-                  <td style={{ ...td, textAlign: "right", ...mono, color: V2.ink }}>
+                  <td
+                    style={{ ...td, textAlign: "right", ...mono, color: V2.ink }}
+                    data-label="Verhalen"
+                  >
                     {storiesByUser.get(u.id) ?? 0}
                   </td>
-                  <td style={{ ...td, ...mono, color: V2.inkSoft }}>
+                  <td
+                    style={{ ...td, ...mono, color: V2.inkSoft }}
+                    data-label="Laatste login"
+                  >
                     {formatDate(u.lastLoginAt)}
                   </td>
-                  <td style={{ ...td, ...mono }}>
+                  <td style={{ ...td, ...mono }} data-label="Inactief">
                     {inactive === null ? (
                       <span style={{ color: V2.inkMute, fontStyle: "italic", fontFamily: V2.body }}>
                         nooit
@@ -554,10 +570,13 @@ export default async function AdminUsersPage({
                       <span style={{ color: V2.inkMute }}>{inactive}d</span>
                     )}
                   </td>
-                  <td style={{ ...td, ...mono, color: V2.inkSoft }}>
+                  <td
+                    style={{ ...td, ...mono, color: V2.inkSoft }}
+                    data-label="Aangemaakt"
+                  >
                     {formatDate(u.createdAt)}
                   </td>
-                  <td style={{ ...td, textAlign: "right" }}>
+                  <td style={{ ...td, textAlign: "right" }} data-label="">
                     <Link
                       href={`/admin/users/${u.id}`}
                       style={{

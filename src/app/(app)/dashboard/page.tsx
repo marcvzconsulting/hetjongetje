@@ -391,12 +391,9 @@ function ChildSectionHeader({
           </h2>
         </div>
       </div>
-      <div className="app-actions-row" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <EBtn kind="primary" size="sm" href={`/generate/${childId}`}>
           + Nieuw verhaal
-        </EBtn>
-        <EBtn kind="ghost" size="sm" href={`/book/${childId}`}>
-          Samenstel boekje
         </EBtn>
         <EBtn kind="ghost" size="sm" href={`/profile/${childId}`}>
           Profiel

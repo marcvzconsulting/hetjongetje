@@ -407,9 +407,11 @@ export default async function AdminDashboardPage({
         {stats.topCustomers.length === 0 ? (
           <EmptyState>Nog geen betalende klanten — dit vult zich vanzelf.</EmptyState>
         ) : (
+          <div className="adm-table-wrap">
           <table
             style={{
               width: "100%",
+              minWidth: 720,
               borderCollapse: "collapse",
               fontFamily: V2.body,
               fontSize: 14,
@@ -496,6 +498,7 @@ export default async function AdminDashboardPage({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Section>
 
@@ -531,9 +534,11 @@ export default async function AdminDashboardPage({
             op de knop — beide).
           </EmptyState>
         ) : (
+          <div className="adm-table-wrap">
           <table
             style={{
               width: "100%",
+              minWidth: 640,
               borderCollapse: "collapse",
               fontFamily: V2.body,
               fontSize: 14,
@@ -626,6 +631,7 @@ export default async function AdminDashboardPage({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </Section>
 
@@ -908,7 +914,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section style={{ marginTop: 48 }}>
+    <section className="adm-section" style={{ marginTop: 48 }}>
       <h2
         style={{
           fontFamily: V2.display,

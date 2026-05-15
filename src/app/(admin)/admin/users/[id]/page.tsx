@@ -1360,6 +1360,7 @@ export default async function AdminUserDetailPage({
             <table
               style={{
                 width: "100%",
+                minWidth: 720,
                 borderCollapse: "collapse",
                 fontFamily: V2.body,
                 fontSize: 14,

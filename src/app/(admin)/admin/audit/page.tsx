@@ -306,6 +306,7 @@ export default async function AdminAuditPage({
       </p>
 
       <div
+        className="adm-cards-wrap"
         style={{
           overflowX: "auto",
           background: V2.paper,
@@ -313,8 +314,10 @@ export default async function AdminAuditPage({
         }}
       >
         <table
+          className="adm-cards"
           style={{
             width: "100%",
+            minWidth: 820,
             borderCollapse: "collapse",
             fontFamily: V2.body,
           }}
@@ -332,10 +335,13 @@ export default async function AdminAuditPage({
           <tbody>
             {entries.map((e) => (
               <tr key={e.id}>
-                <td style={{ ...td, ...mono, color: V2.inkSoft, whiteSpace: "nowrap" }}>
+                <td
+                  style={{ ...td, ...mono, color: V2.inkSoft, whiteSpace: "nowrap" }}
+                  data-label="Wanneer"
+                >
                   {formatDateTime(e.createdAt)}
                 </td>
-                <td style={td}>
+                <td style={td} data-label="Admin" data-stack="true">
                   <div style={{ color: V2.ink, fontSize: 14 }}>
                     {e.adminName || <em style={{ color: V2.inkMute }}>—</em>}
                   </div>
@@ -351,10 +357,10 @@ export default async function AdminAuditPage({
                     {e.adminEmail}
                   </div>
                 </td>
-                <td style={td}>
+                <td style={td} data-label="Actie">
                   <ActionPill action={e.action} />
                 </td>
-                <td style={td}>
+                <td style={td} data-label="Target" data-stack="true">
                   {e.targetType ? (
                     <>
                       <div style={{ ...mono, color: V2.ink }}>{e.targetType}</div>
@@ -384,7 +390,7 @@ export default async function AdminAuditPage({
                     <span style={{ color: V2.inkMute, fontStyle: "italic" }}>—</span>
                   )}
                 </td>
-                <td style={{ ...td, maxWidth: 360 }}>
+                <td style={{ ...td, maxWidth: 360 }} data-label="Metadata" data-stack="true">
                   {e.metadata ? (
                     <pre
                       style={{
@@ -405,7 +411,7 @@ export default async function AdminAuditPage({
                     <span style={{ color: V2.inkMute, fontStyle: "italic" }}>—</span>
                   )}
                 </td>
-                <td style={{ ...td, ...mono, color: V2.inkSoft }}>{e.ip ?? "-"}</td>
+                <td style={{ ...td, ...mono, color: V2.inkSoft }} data-label="IP">{e.ip ?? "-"}</td>
               </tr>
             ))}
             {entries.length === 0 && (

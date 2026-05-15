@@ -291,6 +291,7 @@ export default async function AdminJobsPage({
       </p>
 
       <div
+        className="adm-cards-wrap"
         style={{
           overflowX: "auto",
           background: V2.paper,
@@ -298,8 +299,10 @@ export default async function AdminJobsPage({
         }}
       >
         <table
+          className="adm-cards"
           style={{
             width: "100%",
+            minWidth: 820,
             borderCollapse: "collapse",
             fontFamily: V2.body,
           }}
@@ -318,10 +321,10 @@ export default async function AdminJobsPage({
           <tbody>
             {jobs.map((job) => (
               <tr key={job.id}>
-                <td style={td}>
+                <td style={td} data-label="Status">
                   <StatusPill status={job.status} />
                 </td>
-                <td style={{ ...td, ...mono, color: V2.ink }}>{job.type}</td>
+                <td style={{ ...td, ...mono, color: V2.ink }} data-label="Type">{job.type}</td>
                 <td
                   style={{
                     ...td,
@@ -329,10 +332,11 @@ export default async function AdminJobsPage({
                     ...mono,
                     color: V2.ink,
                   }}
+                  data-label="Progress"
                 >
                   {job.progress}%
                 </td>
-                <td style={td}>
+                <td style={td} data-label="Verhaal / Kind" data-stack="true">
                   <div style={{ color: V2.ink, fontSize: 14 }}>
                     {job.story.title}
                   </div>
@@ -365,7 +369,7 @@ export default async function AdminJobsPage({
                     user <IconV2 name="arrow" size={12} />
                   </Link>
                 </td>
-                <td style={{ ...td, maxWidth: 320 }}>
+                <td style={{ ...td, maxWidth: 320 }} data-label="Foutmelding" data-stack="true">
                   {job.errorMessage ? (
                     <span
                       style={{
@@ -391,10 +395,10 @@ export default async function AdminJobsPage({
                     </span>
                   )}
                 </td>
-                <td style={{ ...td, ...mono, color: V2.inkSoft }}>
+                <td style={{ ...td, ...mono, color: V2.inkSoft }} data-label="Gestart">
                   {formatDateTime(job.createdAt)}
                 </td>
-                <td style={{ ...td, ...mono, color: V2.inkSoft }}>
+                <td style={{ ...td, ...mono, color: V2.inkSoft }} data-label="Afgerond">
                   {formatDateTime(job.completedAt)}
                 </td>
               </tr>

@@ -44,9 +44,12 @@ export default async function EmailTemplatesIndexPage() {
         ingevuld.
       </p>
 
+      <div className="adm-cards-wrap" style={{ overflowX: "auto" }}>
       <table
+        className="adm-cards"
         style={{
           width: "100%",
+          minWidth: 640,
           borderCollapse: "collapse",
           fontFamily: V2.body,
           fontSize: 14,
@@ -70,7 +73,7 @@ export default async function EmailTemplatesIndexPage() {
                 key={t.code}
                 style={{ borderBottom: `1px solid ${V2.paperShade}` }}
               >
-                <Td>
+                <Td stack>
                   <div style={{ fontWeight: 500 }}>{t.label}</div>
                   <div
                     style={{
@@ -95,14 +98,14 @@ export default async function EmailTemplatesIndexPage() {
                     {t.description}
                   </div>
                 </Td>
-                <Td>
+                <Td dataLabel="Status">
                   {override ? (
                     <Badge color={V2.gold}>aangepast</Badge>
                   ) : (
                     <Badge color={V2.inkMute}>standaard</Badge>
                   )}
                 </Td>
-                <Td mono>
+                <Td mono dataLabel="Laatst aangepast">
                   {override
                     ? override.updatedAt.toLocaleDateString("nl-NL", {
                         day: "numeric",
@@ -130,6 +133,7 @@ export default async function EmailTemplatesIndexPage() {
           })}
         </tbody>
       </table>
+      </div>
     </AdminShell>
   );
 }
@@ -157,13 +161,19 @@ function Td({
   children,
   align,
   mono,
+  dataLabel,
+  stack,
 }: {
   children?: React.ReactNode;
   align?: "left" | "right";
   mono?: boolean;
+  dataLabel?: string;
+  stack?: boolean;
 }) {
   return (
     <td
+      data-label={dataLabel ?? ""}
+      data-stack={stack ? "true" : undefined}
       style={{
         fontFamily: mono ? V2.mono : V2.body,
         fontSize: 14,
