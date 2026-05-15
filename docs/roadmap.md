@@ -1,6 +1,6 @@
 # Ons Verhaaltje — Roadmap
 
-Laatst bijgewerkt: 2026-05-08 (fase 2 voltooid + AEO-item toegevoegd aan fase 5)
+Laatst bijgewerkt: 2026-05-15 (fases 2/3/4 voltooid + audit-refactor + PDF-export)
 
 Lijst van besloten verbeteringen, gegroepeerd in fases. Volg ze van boven naar beneden, of pak per fase iets eruit. Per item: wat het inhoudt + waarom het in deze fase staat.
 
@@ -15,32 +15,73 @@ Status: live en getest, geen openstaande bugs.
 
 ---
 
-## Fase 2 — Operationeel comfort (~2-3 uur)
+## ✅ Fase 2 — Operationeel comfort (klaar — gepusht 2026-05-09)
 
-> Doel: voorkom dat elk klantcontact handwerk in Mollie + DB wordt zodra je >50 klanten passeert.
+3. **Audit-log-viewer** — `/admin/audit` met filters (actor, actie, target-type, datum) + paginering. Action-pills gekleurd op type. Live.
+4. **Cancellation-reason survey** — bij abonnement-opzegging een radio-stap + textarea. Velden `Subscription.cancellationReason` + `cancellationReasonNote`. Admin-dashboard toont counts per reden + recente toelichtingen.
+5. **Customer-support inbox** — `/admin/inbox` met tabs "Open" / "Afgehandeld", "Beantwoorden →" via mailto, markeer afgehandeld/heropen. Contactformulier slaat berichten in DB op (`ContactMessage`). Brevo inbound-replies blijven uitgesteld (vereist DNS-config).
+6. **Refund-flow vanuit admin** — knop op user-detail om Mollie-payment terug te boeken. Bij credit-orders wordt `storyCredits` gedecrementeerd (gefloord op 0 als al uitgegeven). Audit-log entry per refund.
+7. **Cookie-melding / consent-banner** — banner onderaan bij eerste bezoek met "akkoord" + link naar privacy. Keuze opgeslagen in `localStorage` met version-string voor toekomstige re-prompts.
 
-3. **Audit-log-viewer** — pagina onder `/admin/audit` met tabel + filters per actor / actie / datum. De data wordt al weggeschreven via `logAdminAction` in [src/lib/admin/audit-log.ts](../src/lib/admin/audit-log.ts), alleen de UI ontbreekt. Add to ADMIN_NAV.
-4. **Cancellation-reason survey** — bij abonnement-opzegging een radiobutton-stap ("te duur", "weinig gebruikt", "tijdelijk", "anders + tekstveld"). Opslaan op nieuwe `Subscription.cancellationReason` + `cancellationReasonNote`. Admin-rapport per maand op het dashboard.
-5. **Customer-support inbox** — `/admin/inbox` met inkomende contact-form-berichten + `info@`-mail-replies via Brevo inbox-API; status open/closed. Vereist Brevo IMAP-key of inbound webhook.
-6. **Refund-flow vanuit admin** — knop op user-detail om Mollie-payment terug te boeken (Mollie-API: `payments.refund`), met logging via auditlog + automatische credit-correctie als het credit-order betrof.
-7. **Cookie-melding / consent-banner** — eenvoudige banner onderaan bij eerste bezoek met "akkoord" + link naar privacy/cookie-pagina. Strikt-noodzakelijke cookies (NextAuth-session, CSRF) zijn vrijgesteld, dus geen blokkerende consent-gate; dit is vooral transparantie + AVG-cover. Vercel Analytics is cookieloos en hoeft niets, maar als we ooit Plausible/GA toevoegen moet de banner ook daadwerkelijk consent gaten gaan stellen. Keuze opslaan in `localStorage` + niet meer tonen na akkoord.
-
----
-
-## Fase 3 — Stevigheid (~1-2 uur code + externe setup)
-
-> Doel: vertrouwen voor groei. Deze dingen worden pas zichtbaar wanneer er iets stuk is — beter nu inrichten dan met een kapotte productie.
-
-8. **AI-kostentracking per verhaal** — `Story.aiCostCents` veld, gevuld met **echte** Anthropic + fal.ai usage uit de response-headers / billing-API. Vervangt de €0,15-schatting met feiten. Update de marge-card op het admin-dashboard.
-9. **Sentry-alerts** — email naar `admin@onsverhaaltje.nl` bij nieuwe issue. Voornamelijk Sentry-UI vinkjes; documenteren waar het zit.
-10. **Uptime-monitoring** — BetterStack of UptimeRobot pingt `/api/health` elke minuut, sms/email als 'ie wegvalt. Ik bouw het health-endpoint, jij maakt het account.
-11. **Backup-restore-test** — script dat een test-klant aanmaakt, snapshot maakt via Neon, klant verwijdert, en restore valideert. Bewijs dat we kunnen recoveren.
+**Bonus tijdens fase 2:**
+- Admin-blok "Abonnement" werkt nu écht — admin-toegekende subs zijn zichtbaar voor klant + opzegbaar zonder Mollie.
+- Pre-existing nested-form bug in `/admin/pricing` opgelost.
+- Dev-tunnel-mechanisme via `MOLLIE_WEBHOOK_BASE_URL` voor Mollie webhook-tests.
 
 ---
 
-## Fase 4 — Onboarding (~1 uur)
+## ✅ Fase 3 — Stevigheid (klaar — gepusht 2026-05-09)
 
-12. **Onboarding-tour** — eerste keer na goedkeuring: 4-staps modal die uitlegt "vul profiel in → kies aanleiding → wij maken verhaal → bundel boekje". Eenmalig, dismiss-baar, opgeslagen op `User.onboardedAt`.
+8. **AI-kostentracking per verhaal** — `Story.aiCostCents` veld, gevuld op het moment van genereren via `computeStoryAiCostCents()` in [src/lib/ai/pricing.ts](../src/lib/ai/pricing.ts). Tarieven (Claude Sonnet 4.5 + fal.ai flux-pro/lora) zijn op één plek tweakbaar. Admin-dashboard toont gemeten vs. geschat. Regen-kosten worden opgeteld bij origineel.
+9. **Sentry-alerts** — twee email-rules in Sentry: "nieuwe production error" en "regressie", beide naar `admin@onsverhaaltje.nl` met 60-min cooldown. Documentatie in `docs/architecture.md`.
+10. **Uptime-monitoring** — `/api/health` endpoint (DB-ping, geen externe API-calls, 200/503). BetterStack monitor draait op 3-min interval, email-alerts bij downtime.
+11. **Backup-restore-test** — `pnpm tsx scripts/backup-restore-test.ts` maakt synthetische user, exporteert naar JSON, verwijdert, restoret, verifieert. Detecteert schema-changes die migrate-paden breken.
+
+---
+
+## ✅ Fase 4 — Onboarding (klaar — gepusht 2026-05-10)
+
+12. **Onboarding-tour** — 4-staps modal op `/dashboard` voor approved users zonder `User.onboardedAt`. Stappen: Profiel → Aanleiding → Generatie → Bewaren. Server-action zet `onboardedAt = now()` bij voltooien of skippen (eenmalig). Glyphs in goldDeep, body-tekst zonder em-dashes.
+
+---
+
+## ✅ Tussentijdse PDF-export (gepusht 2026-05-10)
+
+Niet uit de oorspronkelijke roadmap maar logisch om vroeg te bouwen — dezelfde PDF-laag is straks de basis voor de drukker-integratie.
+
+- **Download-knop in de reader-chrome** (icoon naast "Bewaren") → server-side PDF-generatie via `@react-pdf/renderer`.
+- **Layout**: A4-landscape spreads met titelpagina, per pagina tekst-links + illustratie-rechts, afsluitscène met "Welterusten, {childName}".
+- **Beperking**: gebruikt nu PDF-standaard fonts (Helvetica/Times). `@react-pdf/renderer`'s fontkit werkt niet stabiel met variable-font TTFs. Bij de echte druk-integratie willen we toch CMYK + 3mm bleed + 300dpi + huisfonts in één klap aanpakken.
+
+Bestanden: [src/lib/pdf/story-pdf.tsx](../src/lib/pdf/story-pdf.tsx) + [src/app/api/stories/[storyId]/pdf/route.ts](../src/app/api/stories/[storyId]/pdf/route.ts).
+
+---
+
+## ✅ Tussentijdse reader-UX (gepusht 2026-05-10/11)
+
+- **Fullscreen-toggle** in chrome (Fullscreen-API).
+- **"Lees opnieuw vanaf het begin"-knop** verschijnt op de laatste pagina.
+- **Tablet-swipe** op DesktopBookFrame-route (touch-handlers op Stage).
+- **Plankje-link** als pill-knop met goldDeep border i.p.v. tekstlink.
+- **Kicker** krijgt `size="lg"` voor verhaal-overzicht-labels.
+
+---
+
+## ✅ Audit-refactor (gepusht 2026-05-12)
+
+Eénmalige opruim-batch op basis van een project-wide audit. Geen feature-changes; betere fundering.
+
+- **Indexes**: `Story` heeft nu indexes op `[createdAt]` en `[feedbackKind]` voor admin-stats counters.
+- **Centralisatie**: `requireUser` in [src/lib/admin.ts](../src/lib/admin.ts), `trim`/`nullIfEmpty`/`trimToNull` in nieuwe [src/lib/form.ts](../src/lib/form.ts). 4 inline duplicates uitgefaseerd.
+- **Zod-validatie**: nieuwe [src/lib/validation.ts](../src/lib/validation.ts) met `parseJsonBody` helper. Toegepast op `PATCH /api/children/[childId]`, `POST /api/stories`, `PATCH /api/stories/[storyId]`.
+- **Dashboard payload-slim**: `findMany({ include })` → `findMany({ select })` op [src/app/(app)/dashboard/page.tsx](../src/app/(app)/dashboard/page.tsx). Geen characterBible/referenceImages/LoRA-velden/generationParams meer over de wire.
+- **Type-safety**: `USER_ROLES` + `USER_STATUSES` const-tuples in [src/lib/types/user.ts](../src/lib/types/user.ts) (geen PG-enum-migratie wegens prod-data risico).
+- **JSON-fix**: `JSON.parse(JSON.stringify(storyRequest))` vervangen door `Prisma.InputJsonValue` cast.
+- **Lint-cleanup**: 2 errors + 10 warnings → 0/0.
+
+Twee items uit de audit zijn bewust **niet** doorgevoerd (te lage impact voor huidige schaal):
+- #17 — rate-limit op PATCH/DELETE `/api/children/[childId]` (~10 min werk; ingelogde user kan alleen eigen data raken).
+- #1 — admin/users storyCounts laadt alle childProfiles in memory (werkt prima tot ~2k children).
 
 ---
 
@@ -64,11 +105,13 @@ Status: live en getest, geen openstaande bugs.
 
 ## Op jouw bord (geen code-actie van Claude)
 
-- **Drukker-API koppeling** — keuze tussen PrintAPI en Peecho, daarna kunnen we de "binnenkort"-placeholder vervangen door een echte boek-bestelflow met PDF-upload, address-validatie en order-tracking. Vereist documentatie + sample inkijken.
+- **Drukker-API koppeling** — keuze tussen PrintAPI en Peecho, daarna kunnen we de "binnenkort"-placeholder vervangen door een echte boek-bestelflow met PDF-upload, address-validatie en order-tracking. De PDF-laag staat al klaar (zie tussentijdse PDF-export hierboven), maar voor druk willen we 'm uitbreiden met CMYK + 3mm bleed + huisfonts + 300dpi.
 - **Externe pen-test** — pas zinvol bij meer schaal.
 - **AVG-juridische review** — externe jurist; meestal samen met privacy/voorwaarden-pagina's.
 - **Mollie live-tarieven** — staffel-korting onderhandelen wanneer omzet structureel groter is.
 - **Catalog-editing voor AI-prompts** (settings, occasions, adventure-types, moods) — bewust geparkeerd; zou Halloween/Kerst toevoegen mogelijk maken zonder code-deploy maar vereist refactor van GenerateWizard + StoryLibrary frontend.
+- **Brevo inbound parsing** — vereist DNS-MX wijziging bij TransIP + webhook-endpoint dat parsed mail in `ContactMessage`-tabel schrijft. Zou de admin-inbox compleet maken (replies op `info@`-mails verschijnen er nu niet).
+- **Admin reply via UI** — Brevo's `sendMail` is gewired, dus een reply-textarea in `/admin/inbox` is technisch mogelijk. Wacht op Brevo inbound zodat conversaties één plek hebben.
 
 ---
 
@@ -85,11 +128,10 @@ Uit de security-deferred-hardening sessie van 2026-04-29:
 
 ## Prioriteit-volgorde wanneer je terugkomt
 
-Mijn voorstel:
+Volgende logische stappen:
 
-1. **Fase 2** in één klap — operationeel comfort betaalt zich snel terug zodra er meer dan een handvol klanten zijn.
-2. **Fase 3** in een rustige avond — eenmaal goed neergezet, geen onderhoud.
-3. **Fase 4** als je merkt dat nieuwe accounts in de funnel afhaken (data uit het admin-cohort-overzicht).
-4. **Fase 5** wanneer je actief gaat werven (drukker-API live + eerste echte marketing-budget).
+1. **Fase 5** wanneer je actief gaat werven — share-links + AEO + SEO + referral hangen aan elkaar.
+2. **Drukker-API** is de grootste single-feature die nog open staat. Hangt aan jouw keuze tussen PrintAPI/Peecho.
+3. **Onboarding-tour effectiviteit meten** — kijken of het cohort-overzicht in admin laat zien dat onboarding-uitval omlaag gaat zodra echte users binnenkomen.
 
-Drukker-keuze + Fase 5 hangen aan elkaar — een werkende boek-bestelflow is een sterk verhaal voor referral.
+De roadmap is verder leeg op fase 5 + parked-items na. We zijn ahead of plan.
