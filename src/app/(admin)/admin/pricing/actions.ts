@@ -88,6 +88,12 @@ export async function createCreditPackAction(formData: FormData) {
   }
 
   revalidatePath("/admin/pricing");
+  // Landing toont DB-prijzen via cache; flush zodat aangepaste prijzen
+  // bij de eerstvolgende bezoeker zichtbaar zijn. Subscribe-/credits-
+  // pagina's lezen dezelfde catalogs.
+  revalidatePath("/");
+  revalidatePath("/subscribe");
+  revalidatePath("/credits");
   redirect("/admin/pricing?saved=created");
 }
 
@@ -137,6 +143,12 @@ export async function updateCreditPackAction(formData: FormData) {
     },
   });
   revalidatePath("/admin/pricing");
+  // Landing toont DB-prijzen via cache; flush zodat aangepaste prijzen
+  // bij de eerstvolgende bezoeker zichtbaar zijn. Subscribe-/credits-
+  // pagina's lezen dezelfde catalogs.
+  revalidatePath("/");
+  revalidatePath("/subscribe");
+  revalidatePath("/credits");
   redirect("/admin/pricing?saved=updated");
 }
 
@@ -157,6 +169,12 @@ export async function deleteCreditPackAction(formData: FormData) {
     metadata: { code: pack.code, name: pack.name },
   });
   revalidatePath("/admin/pricing");
+  // Landing toont DB-prijzen via cache; flush zodat aangepaste prijzen
+  // bij de eerstvolgende bezoeker zichtbaar zijn. Subscribe-/credits-
+  // pagina's lezen dezelfde catalogs.
+  revalidatePath("/");
+  revalidatePath("/subscribe");
+  revalidatePath("/credits");
   redirect("/admin/pricing?saved=deleted");
 }
 
@@ -220,6 +238,12 @@ export async function createSubscriptionPlanAction(formData: FormData) {
   }
 
   revalidatePath("/admin/pricing");
+  // Landing toont DB-prijzen via cache; flush zodat aangepaste prijzen
+  // bij de eerstvolgende bezoeker zichtbaar zijn. Subscribe-/credits-
+  // pagina's lezen dezelfde catalogs.
+  revalidatePath("/");
+  revalidatePath("/subscribe");
+  revalidatePath("/credits");
   redirect("/admin/pricing?saved=created");
 }
 
@@ -282,6 +306,12 @@ export async function updateSubscriptionPlanAction(formData: FormData) {
     },
   });
   revalidatePath("/admin/pricing");
+  // Landing toont DB-prijzen via cache; flush zodat aangepaste prijzen
+  // bij de eerstvolgende bezoeker zichtbaar zijn. Subscribe-/credits-
+  // pagina's lezen dezelfde catalogs.
+  revalidatePath("/");
+  revalidatePath("/subscribe");
+  revalidatePath("/credits");
   redirect("/admin/pricing?saved=updated");
 }
 
@@ -302,5 +332,11 @@ export async function deleteSubscriptionPlanAction(formData: FormData) {
     metadata: { code: plan.code, name: plan.name },
   });
   revalidatePath("/admin/pricing");
+  // Landing toont DB-prijzen via cache; flush zodat aangepaste prijzen
+  // bij de eerstvolgende bezoeker zichtbaar zijn. Subscribe-/credits-
+  // pagina's lezen dezelfde catalogs.
+  revalidatePath("/");
+  revalidatePath("/subscribe");
+  revalidatePath("/credits");
   redirect("/admin/pricing?saved=deleted");
 }
