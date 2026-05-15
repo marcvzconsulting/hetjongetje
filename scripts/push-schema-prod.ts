@@ -40,8 +40,17 @@ const host = url.match(/@([^/]+)/)?.[1] ?? "onbekend";
 console.log(`📡 Target: ${host}`);
 console.log(`📤 Schema pushen naar productie...\n`);
 
+// `--accept-data-loss` zet Prisma's waarschuwing voor schema-changes uit
+// die op een lege/nullable kolom geen echte data raken (zoals het
+// toevoegen van een unique constraint waar nog geen waardes staan). Op
+// productie hebben we geen bestaande share_token / referral_code rijen.
+const args = ["prisma", "db", "push", "--config", "prisma/prisma.config.ts"];
+if (process.argv.includes("--accept-data-loss")) {
+  args.push("--accept-data-loss");
+}
+
 try {
-  execSync("prisma db push --config prisma/prisma.config.ts", {
+  execSync(args.join(" "), {
     stdio: "inherit",
     env: { ...process.env },
   });
