@@ -17,11 +17,23 @@ import type { Spread, PageType } from "@/lib/story/spread-types";
 type Props = {
   spreads: Spread[];
   childName: string;
-  childId: string;
+  /** Omit on public read-only views — the "Nieuw verhaal"-link wordt dan
+   *  vervangen door een "Maak je eigen"-CTA naar de landing. */
+  childId?: string;
   storyId: string;
   isFavorite: boolean;
-  onToggleFavorite: () => void;
+  /** Omit on read-only views to hide de favorite-knop. */
+  onToggleFavorite?: () => void;
   storyTitle: string;
+  /** Public share-view (`/s/[token]`): logo linkt naar landing, geen
+   *  PDF-download / SignOut / Plankje, CTA naar registratie. */
+  readOnly?: boolean;
+  /** Optionele chrome-knoppen voor parent-only acties. Niet getoond in
+   *  readOnly-modus. */
+  onShareClick?: () => void;
+  isShared?: boolean;
+  onReactClick?: () => void;
+  hasFeedback?: boolean;
 };
 
 // SVG fractal-noise texture, inlined as data URL. Subtle paper grain,
@@ -52,6 +64,11 @@ export function BookViewerV3({
   isFavorite,
   onToggleFavorite,
   storyTitle,
+  readOnly = false,
+  onShareClick,
+  isShared = false,
+  onReactClick,
+  hasFeedback = false,
 }: Props) {
   // ── Viewport ─────────────────────────────────────────────────
   // `isMobile` here = "use compact single-page mode". A phone in landscape
@@ -61,9 +78,24 @@ export function BookViewerV3({
       ? shouldUseCompact(window.innerWidth, window.innerHeight)
       : false,
   );
+  /** Chrome-knoppen alleen-icoon (geen tekst) wanneer de balk anders te
+   *  krap wordt en titel + plankje gaan overlappen. */
+  const [compactLabels, setCompactLabels] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth < 1100 : false,
+  );
+  /** Titel in het midden van de chrome verbergen op smallere desktops
+   *  zodat de knoppenrij rechts niet over de Plankje-pill rolt. */
+  const [showTitle, setShowTitle] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 960 : true,
+  );
   useEffect(() => {
-    const onResize = () =>
-      setIsMobile(shouldUseCompact(window.innerWidth, window.innerHeight));
+    const onResize = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsMobile(shouldUseCompact(w, h));
+      setCompactLabels(w < 1100);
+      setShowTitle(w >= 960);
+    };
     onResize();
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
@@ -236,34 +268,39 @@ export function BookViewerV3({
         onMouseEnter={() => setChromeVisible(true)}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
-          <Link href="/dashboard" aria-label="Terug naar bibliotheek">
+          <Link
+            href={readOnly ? "/" : "/dashboard"}
+            aria-label={readOnly ? "Naar Ons Verhaaltje" : "Terug naar bibliotheek"}
+          >
             <Logo size={isMobile ? 16 : 18} />
           </Link>
-          <Link
-            href="/dashboard"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontFamily: V2.ui,
-              fontSize: 13,
-              fontWeight: 500,
-              color: V2.ink,
-              textDecoration: "none",
-              whiteSpace: "nowrap",
-              padding: "7px 14px",
-              border: `1.5px solid ${V2.goldDeep}`,
-              background: V2.paper,
-              borderRadius: 999,
-              letterSpacing: "0.02em",
-            }}
-          >
-            <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>←</span>
-            <span>Plankje</span>
-          </Link>
+          {!readOnly && (
+            <Link
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontFamily: V2.ui,
+                fontSize: 13,
+                fontWeight: 500,
+                color: V2.ink,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                padding: "7px 14px",
+                border: `1.5px solid ${V2.goldDeep}`,
+                background: V2.paper,
+                borderRadius: 999,
+                letterSpacing: "0.02em",
+              }}
+            >
+              <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>←</span>
+              <span>Plankje</span>
+            </Link>
+          )}
         </div>
 
-        {!isMobile && (
+        {showTitle && (
           <div
             style={{
               fontFamily: V2.display,
@@ -291,47 +328,71 @@ export function BookViewerV3({
             color: V2.inkMute,
           }}
         >
-          <ChromeButton
-            label={isFavorite ? "Favoriet" : "Bewaren"}
-            iconName="heart"
-            active={isFavorite}
-            activeColor={V2.heart}
-            onClick={onToggleFavorite}
-            compact={isMobile}
-          />
-          <a
-            href={`/api/stories/${storyId}/pdf`}
-            download
-            aria-label="Download als PDF"
-            title="Download als PDF"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              color: V2.inkMute,
-              fontFamily: V2.ui,
-              fontSize: 13,
-              fontWeight: 400,
-              padding: isMobile ? "8px 6px" : "8px 4px",
-              minHeight: 36,
-              textDecoration: "none",
-            }}
-          >
-            <ButtonIcon name="download" color={V2.inkMute} active={false} />
-            {!isMobile && <span>PDF</span>}
-          </a>
+          {!readOnly && onShareClick && (
+            <ChromeButton
+              label="Delen"
+              iconName="share"
+              active={isShared}
+              activeColor={V2.goldDeep}
+              onClick={onShareClick}
+              compact={compactLabels}
+            />
+          )}
+          {!readOnly && onReactClick && (
+            <ChromeButton
+              label="Reageren"
+              iconName="redo"
+              active={hasFeedback}
+              activeColor={V2.goldDeep}
+              onClick={onReactClick}
+              compact={compactLabels}
+            />
+          )}
+          {!readOnly && onToggleFavorite && (
+            <ChromeButton
+              label={isFavorite ? "Favoriet" : "Bewaren"}
+              iconName="heart"
+              active={isFavorite}
+              activeColor={V2.heart}
+              onClick={onToggleFavorite}
+              compact={compactLabels}
+            />
+          )}
+          {!readOnly && (
+            <a
+              href={`/api/stories/${storyId}/pdf`}
+              download
+              aria-label="Download als PDF"
+              title="Download als PDF"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: V2.inkMute,
+                fontFamily: V2.ui,
+                fontSize: 13,
+                fontWeight: 400,
+                padding: compactLabels ? "8px 6px" : "8px 4px",
+                minHeight: 36,
+                textDecoration: "none",
+              }}
+            >
+              <ButtonIcon name="download" color={V2.inkMute} active={false} />
+              {!compactLabels && <span>PDF</span>}
+            </a>
+          )}
           <ChromeButton
             label={isFullscreen ? "Verlaten" : "Volledig scherm"}
             iconName={isFullscreen ? "fullscreen-exit" : "fullscreen"}
             active={isFullscreen}
             onClick={toggleFullscreen}
-            compact={isMobile}
+            compact={compactLabels}
           />
 
-          {!isMobile && (
+          {!compactLabels && !readOnly && childId && (
             <Link
               href={`/generate/${childId}`}
               style={{ color: V2.inkMute, textDecoration: "none", whiteSpace: "nowrap" }}
@@ -339,7 +400,30 @@ export function BookViewerV3({
               Nieuw verhaal
             </Link>
           )}
-          {!isMobile && <SignOutButtonV2 />}
+          {!compactLabels && !readOnly && <SignOutButtonV2 />}
+
+          {readOnly && (
+            <Link
+              href="/"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontFamily: V2.ui,
+                fontSize: 13,
+                fontWeight: 500,
+                color: V2.paper,
+                background: V2.ink,
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                padding: "8px 16px",
+                borderRadius: 999,
+                letterSpacing: "0.02em",
+              }}
+            >
+              {isMobile ? "Maak je eigen →" : "Maak je eigen verhaal →"}
+            </Link>
+          )}
         </div>
       </nav>
 
@@ -1250,7 +1334,7 @@ function ChromeButton({
   compact,
 }: {
   label: string;
-  iconName: "heart" | "speaker" | "x" | "fullscreen" | "fullscreen-exit";
+  iconName: "heart" | "speaker" | "x" | "fullscreen" | "fullscreen-exit" | "share" | "redo";
   active: boolean;
   activeColor?: string;
   onClick: () => void;
@@ -1289,10 +1373,45 @@ function ButtonIcon({
   color,
   active,
 }: {
-  name: "heart" | "speaker" | "x" | "download" | "fullscreen" | "fullscreen-exit";
+  name: "heart" | "speaker" | "x" | "download" | "fullscreen" | "fullscreen-exit" | "share" | "redo";
   color: string;
   active: boolean;
 }) {
+  if (name === "redo") {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+        <path d="M21 3v5h-5" />
+      </svg>
+    );
+  }
+  if (name === "share") {
+    return (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M12 16V4" />
+        <path d="M7 9l5-5 5 5" />
+        <path d="M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+      </svg>
+    );
+  }
   if (name === "heart") {
     return (
       <IconV2 name="heart" size={16} color={color} filled={active} />

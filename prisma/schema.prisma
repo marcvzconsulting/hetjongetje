@@ -396,6 +396,10 @@ model Story {
   /// Dashboard-marge gebruikt SUM(aiCostCents) voor stories die het
   /// hebben en valt voor de rest terug op de €0,15-schatting.
   aiCostCents         Int?        @map("ai_cost_cents")
+  /// Unguessable token for `/s/[token]` public reader. Null = niet gedeeld;
+  /// non-null = anyone with the link can read (rate-limited). Generated/
+  /// revoked via the "Delen"-modal in de story-reader.
+  shareToken          String?     @unique @map("share_token")
   createdAt           DateTime    @default(now()) @map("created_at")
   updatedAt           DateTime    @updatedAt @map("updated_at")
 

@@ -17,6 +17,8 @@ interface Props {
   regenerationLimit: number;
   initialFeedbackKind: "up" | "down" | null;
   initialFeedbackNote: string | null;
+  /** Bestaande share-token uit DB; null = nog niet gedeeld. */
+  initialShareToken: string | null;
 }
 
 export function StoryPageClient({
@@ -30,6 +32,7 @@ export function StoryPageClient({
   regenerationLimit,
   initialFeedbackKind,
   initialFeedbackNote,
+  initialShareToken,
 }: Props) {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
@@ -45,6 +48,51 @@ export function StoryPageClient({
   const [regenFeedback, setRegenFeedback] = useState<string>("");
   const [, startTransition] = useTransition();
   const [reactOpen, setReactOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
+  const [shareInFlight, setShareInFlight] = useState(false);
+  const [copyConfirmed, setCopyConfirmed] = useState(false);
+
+  const shareUrl = shareToken
+    ? typeof window !== "undefined"
+      ? `${window.location.origin}/s/${shareToken}`
+      : `/s/${shareToken}`
+    : null;
+
+  async function enableShare() {
+    setShareInFlight(true);
+    try {
+      const res = await fetch(`/api/stories/${storyId}/share`, { method: "POST" });
+      if (res.ok) {
+        const data = (await res.json()) as { shareToken: string };
+        setShareToken(data.shareToken);
+      }
+    } finally {
+      setShareInFlight(false);
+    }
+  }
+
+  async function disableShare() {
+    setShareInFlight(true);
+    try {
+      const res = await fetch(`/api/stories/${storyId}/share`, { method: "DELETE" });
+      if (res.ok) setShareToken(null);
+    } finally {
+      setShareInFlight(false);
+    }
+  }
+
+  async function copyShareLink() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopyConfirmed(true);
+      setTimeout(() => setCopyConfirmed(false), 2000);
+    } catch {
+      // clipboard kan blocked zijn (oude browser of permissie geweigerd) —
+      // de input blijft selecteerbaar zodat de ouder zelf kan kopiëren.
+    }
+  }
 
   const canRegenerate = regenerationCount < regenerationLimit;
   const hasFeedback = feedbackKind !== null;
@@ -124,42 +172,11 @@ export function StoryPageClient({
         storyTitle={storyTitle}
         isFavorite={isFavorite}
         onToggleFavorite={toggleFavorite}
+        onShareClick={() => setShareOpen(true)}
+        isShared={!!shareToken}
+        onReactClick={() => setReactOpen(true)}
+        hasFeedback={hasFeedback}
       />
-
-      {/* Floating button bottom-right of the reader. The reader itself
-          uses position:fixed for chrome and full-screen layout, so a
-          fixed button on top is the only way to surface these actions
-          without scrolling out of the immersive view. */}
-      <button
-        type="button"
-        aria-label="Reageren of opnieuw genereren"
-        onClick={() => setReactOpen(true)}
-        style={{
-          position: "fixed",
-          bottom: 20,
-          right: 20,
-          zIndex: 50,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 16px",
-          background: V2.ink,
-          color: V2.paper,
-          border: "none",
-          borderRadius: 999,
-          fontFamily: V2.ui,
-          fontSize: 13,
-          fontWeight: 500,
-          letterSpacing: "0.04em",
-          cursor: "pointer",
-          boxShadow: "0 6px 20px rgba(20,20,46,0.25)",
-        }}
-      >
-        <span aria-hidden style={{ fontSize: 14 }}>
-          {hasFeedback ? "✓" : "✱"}
-        </span>
-        <span>Reageren</span>
-      </button>
 
       {/* Modal — slides up from bottom on mobile, centered card on
           desktop. Click outside or press Esc closes. */}
@@ -370,6 +387,148 @@ export function StoryPageClient({
                 </div>
               )}
             </div>
+          </div>
+        </ReactModal>
+      )}
+
+      {/* Share modal — toon link wanneer aan, knop wanneer uit. */}
+      {shareOpen && (
+        <ReactModal onClose={() => setShareOpen(false)}>
+          <div style={{ display: "grid", gap: 18 }}>
+            <div>
+              <h2
+                style={{
+                  fontFamily: V2.display,
+                  fontWeight: 300,
+                  fontSize: 22,
+                  letterSpacing: -0.4,
+                  margin: "0 0 6px",
+                  color: V2.ink,
+                }}
+              >
+                Verhaal delen
+              </h2>
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.inkSoft,
+                  margin: 0,
+                  lineHeight: 1.55,
+                }}
+              >
+                Met een deellink kunnen opa, oma of vrienden het verhaal
+                lezen zonder account. De link blijft werken tot je 'm
+                hier uitschakelt.
+              </p>
+            </div>
+
+            {shareToken && shareUrl ? (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "stretch",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <input
+                    readOnly
+                    value={shareUrl}
+                    onFocus={(e) => e.currentTarget.select()}
+                    style={{
+                      flex: "1 1 220px",
+                      padding: "10px 12px",
+                      fontFamily: V2.mono,
+                      fontSize: 13,
+                      color: V2.ink,
+                      background: V2.paperDeep,
+                      border: `1px solid ${V2.paperShade}`,
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={copyShareLink}
+                    style={{
+                      padding: "10px 18px",
+                      fontFamily: V2.ui,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      letterSpacing: "0.04em",
+                      background: copyConfirmed ? V2.goldSoft : V2.ink,
+                      color: copyConfirmed ? V2.goldDeep : V2.paper,
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {copyConfirmed ? "Gekopieerd ✓" : "Kopieer link"}
+                  </button>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                    paddingTop: 10,
+                    borderTop: `1px solid ${V2.paperShade}`,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: V2.body,
+                      fontSize: 13,
+                      color: V2.inkMute,
+                    }}
+                  >
+                    Verhaal staat nu publiek (alleen via deze link).
+                  </span>
+                  <button
+                    type="button"
+                    onClick={disableShare}
+                    disabled={shareInFlight}
+                    style={{
+                      fontFamily: V2.ui,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      letterSpacing: "0.04em",
+                      padding: "8px 16px",
+                      background: "transparent",
+                      color: V2.ink,
+                      border: `1px solid ${V2.paperShade}`,
+                      cursor: shareInFlight ? "default" : "pointer",
+                      opacity: shareInFlight ? 0.6 : 1,
+                    }}
+                  >
+                    {shareInFlight ? "Even…" : "Stop met delen"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={enableShare}
+                disabled={shareInFlight}
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  letterSpacing: "0.04em",
+                  padding: "12px 22px",
+                  background: V2.ink,
+                  color: V2.paper,
+                  border: "none",
+                  cursor: shareInFlight ? "default" : "pointer",
+                  opacity: shareInFlight ? 0.7 : 1,
+                  justifySelf: "start",
+                }}
+              >
+                {shareInFlight ? "Bezig…" : "Genereer deellink →"}
+              </button>
+            )}
           </div>
         </ReactModal>
       )}

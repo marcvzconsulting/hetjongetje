@@ -54,6 +54,7 @@ export default async function StoryPage({ params }: Props) {
       regenerationLimit={1}
       initialFeedbackKind={story.feedbackKind as "up" | "down" | null}
       initialFeedbackNote={story.feedbackNote}
+      initialShareToken={story.shareToken}
     />
   );
 }
