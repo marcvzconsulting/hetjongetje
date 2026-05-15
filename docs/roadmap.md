@@ -85,21 +85,19 @@ Twee items uit de audit zijn bewust **niet** doorgevoerd (te lage impact voor hu
 
 ---
 
-## Fase 5 — Groei / marketing (~3-4 uur)
+## Fase 5 — Groei / marketing ✅ (klaar 2026-05-15)
 
 > Doel: features die pas waardevol zijn bij actief werven van klanten.
 
-13. **Publieke share-link voor gedeelde verhalen** — `/s/[token]` met unguessable token, leesbaar zonder login (opa/oma op telefoon), rate-limited en optioneel met opt-out per verhaal.
-14. **OG-images per verhaal** — automatisch een 1200×630 preview met titel + cover-illustratie, voor WhatsApp/Facebook-shares. Vercel OG-image-license is gratis op Hobby-tier.
-15. **SEO-metadata + structured data** — meta-tags + JSON-LD op de landing, zodat Google een rich snippet kan tonen.
-16. **AEO (Answer Engine Optimization) — vindbaarheid voor AI** — getriggerd door een Framer-rapport dat de huidige site op 73/100 scoort. Concrete punten:
-    - **Freshness signals** — `datePublished` / `dateModified` op de landing, blog-achtige content en evt. de FAQ. AI-bots zien content zonder datum als "verouderd".
-    - **Citation-links** — minimaal 3 externe links uit de body naar gezaghebbende bronnen (kindergeneeskunde, voorleescultuur, taalontwikkeling) zodat we als hub-pagina herkenbaar worden.
-    - **Author / byline** — duidelijk wie er achter de site zit (MVZ Consulting + persoon), met JSON-LD `Person` of `Organization`.
-    - **AI-crawlers** — `robots.txt` expliciet `Allow` zetten voor `GPTBot`, `ClaudeBot`, `PerplexityBot`, `Google-Extended` (nu impliciet, maar kan strakker).
-    - **FAQ-style content** — bestaande `/veelgestelde-vragen` als JSON-LD `FAQPage` markup uitleveren.
-    - Overlapt met item 15; zou samen in één PR kunnen.
-17. **Referral-systeem** — invitee-code per user, "stuur een vriend, beide een gratis verhaal", tracking + auto-credit-grant bij eerste betaling van de uitgenodigde.
+13. ✅ **Publieke share-link voor gedeelde verhalen** — `/s/[token]` met unguessable token (~132 bits), read-only reader-modus van BookViewerV3, rate-limited 60/min per IP, noindex via metadata + robots-disallow. Aan/uit via een "Delen"-modal in de story-reader; chrome heeft nu een share-icoon.
+14. ✅ **OG-images per verhaal** — `/s/[token]/opengraph-image.tsx` rendert dynamisch een 1200×630 met titel + kindnaam + eerste illustratie. Twitter card + Open Graph metadata gekoppeld.
+15. ✅ **SEO-metadata + structured data** — JSON-LD `@graph` op landing met Organization + WebSite + WebPage + Product, met `datePublished` / `dateModified` voor freshness.
+16. ✅ **AEO (Answer Engine Optimization)** — alle deelpunten doorgevoerd:
+    - Freshness via `datePublished` / `dateModified` in JSON-LD.
+    - 3 citation-links op `/over-ons` (Nederlands Jeugdinstituut, Stichting Lezen, Leesmonitor) + AboutPage/Person JSON-LD met byline naar MVZ Consulting.
+    - `robots.ts` heeft expliciete Allow-blokken voor GPTBot, OAI-SearchBot, ClaudeBot, anthropic-ai, PerplexityBot, Perplexity-User, Google-Extended, Applebot-Extended, CCBot.
+    - `/veelgestelde-vragen` levert nu FAQPage JSON-LD uit, gevoed door een nieuw `FaqEntry`-model in de DB. Admin CRUD-UI op `/admin/faq` (sortOrder + publish-toggle + verwijderen).
+17. ✅ **Referral-systeem** — `User.referralCode` (lazy-generated, 6-char base32 zonder ambigue chars), `referredByUserId`, `referralBonusGrantedAt`. `/r/[code]` zet `ov_ref`-cookie (30d, httpOnly, lax) → bij registratie wordt de invitee gekoppeld en krijgt direct +1 storyCredit cadeau. Bij eerste betaalde order van de invitee krijgt de inviter ook +1 (idempotent via timestamp). Dashboard heeft een ReferralCard met copy-link + Web Share API fallback.
 
 ---
 
@@ -130,8 +128,8 @@ Uit de security-deferred-hardening sessie van 2026-04-29:
 
 Volgende logische stappen:
 
-1. **Fase 5** wanneer je actief gaat werven — share-links + AEO + SEO + referral hangen aan elkaar.
-2. **Drukker-API** is de grootste single-feature die nog open staat. Hangt aan jouw keuze tussen PrintAPI/Peecho.
-3. **Onboarding-tour effectiviteit meten** — kijken of het cohort-overzicht in admin laat zien dat onboarding-uitval omlaag gaat zodra echte users binnenkomen.
+1. **Drukker-API** is de grootste single-feature die nog open staat. Hangt aan jouw keuze tussen PrintAPI/Peecho.
+2. **Onboarding-tour effectiviteit meten** — kijken of het cohort-overzicht in admin laat zien dat onboarding-uitval omlaag gaat zodra echte users binnenkomen.
+3. **Referral-conversie meten** — admin-stat toevoegen die laat zien hoeveel invitees per inviter er zijn en welk % tot een betaalde order leidt.
 
-De roadmap is verder leeg op fase 5 + parked-items na. We zijn ahead of plan.
+Alle 5 fases zijn klaar. Alleen parked-items + "op jouw bord"-keuzes resten.
