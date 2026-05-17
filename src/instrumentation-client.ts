@@ -27,6 +27,11 @@ Sentry.init({
     "ResizeObserver loop limit exceeded",
     "ResizeObserver loop completed with undelivered notifications",
     "Non-Error promise rejection captured",
+    // Tracker-blocker / anti-tracking extensies (Brave Shields, Ghostery,
+    // Privacy Badger etc.) injecteren scripts die deze ReferenceErrors
+    // gooien op cookie-banner-klik.
+    /TrackerStorageType/,
+    /__ChromiumStackTrace/,
     // Sentry noise
     "Failed to fetch",
   ],
