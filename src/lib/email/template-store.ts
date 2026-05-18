@@ -220,6 +220,12 @@ export const EDITABLE_TEMPLATES = [
     description: "Welkomstmail na nieuwsbrief-aanmelding.",
     vars: ["email", "unsubscribeUrl"],
   },
+  {
+    code: "newsletter-unsubscribed",
+    label: "Nieuwsbrief afgemeld",
+    description: "Bevestigingsmail na afmelden van de nieuwsbrief.",
+    vars: ["email", "resubscribeUrl"],
+  },
 ] as const;
 
 export type EditableTemplateCode = (typeof EDITABLE_TEMPLATES)[number]["code"];

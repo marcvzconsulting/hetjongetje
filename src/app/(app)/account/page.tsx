@@ -15,6 +15,7 @@ import {
   changePasswordAction,
   deleteAccountAction,
   toggleNewsletterAction,
+  submitAccountUnsubscribeReasonAction,
   cancelSubscriptionAction,
 } from "./actions";
 
@@ -23,6 +24,9 @@ type SearchParams = Promise<{
   error?: string;
   /** "reason" → toon de opzeg-survey i.p.v. de losse opzeg-knop. */
   cancelStep?: string;
+  /** "survey" → toon de nieuwsbrief-afmeld-survey inline na uitschrijven. */
+  newsletterStep?: string;
+  newsletterError?: string;
 }>;
 
 const SAVED_MESSAGES: Record<string, string> = {
@@ -31,9 +35,19 @@ const SAVED_MESSAGES: Record<string, string> = {
   password: "Wachtwoord gewijzigd",
   newsletter_on: "Je staat op de nieuwsbrief",
   newsletter_off: "Je bent uitgeschreven van de nieuwsbrief",
+  newsletter_off_thanks:
+    "Bedankt voor je feedback. We gebruiken het om de nieuwsbrief beter te maken.",
   subscription_cancelled:
     "Je abonnement is opgezegd. Je behoudt toegang tot het einde van de huidige periode.",
 };
+
+const NEWSLETTER_REASON_OPTIONS: { value: string; label: string; hint?: string }[] = [
+  { value: "te_vaak", label: "Ik krijg te veel mails", hint: "Frequentie te hoog" },
+  { value: "niet_relevant", label: "De inhoud past niet bij me" },
+  { value: "nooit_aangemeld", label: "Ik heb me hier nooit voor aangemeld", hint: "Spam-melding" },
+  { value: "tijdelijk", label: "Tijdelijke pauze", hint: "Misschien kom ik later terug" },
+  { value: "anders", label: "Anders, namelijk:" },
+];
 
 const ERROR_MESSAGES: Record<string, string> = {
   profile_missing: "Naam en email zijn verplicht",
@@ -280,51 +294,72 @@ export default async function AccountPage({
 
         {/* Newsletter */}
         <Section
+          id="newsletter"
           title="Nieuwsbrief"
           meta="Af en toe een mailtje. Geen spam, beloofd."
         >
-          <form action={toggleNewsletterAction}>
-            <input
-              type="hidden"
-              name="optIn"
-              value={user.newsletterOptIn ? "0" : "1"}
+          {(params.saved === "newsletter_on" ||
+            params.saved === "newsletter_off" ||
+            params.saved === "newsletter_off_thanks") && (
+            <InlineConfirm
+              kind={params.saved === "newsletter_on" ? "on" : "off"}
+            >
+              {params.saved === "newsletter_on"
+                ? "Je staat op de nieuwsbrief — bij de eerstvolgende editie zit je erbij."
+                : params.saved === "newsletter_off_thanks"
+                  ? "Bedankt voor je feedback. We gebruiken het om de nieuwsbrief beter te maken."
+                  : "Je bent uitgeschreven. Geen mails meer van ons."}
+            </InlineConfirm>
+          )}
+
+          {params.newsletterStep === "survey" ? (
+            <NewsletterReasonForm
+              noteRequired={params.newsletterError === "note_required"}
             />
-            <p
-              style={{
-                fontFamily: V2.body,
-                fontSize: 15,
-                color: V2.inkSoft,
-                margin: "0 0 18px",
-                lineHeight: 1.6,
-                maxWidth: "60ch",
-              }}
-            >
-              {user.newsletterOptIn ? (
-                <>
-                  Je staat momenteel{" "}
-                  <strong style={{ color: V2.ink }}>aangemeld</strong> voor
-                  de nieuwsbrief. Je ontvangt af en toe een update over
-                  nieuwe functies en seizoens-tips voor het voorlezen.
-                </>
-              ) : (
-                <>
-                  Je staat momenteel{" "}
-                  <strong style={{ color: V2.ink }}>niet aangemeld</strong>.
-                  Aanmelden kun je altijd uitzetten via deze pagina of via
-                  de afmeldlink onderaan elke nieuwsbrief.
-                </>
-              )}
-            </p>
-            <EBtnSubmit
-              kind={user.newsletterOptIn ? "ghost" : "primary"}
-              size="md"
-              pendingLabel="Bezig…"
-            >
-              {user.newsletterOptIn
-                ? "Uitschrijven"
-                : "Aanmelden voor de nieuwsbrief →"}
-            </EBtnSubmit>
-          </form>
+          ) : (
+            <form action={toggleNewsletterAction}>
+              <input
+                type="hidden"
+                name="optIn"
+                value={user.newsletterOptIn ? "0" : "1"}
+              />
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 15,
+                  color: V2.inkSoft,
+                  margin: "0 0 18px",
+                  lineHeight: 1.6,
+                  maxWidth: "60ch",
+                }}
+              >
+                {user.newsletterOptIn ? (
+                  <>
+                    Je staat momenteel{" "}
+                    <strong style={{ color: V2.ink }}>aangemeld</strong> voor
+                    de nieuwsbrief. Je ontvangt af en toe een update over
+                    nieuwe functies en seizoens-tips voor het voorlezen.
+                  </>
+                ) : (
+                  <>
+                    Je staat momenteel{" "}
+                    <strong style={{ color: V2.ink }}>niet aangemeld</strong>.
+                    Aanmelden kun je altijd uitzetten via deze pagina of via
+                    de afmeldlink onderaan elke nieuwsbrief.
+                  </>
+                )}
+              </p>
+              <EBtnSubmit
+                kind={user.newsletterOptIn ? "ghost" : "primary"}
+                size="md"
+                pendingLabel="Bezig…"
+              >
+                {user.newsletterOptIn
+                  ? "Uitschrijven"
+                  : "Aanmelden voor de nieuwsbrief →"}
+              </EBtnSubmit>
+            </form>
+          )}
         </Section>
 
         {/* Subscription */}
@@ -1110,6 +1145,227 @@ function FlashSaved({ children }: { children: React.ReactNode }) {
         fontFamily: V2.body,
         fontSize: 14,
         color: V2.ink,
+      }}
+    >
+      ✓ {children}
+    </div>
+  );
+}
+
+/**
+ * Inline waarom-survey die verschijnt direct na een uitschrijving via
+ * /account. Klant blijft binnen z'n eigen portaal (geen redirect naar
+ * de publieke /unsubscribe-pagina). Submit slaat de reden op via
+ * `submitAccountUnsubscribeReasonAction`; "Liever overslaan" linkt
+ * gewoon weg met state-reset.
+ */
+function NewsletterReasonForm({ noteRequired }: { noteRequired: boolean }) {
+  return (
+    <form
+      action={submitAccountUnsubscribeReasonAction}
+      style={{ display: "grid", gap: 20, marginTop: 4, minWidth: 0 }}
+    >
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 15,
+          color: V2.inkSoft,
+          margin: 0,
+          lineHeight: 1.6,
+          maxWidth: "60ch",
+        }}
+      >
+        Mag ik nog kort iets vragen — dat helpt om de nieuwsbrief beter te
+        maken. Optioneel, je bent al uitgeschreven.
+      </p>
+
+      <fieldset
+        style={{
+          border: "none",
+          padding: 0,
+          margin: 0,
+          display: "grid",
+          gap: 10,
+          minInlineSize: 0,
+          minWidth: 0,
+        }}
+      >
+        <legend
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: V2.inkMute,
+            marginBottom: 4,
+          }}
+        >
+          Waarom afgemeld?
+        </legend>
+        {NEWSLETTER_REASON_OPTIONS.map((opt) => (
+          <label
+            key={opt.value}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+              padding: "14px 16px",
+              background: V2.paper,
+              border: `1px solid ${V2.paperShade}`,
+              cursor: "pointer",
+              fontFamily: V2.body,
+              fontSize: 15,
+              color: V2.ink,
+              lineHeight: 1.4,
+            }}
+          >
+            <input
+              type="radio"
+              name="reason"
+              value={opt.value}
+              required
+              style={{ marginTop: 4, flex: "0 0 auto" }}
+            />
+            <span
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              <span>{opt.label}</span>
+              {opt.hint && (
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontStyle: "italic",
+                    color: V2.inkMute,
+                  }}
+                >
+                  {opt.hint}
+                </span>
+              )}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+
+      <div>
+        <label
+          htmlFor="newsletter-note"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: V2.inkMute,
+            display: "block",
+            marginBottom: 6,
+          }}
+        >
+          Toelichting{" "}
+          <span
+            style={{
+              fontWeight: 400,
+              textTransform: "none",
+              letterSpacing: 0,
+            }}
+          >
+            (optioneel — verplicht bij &ldquo;Anders&rdquo;)
+          </span>
+        </label>
+        <textarea
+          id="newsletter-note"
+          name="note"
+          rows={4}
+          maxLength={2000}
+          placeholder="Wat had je anders gewild?"
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "12px 14px",
+            fontFamily: V2.body,
+            fontSize: 15,
+            lineHeight: 1.5,
+            color: V2.ink,
+            background: V2.paper,
+            border: `1px solid ${noteRequired ? V2.heart : V2.paperShade}`,
+            outline: "none",
+            resize: "vertical",
+          }}
+        />
+        {noteRequired && (
+          <p
+            style={{
+              marginTop: 6,
+              fontFamily: V2.body,
+              fontSize: 13,
+              color: V2.heart,
+            }}
+          >
+            Vul een korte toelichting in wanneer je &ldquo;Anders&rdquo; kiest.
+          </p>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <EBtnSubmit kind="primary" size="md" pendingLabel="Versturen…">
+          Verstuur →
+        </EBtnSubmit>
+        <Link
+          href="/account"
+          style={{
+            fontFamily: V2.ui,
+            fontSize: 13,
+            color: V2.inkMute,
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+          }}
+        >
+          Liever overslaan
+        </Link>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Inline-bevestiging direct binnen een Section — voor acties die wegduwen
+ * van de globale FlashSaved bovenaan de pagina (waar je 'm zou missen
+ * als je halverwege de pagina op een knop klikt en de scroll wordt
+ * behouden).
+ */
+function InlineConfirm({
+  kind,
+  children,
+}: {
+  kind: "on" | "off";
+  children: React.ReactNode;
+}) {
+  const accent = kind === "on" ? V2.gold : V2.inkMute;
+  const bg = kind === "on" ? "rgba(201,169,97,0.14)" : V2.paperDeep;
+  return (
+    <div
+      style={{
+        marginBottom: 18,
+        padding: "12px 16px",
+        background: bg,
+        borderLeft: `2px solid ${accent}`,
+        fontFamily: V2.body,
+        fontSize: 14,
+        color: V2.ink,
+        lineHeight: 1.45,
       }}
     >
       ✓ {children}

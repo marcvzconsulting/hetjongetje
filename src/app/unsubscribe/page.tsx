@@ -1,8 +1,14 @@
 import { ContentPage, Lead, P } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
 import { prisma } from "@/lib/db";
-import { verifyUnsubscribeToken } from "@/lib/newsletter/unsubscribe-token";
+import {
+  verifyUnsubscribeToken,
+  signResubscribeToken,
+} from "@/lib/newsletter/unsubscribe-token";
 import { deleteContact } from "@/lib/email/brevo-contacts";
+import { sendMail } from "@/lib/email/client";
+import { buildAppUrl } from "@/lib/url";
+import { buildNewsletterUnsubscribedMail } from "@/lib/email/templates/newsletter-unsubscribed";
 import { submitUnsubscribeReasonAction } from "./actions";
 
 type SearchParams = Promise<{
@@ -60,21 +66,60 @@ export default async function UnsubscribePage({
   }
 
   // ── Side-effects: idempotent afmelden bij elke aanroep ──────
-  // We doen dit bij elke render zodat een refresh of "thanks=1"-bezoek
-  // niet ineens iemand weer aanmeldt. updateMany doet niets als er al
-  // niks meer matched.
-  await prisma.user.updateMany({
+  // updateMany retourneert het aantal aangepaste rijen, zodat we de
+  // bevestigingsmail alleen sturen bij de eerste keer dat deze user
+  // daadwerkelijk wordt uitgeschreven.
+  const userUpdate = await prisma.user.updateMany({
     where: { email, newsletterOptIn: true },
     data: { newsletterOptIn: false, newsletterOptInAt: null },
   });
-  await prisma.newsletterSignup.updateMany({
+  const signupUpdate = await prisma.newsletterSignup.updateMany({
     where: { email, unsubscribedAt: null },
     data: { unsubscribedAt: new Date() },
   });
+  const justUnsubscribed = userUpdate.count + signupUpdate.count > 0;
   try {
     await deleteContact(email);
   } catch (err) {
     console.error("[unsubscribe] Brevo delete failed", err);
+  }
+
+  if (justUnsubscribed) {
+    try {
+      // Naam ophalen voor persoonlijke aanhef; fallback op leeg.
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: { name: true },
+      });
+      const signup = user
+        ? null
+        : await prisma.newsletterSignup.findUnique({
+            where: { email },
+            select: { name: true },
+          });
+      // One-click herinschrijving via signed token — werkt voor zowel
+      // account-houders als losse signups, en de /resubscribe-route
+      // stuurt door naar /account of landing afhankelijk van wat er is.
+      const reToken = signResubscribeToken(email);
+      const resubscribeUrl = await buildAppUrl(
+        `/resubscribe?email=${encodeURIComponent(email)}&token=${reToken}`,
+      );
+      const mail = await buildNewsletterUnsubscribedMail({
+        name: user?.name ?? signup?.name ?? null,
+        email,
+        resubscribeUrl,
+      });
+      await sendMail({
+        to: email,
+        toName: user?.name ?? signup?.name ?? undefined,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["newsletter-unsubscribed"],
+      });
+    } catch (err) {
+      console.error("[unsubscribe] confirmation mail failed", err);
+    }
   }
 
   // ── Bedankt-staat (na survey-submit) ────────────────────────

@@ -22,6 +22,12 @@ import {
   cancelSubscription,
   isCancellationReason,
 } from "@/lib/payments/subscriptions";
+import {
+  signUnsubscribeToken,
+  signResubscribeToken,
+} from "@/lib/newsletter/unsubscribe-token";
+import { buildNewsletterWelcomeMail } from "@/lib/email/templates/newsletter-welcome";
+import { buildNewsletterUnsubscribedMail } from "@/lib/email/templates/newsletter-unsubscribed";
 
 export async function updateProfileAction(formData: FormData) {
   const userId = await requireUser();
@@ -121,8 +127,108 @@ export async function toggleNewsletterAction(formData: FormData) {
     console.error("[account] newsletter toggle sync failed", err);
   }
 
+  // Bevestigingsmail — welkom of afgemeld, naargelang het geval.
+  try {
+    if (optIn) {
+      const unsubscribeToken = signUnsubscribeToken(user.email);
+      const unsubscribeUrl = await buildAppUrl(
+        `/unsubscribe?email=${encodeURIComponent(user.email)}&token=${unsubscribeToken}`,
+      );
+      const mail = await buildNewsletterWelcomeMail({
+        name: user.name,
+        email: user.email,
+        unsubscribeUrl,
+      });
+      await sendMail({
+        to: user.email,
+        toName: user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["newsletter-welcome"],
+      });
+    } else {
+      // One-click herinschrijving — signed token zodat een klik in de
+      // mail meteen werkt zonder dat de gebruiker eerst hoeft in te
+      // loggen of nog een knop te zoeken.
+      const reToken = signResubscribeToken(user.email);
+      const resubscribeUrl = await buildAppUrl(
+        `/resubscribe?email=${encodeURIComponent(user.email)}&token=${reToken}`,
+      );
+      const mail = await buildNewsletterUnsubscribedMail({
+        name: user.name,
+        email: user.email,
+        resubscribeUrl,
+      });
+      await sendMail({
+        to: user.email,
+        toName: user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["newsletter-unsubscribed"],
+      });
+    }
+  } catch (err) {
+    console.error("[account] newsletter confirmation mail failed", err);
+  }
+
   revalidatePath("/account");
-  redirect(optIn ? "/account?saved=newsletter_on" : "/account?saved=newsletter_off");
+
+  if (!optIn) {
+    // De uitgeschreven user krijgt op /account de inline waarom-survey
+    // te zien (newsletterStep=survey). Submit blijft binnen /account.
+    // Hash anker zorgt dat de browser meteen naar de Nieuwsbrief-sectie
+    // scrollt i.p.v. boven aan de pagina te beginnen.
+    redirect("/account?saved=newsletter_off&newsletterStep=survey#newsletter");
+  }
+  redirect("/account?saved=newsletter_on#newsletter");
+}
+
+const VALID_NEWSLETTER_REASONS = new Set([
+  "te_vaak",
+  "niet_relevant",
+  "nooit_aangemeld",
+  "tijdelijk",
+  "anders",
+]);
+
+/**
+ * Slaat het waarom-antwoord op nadat een ingelogde gebruiker zich via
+ * `/account` heeft uitgeschreven. Volledig optioneel — we doen niets
+ * met de afmelding zelf hier; die is al verwerkt door
+ * `toggleNewsletterAction` voordat de survey verscheen.
+ */
+export async function submitAccountUnsubscribeReasonAction(formData: FormData) {
+  const userId = await requireUser();
+
+  const reason = trim(formData.get("reason"));
+  const note = trim(formData.get("note"));
+
+  if (!VALID_NEWSLETTER_REASONS.has(reason)) {
+    redirect("/account?saved=newsletter_off&newsletterStep=survey");
+  }
+  if (reason === "anders" && note.length === 0) {
+    redirect(
+      "/account?saved=newsletter_off&newsletterStep=survey&newsletterError=note_required",
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  await prisma.newsletterUnsubscribeReason.create({
+    data: {
+      email: user?.email ?? null,
+      reason,
+      note: note.length > 0 ? note.slice(0, 2000) : null,
+    },
+  });
+
+  revalidatePath("/account");
+  redirect("/account?saved=newsletter_off_thanks#newsletter");
 }
 
 export async function updateAddressAction(formData: FormData) {
