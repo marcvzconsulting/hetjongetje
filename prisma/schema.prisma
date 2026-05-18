@@ -128,6 +128,29 @@ model NewsletterSignup {
   @@map("newsletter_signups")
 }
 
+/// Reden-survey die wordt getoond na een nieuwsbrief-afmelding. Volledig
+/// optioneel — afmelden zelf gebeurt direct bij token-klik, deze tabel
+/// vangt alleen het waarom-vervolg op. Append-only zodat we trends over
+/// tijd kunnen zien. E-mail is hier optioneel (we kunnen 'm bewaren om
+/// duplicate-submits af te vangen of weglaten voor anonimiteit).
+model NewsletterUnsubscribeReason {
+  id        String   @id @default(uuid())
+  email     String?
+  /// Vaste set: "te_vaak" | "niet_relevant" | "nooit_aangemeld" |
+  /// "tijdelijk" | "anders". Free-form-vrije veld voor toekomstige
+  /// uitbreiding zonder migratie.
+  reason    String
+  /// Optionele toelichting. Verplicht ingevuld voor reason="anders" via
+  /// validatie in de server action; voor de rest mag leeg.
+  note      String?  @db.Text
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([reason])
+  @@map("newsletter_unsubscribe_reasons")
+}
+
 /// One-shot tokens for passwordless ("magic-link") login. Raw token in the
 /// email link; only the SHA-256 hash is stored. Lifetime is short (15 min)
 /// because the email itself is the second factor.

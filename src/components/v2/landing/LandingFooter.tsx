@@ -15,6 +15,27 @@ export function LandingFooter() {
         background: V2.paper,
       }}
     >
+      {/* Mobiele regels — homepage definieert dezelfde rules in z'n
+          eigen ResponsiveStyles, maar content-pagina's missen die. Hier
+          inline zodat /privacy, /unsubscribe etc. dezelfde compacte
+          footer-layout krijgen. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+@media (max-width: 760px) {
+  .lp-footer-pad { padding: 36px 20px !important; }
+  .lp-footer-grid { grid-template-columns: 1fr !important; gap: 28px !important; }
+  .lp-footer-links {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 14px 20px !important;
+    justify-content: stretch !important;
+    align-self: stretch !important;
+  }
+}
+`,
+        }}
+      />
       <div
         className="lp-footer-grid"
         style={{

@@ -8,6 +8,7 @@ import { Logo, EBtn } from "@/components/v2";
 export function LandingNav() {
   return (
     <nav
+      className="ln-pad"
       style={{
         display: "flex",
         alignItems: "center",
@@ -19,10 +20,24 @@ export function LandingNav() {
         flexWrap: "wrap",
       }}
     >
+      {/* Mobiele consistency met de homepage-Nav: hide content-links
+          onder 760px zodat de balk niet uit z'n voegen barst. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+@media (max-width: 760px) {
+  .ln-pad { padding: 16px 20px !important; }
+  .ln-cluster { gap: 14px !important; }
+  .ln-mobile-hide { display: none !important; }
+}
+`,
+        }}
+      />
       <Link href="/" aria-label="Ons Verhaaltje, home">
         <Logo size={22} />
       </Link>
       <div
+        className="ln-cluster"
         style={{
           display: "flex",
           gap: 32,
@@ -35,18 +50,21 @@ export function LandingNav() {
       >
         <Link
           href="/hoe-het-werkt"
+          className="ln-mobile-hide"
           style={{ color: V2.ink, textDecoration: "none" }}
         >
           Hoe het werkt
         </Link>
         <Link
           href="/veelgestelde-vragen"
+          className="ln-mobile-hide"
           style={{ color: V2.ink, textDecoration: "none" }}
         >
           FAQ
         </Link>
         <Link
           href="/over-ons"
+          className="ln-mobile-hide"
           style={{ color: V2.ink, textDecoration: "none" }}
         >
           Over ons

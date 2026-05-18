@@ -119,6 +119,8 @@ export default async function AdminDashboardPage({
     cancelReasonsThisMonth,
     recentCancelNotes,
     openInboxCount,
+    newsletterReasonsThisMonth,
+    recentNewsletterNotes,
   ] = await Promise.all([
     loadDashboardStats(),
     loadRevenueTimeSeries({
@@ -148,6 +150,18 @@ export default async function AdminDashboardPage({
       },
     }),
     prisma.contactMessage.count({ where: { status: "open" } }),
+    // Nieuwsbrief-afmeld-redenen deze maand — zelfde periode als hierboven.
+    prisma.newsletterUnsubscribeReason.groupBy({
+      by: ["reason"],
+      where: { createdAt: { gte: monthStart } },
+      _count: { _all: true },
+    }),
+    prisma.newsletterUnsubscribeReason.findMany({
+      where: { createdAt: { gte: monthStart }, note: { not: null } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: { createdAt: true, reason: true, note: true },
+    }),
   ]);
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
@@ -269,6 +283,14 @@ export default async function AdminDashboardPage({
         <CancelReasons
           buckets={cancelReasonsThisMonth}
           notes={recentCancelNotes}
+        />
+      </Section>
+
+      {/* ── Nieuwsbrief afmeld-redenen ──────────────────── */}
+      <Section title="Nieuwsbrief afmeld-redenen (deze maand)">
+        <NewsletterReasons
+          buckets={newsletterReasonsThisMonth}
+          notes={recentNewsletterNotes}
         />
       </Section>
 
@@ -895,6 +917,167 @@ function CancelReasons({
                     : "geen reden"}
                 </div>
                 {n.cancellationReasonNote}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Nieuwsbrief afmeld-redenen rapport ────────────────────────────────
+
+const NEWSLETTER_REASON_LABELS: Record<string, string> = {
+  te_vaak: "Te veel mails",
+  niet_relevant: "Niet relevant",
+  nooit_aangemeld: "Nooit aangemeld",
+  tijdelijk: "Tijdelijke pauze",
+  anders: "Anders",
+};
+
+function NewsletterReasons({
+  buckets,
+  notes,
+}: {
+  buckets: { reason: string; _count: { _all: number } }[];
+  notes: { createdAt: Date; reason: string; note: string | null }[];
+}) {
+  const total = buckets.reduce((sum, b) => sum + b._count._all, 0);
+
+  if (total === 0) {
+    return (
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontStyle: "italic",
+          fontSize: 14,
+          color: V2.inkMute,
+          margin: 0,
+        }}
+      >
+        Nog geen afmeldingen met reden deze maand.
+      </p>
+    );
+  }
+
+  const sorted = [...buckets].sort((a, b) => b._count._all - a._count._all);
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "grid",
+          gap: 10,
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          marginBottom: 18,
+        }}
+      >
+        {sorted.map((b) => {
+          const label = NEWSLETTER_REASON_LABELS[b.reason] ?? b.reason;
+          const pct = Math.round((b._count._all / total) * 100);
+          return (
+            <div
+              key={b.reason}
+              style={{
+                padding: "14px 16px",
+                background: V2.paperDeep,
+                border: `1px solid ${V2.paperShade}`,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: V2.inkMute,
+                  marginBottom: 6,
+                }}
+              >
+                {label}
+              </div>
+              <div
+                style={{
+                  fontFamily: V2.display,
+                  fontWeight: 300,
+                  fontSize: 28,
+                  lineHeight: 1,
+                  color: V2.ink,
+                  letterSpacing: -0.6,
+                }}
+              >
+                {b._count._all}
+                <span
+                  style={{
+                    fontFamily: V2.mono,
+                    fontSize: 12,
+                    color: V2.inkMute,
+                    marginLeft: 8,
+                    letterSpacing: 0,
+                  }}
+                >
+                  {pct}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {notes.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: V2.inkMute,
+              marginBottom: 10,
+            }}
+          >
+            Recente toelichtingen
+          </div>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 10,
+            }}
+          >
+            {notes.map((n, i) => (
+              <li
+                key={i}
+                style={{
+                  padding: "10px 14px",
+                  background: V2.paperDeep,
+                  border: `1px solid ${V2.paperShade}`,
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.ink,
+                  lineHeight: 1.5,
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: V2.mono,
+                    fontSize: 11,
+                    color: V2.inkMute,
+                    marginBottom: 4,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  {n.createdAt.toLocaleDateString("nl-NL")}
+                  {" · "}
+                  {NEWSLETTER_REASON_LABELS[n.reason] ?? n.reason}
+                </div>
+                {n.note}
               </li>
             ))}
           </ul>
