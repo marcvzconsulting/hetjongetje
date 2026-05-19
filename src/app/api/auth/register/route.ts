@@ -14,8 +14,7 @@ import {
   REFERRAL_COOKIE,
   resolveReferralCode,
 } from "@/lib/referral";
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@onsverhaaltje.nl";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,8 +80,8 @@ export async function POST(request: NextRequest) {
       console.error("[register] welcome mail failed", mailError);
     }
 
-    // Notify the admin so pending accounts can be reviewed quickly while
-    // we're still in test phase.
+    // Notify alle admin-adressen — één per mail zodat één bouncing
+    // inbox de andere niet blokkeert.
     try {
       const reviewUrl = await buildAppUrl(`/admin/users/${user.id}`);
       const mail = buildAdminNewSignupMail({
@@ -91,15 +90,24 @@ export async function POST(request: NextRequest) {
         createdAt: user.createdAt,
         reviewUrl,
       });
-      await sendMail({
-        to: ADMIN_EMAIL,
-        subject: mail.subject,
-        html: mail.html,
-        text: mail.text,
-        tags: ["admin-new-signup"],
-      });
+      for (const to of getAdminNotifyEmails()) {
+        try {
+          await sendMail({
+            to,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+            tags: ["admin-new-signup"],
+          });
+        } catch (perAddressErr) {
+          console.error(
+            `[register] admin notification to ${to} failed`,
+            perAddressErr instanceof Error ? perAddressErr.message : perAddressErr,
+          );
+        }
+      }
     } catch (adminMailError) {
-      console.error("[register] admin notification mail failed", adminMailError);
+      console.error("[register] admin notification build failed", adminMailError);
     }
 
     const response = NextResponse.json(

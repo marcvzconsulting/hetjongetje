@@ -21,7 +21,7 @@ import { consumeMagicLinkToken } from "@/lib/magic-link";
 const DECOY_HASH =
   "$2b$12$CwTycUXWue0Thq9StjUM0uJ8e4M.yRHaZ3.j8Ql7BjT8X7aYsMaDi";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@onsverhaaltje.nl";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 /** Send the welcome + admin notification mails for a brand-new account.
  *  Fire-and-forget — never blocks the auth flow. */
@@ -53,13 +53,22 @@ async function sendWelcomeMails(user: {
       createdAt: user.createdAt,
       reviewUrl,
     });
-    await sendMail({
-      to: ADMIN_EMAIL,
-      subject: adminMail.subject,
-      html: adminMail.html,
-      text: adminMail.text,
-      tags: ["admin-new-signup"],
-    });
+    for (const to of getAdminNotifyEmails()) {
+      try {
+        await sendMail({
+          to,
+          subject: adminMail.subject,
+          html: adminMail.html,
+          text: adminMail.text,
+          tags: ["admin-new-signup"],
+        });
+      } catch (perAddressErr) {
+        console.error(
+          `[auth] admin notification to ${to} failed`,
+          perAddressErr instanceof Error ? perAddressErr.message : perAddressErr,
+        );
+      }
+    }
   } catch (err) {
     console.error("[auth] admin notification mail failed", err);
   }
