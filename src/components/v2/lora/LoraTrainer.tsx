@@ -102,8 +102,24 @@ export function LoraTrainer({
   }
 
   async function submitTraining() {
+    if (!childId) {
+      setError("Profiel-id ontbreekt — herlaad de pagina en probeer opnieuw.");
+      return;
+    }
     if (photos.length < MIN_PHOTOS) {
       setError(`Upload minimaal ${MIN_PHOTOS} foto's`);
+      return;
+    }
+    // iOS-detectie: HEIC-foto's hebben soms een lege MIME-type. Safari
+    // doet de conversie pas bij submit, maar oudere iOS-versies struikelen
+    // hier. Geef een duidelijke melding i.p.v. een cryptische error.
+    const heicLikely = photos.some(
+      (f) => f.type === "" || f.type === "image/heic" || f.type === "image/heif",
+    );
+    if (heicLikely) {
+      setError(
+        "Eén of meer foto's lijken HEIC (iPhone-formaat). Open de foto in 'Bestanden' en exporteer als JPG, of zet in iPhone-instellingen Camera → Indelingen op 'Meest compatibel'.",
+      );
       return;
     }
     setSubmitting(true);
@@ -117,7 +133,7 @@ export function LoraTrainer({
         method: "POST",
         body: form,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}) as { error?: string });
       if (!res.ok) {
         setError(data.error ?? "Training starten mislukt");
         return;
@@ -127,7 +143,19 @@ export function LoraTrainer({
       setPhotos([]);
       setFailureReason(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Er ging iets mis");
+      // Capture naar Sentry zodat we toekomstige iOS/Safari-rariteiten
+      // kunnen diagnoseren. Tonen een mensvriendelijke melding i.p.v.
+      // raw browser-text als "the string did not match the expected
+      // pattern".
+      void import("@sentry/nextjs")
+        .then((Sentry) => Sentry.captureException(err, { tags: { area: "lora-submit" } }))
+        .catch(() => {});
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(
+        msg && msg.length < 200
+          ? `Er ging iets mis: ${msg}. Probeer opnieuw of mail ons.`
+          : "Er ging iets mis bij het uploaden. Probeer opnieuw of mail ons.",
+      );
     } finally {
       setSubmitting(false);
     }
