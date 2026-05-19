@@ -501,53 +501,69 @@ export type FunnelStep = {
 };
 
 /**
- * The five-step customer funnel from sign-up to recurring revenue.
+ * The six-step customer funnel from sign-up to recurring revenue.
  * Each step's count is users who have *reached* the step — so by
  * definition counts decrease (or stay equal) down the chain.
  *
- * Only counts users (not admins) created since REVENUE_CUTOFF, so the
- * funnel reflects the live-mode era and not the test phase.
+ * Default scope: alle users (niet admins) sinds REVENUE_CUTOFF, dus
+ * live-mode-era. Met opts.since kun je een cohort-window meegeven
+ * (bv. laatste 30 dagen voor onboarding-evaluatie).
  */
-export async function loadFunnelStats(): Promise<FunnelStep[]> {
-  const where = { role: "user", createdAt: { gte: REVENUE_CUTOFF } } as const;
+export async function loadFunnelStats(opts?: {
+  since?: Date;
+}): Promise<FunnelStep[]> {
+  const since = opts?.since ?? REVENUE_CUTOFF;
+  const where = { role: "user", createdAt: { gte: since } } as const;
 
-  const [registered, withChildProfile, withStory, withPaidOrder, withActiveSub] =
-    await Promise.all([
-      prisma.user.count({ where }),
-      prisma.user.count({
-        where: { ...where, children: { some: {} } },
-      }),
-      prisma.user.count({
-        where: {
-          ...where,
-          children: { some: { stories: { some: {} } } },
-        },
-      }),
-      prisma.user.count({
-        where: {
-          ...where,
-          orders: { some: { status: "paid", paidAt: { gte: REVENUE_CUTOFF } } },
-        },
-      }),
-      prisma.user.count({
-        where: {
-          ...where,
-          subscription: {
-            is: {
-              status: "active",
-              plan: { not: "free" },
-              mollieSubscriptionId: { not: null },
-            },
+  const [
+    registered,
+    approved,
+    withChildProfile,
+    withStory,
+    withPaidOrder,
+    withActiveSub,
+  ] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.count({ where: { ...where, status: "approved" } }),
+    prisma.user.count({
+      where: { ...where, children: { some: {} } },
+    }),
+    prisma.user.count({
+      where: {
+        ...where,
+        children: { some: { stories: { some: {} } } },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        ...where,
+        orders: { some: { status: "paid", paidAt: { gte: since } } },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        ...where,
+        subscription: {
+          is: {
+            status: "active",
+            plan: { not: "free" },
+            mollieSubscriptionId: { not: null },
           },
         },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   return [
     {
       label: "Registratie",
       description: "Account aangemaakt",
       count: registered,
+    },
+    {
+      label: "Goedgekeurd",
+      description: "Admin heeft account vrijgegeven",
+      count: approved,
     },
     {
       label: "Profiel",

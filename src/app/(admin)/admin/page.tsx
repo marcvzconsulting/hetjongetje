@@ -27,7 +27,15 @@ type SearchParams = Promise<{
   to?: string;
   /** "total" (default) or "split" — splits the line per Order.kind. */
   mode?: string;
+  /** "30d" | "90d" | "all" — cohort-venster voor de funnel. */
+  funnel?: string;
 }>;
+
+const FUNNEL_PRESETS: Record<string, { label: string; days: number | "all" }> = {
+  "30d": { label: "Laatste 30 dagen", days: 30 },
+  "90d": { label: "Laatste 90 dagen", days: 90 },
+  all: { label: "Sinds live", days: "all" },
+};
 
 const RANGE_PRESETS: Record<
   string,
@@ -111,6 +119,16 @@ export default async function AdminDashboardPage({
   // Start van de huidige kalendermaand voor het opzeg-redenen-rapport.
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
+  // Funnel-cohort: default 30d zodat onboarding-uitval over recente
+  // weken zichtbaar is. "all" valt terug op de REVENUE_CUTOFF-default
+  // van loadFunnelStats.
+  const funnelKey = sp.funnel && FUNNEL_PRESETS[sp.funnel] ? sp.funnel : "30d";
+  const funnelPreset = FUNNEL_PRESETS[funnelKey];
+  const funnelSince =
+    funnelPreset.days === "all"
+      ? undefined
+      : new Date(now.getTime() - funnelPreset.days * 86_400_000);
+
   const [
     stats,
     buckets,
@@ -128,7 +146,7 @@ export default async function AdminDashboardPage({
       to: rangeToExclusive,
       granularity,
     }),
-    loadFunnelStats(),
+    loadFunnelStats({ since: funnelSince }),
     loadCohortRetention({ cohorts: 6 }),
     prisma.subscription.groupBy({
       by: ["cancellationReason"],
@@ -340,10 +358,37 @@ export default async function AdminDashboardPage({
             lineHeight: 1.5,
           }}
         >
-          Van registratie tot recurring revenue, voor accounts sinds{" "}
-          {REVENUE_CUTOFF.toLocaleDateString("nl-NL")}. Elke stap toont
-          absoluut + percentage van top, en conversie vanaf de vorige stap.
+          Van registratie tot recurring revenue. Elke stap toont absoluut
+          aantal, percentage van top, en conversie vanaf de vorige stap.
+          De Goedgekeurd-stap maakt admin-approval als drop-off zichtbaar.
         </p>
+
+        {/* Cohort-filter — laatste 30d laat onboarding-uitval over recente
+            weken zien; "Sinds live" is de all-time view die er voorheen was. */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+          {Object.entries(FUNNEL_PRESETS).map(([key, preset]) => {
+            const active = key === funnelKey;
+            return (
+              <Link
+                key={key}
+                href={`/admin?funnel=${key}`}
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: "0.04em",
+                  padding: "6px 12px",
+                  border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                  background: active ? V2.ink : V2.paper,
+                  color: active ? V2.paper : V2.ink,
+                  textDecoration: "none",
+                }}
+              >
+                {preset.label}
+              </Link>
+            );
+          })}
+        </div>
         <Funnel steps={funnel} />
       </Section>
 
