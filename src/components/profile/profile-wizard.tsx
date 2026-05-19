@@ -100,8 +100,16 @@ export function ProfileWizard() {
         return;
       }
 
-      await res.json();
-      router.push("/dashboard");
+      const child = (await res.json()) as { id?: string };
+      if (child.id) {
+        // Direct door naar profiel-pagina met focus op portret/LoRA —
+        // dat is de stap die karakter-consistentie waarborgt en dus
+        // klant-retentie significant verbetert. Banner + auto-scroll
+        // hoort bij `?from=create`.
+        router.push(`/profile/${child.id}?from=create#portret`);
+      } else {
+        router.push("/dashboard");
+      }
     } catch {
       setError("Er ging iets mis. Probeer het opnieuw.");
     } finally {

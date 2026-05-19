@@ -13,9 +13,10 @@ import { ProfileEditor } from "./client";
 
 interface Props {
   params: Promise<{ childId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
-export default async function ProfilePage({ params }: Props) {
+export default async function ProfilePage({ params, searchParams }: Props) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -23,6 +24,8 @@ export default async function ProfilePage({ params }: Props) {
   const credits = gate && !gate.isAdmin ? gate.storyCredits : null;
 
   const { childId } = await params;
+  const { from } = await searchParams;
+  const justCreated = from === "create";
 
   const child = await prisma.childProfile.findFirst({
     where: { id: childId, userId: session.user.id },
@@ -155,23 +158,70 @@ export default async function ProfilePage({ params }: Props) {
           />
         </div>
 
-        {/* Character LoRA training (optional, GDPR-gated) */}
-        <LoraTrainer
-          childId={child.id}
-          childName={child.name}
-          initialStatus={
-            (child.loraStatus as
-              | "none"
-              | "training"
-              | "ready"
-              | "failed"
-              | "uploaded") ?? "none"
-          }
-          initialTrainedAt={
-            child.loraTrainedAt ? child.loraTrainedAt.toISOString() : null
-          }
-          initialFailureReason={child.loraFailureReason}
-        />
+        {/* Character LoRA training (optional, GDPR-gated). Anchor en
+            optionele just-created-banner staan in een section-wrapper. */}
+        <section
+          id="portret"
+          style={{ scrollMarginTop: 24, marginTop: justCreated ? 40 : 0 }}
+        >
+          {justCreated && (
+            <div
+              role="status"
+              style={{
+                marginTop: 8,
+                marginBottom: 24,
+                padding: "20px 24px",
+                background: V2.goldSoft,
+                borderLeft: `3px solid ${V2.goldDeep}`,
+                fontFamily: V2.body,
+                color: V2.ink,
+                lineHeight: 1.55,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: V2.mono,
+                  fontSize: 10,
+                  letterSpacing: "0.22em",
+                  textTransform: "uppercase",
+                  color: V2.goldDeep,
+                  marginBottom: 6,
+                }}
+              >
+                Profiel aangemaakt ✓
+              </div>
+              <div style={{ fontFamily: V2.display, fontWeight: 300, fontSize: 22, letterSpacing: -0.4, marginBottom: 8 }}>
+                Stel nu het portret in van{" "}
+                <span style={{ fontStyle: "italic" }}>{child.name}</span>.
+              </div>
+              <div style={{ fontSize: 14, color: V2.inkSoft, maxWidth: "60ch" }}>
+                Wanneer je een paar foto's uploadt of een gegenereerd
+                portret goedkeurt, lijkt {child.name} op elke pagina van
+                elk verhaal hetzelfde. Zonder deze stap verschilt het
+                personage soms per illustratie — daar haken ouders en
+                kinderen op af. Je kunt 'm overslaan en later weer
+                terugkomen, maar 't kost minder dan 5 minuten en het
+                verschil is groot.
+              </div>
+            </div>
+          )}
+          <LoraTrainer
+            childId={child.id}
+            childName={child.name}
+            initialStatus={
+              (child.loraStatus as
+                | "none"
+                | "training"
+                | "ready"
+                | "failed"
+                | "uploaded") ?? "none"
+            }
+            initialTrainedAt={
+              child.loraTrainedAt ? child.loraTrainedAt.toISOString() : null
+            }
+            initialFailureReason={child.loraFailureReason}
+          />
+        </section>
       </div>
     </AppShell>
   );
