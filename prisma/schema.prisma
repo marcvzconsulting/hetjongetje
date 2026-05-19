@@ -25,6 +25,10 @@ model User {
   newsletterOptIn    Boolean        @default(false) @map("newsletter_opt_in")
   newsletterOptInAt  DateTime?      @map("newsletter_opt_in_at") // AVG-bewijs van consent
   firstStoryEmailSentAt DateTime?   @map("first_story_email_sent_at") // idempotency-flag
+  /// Wanneer we de "Je profiel is nog niet af"-reminder verstuurd
+  /// hebben. Eenmalig per user; null = nog niet ontvangen. Cron-route
+  /// /api/cron/profile-reminder leest dit veld.
+  reminderSentAt        DateTime?   @map("reminder_sent_at")
   /// Wanneer de 4-staps onboarding-tour is voltooid of weggeklikt.
   /// Null = nog niet gezien; ongelijk null = niet meer tonen op /dashboard.
   /// Tour-tekst kan later versie krijgen door een aparte kolom of

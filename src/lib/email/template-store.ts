@@ -226,6 +226,13 @@ export const EDITABLE_TEMPLATES = [
     description: "Bevestigingsmail na afmelden van de nieuwsbrief.",
     vars: ["email", "resubscribeUrl"],
   },
+  {
+    code: "profile-incomplete-reminder",
+    label: "Profiel-reminder",
+    description:
+      "Eenmalige reminder voor accounts die wel registreerden maar nog geen kindprofiel maakten (cron na 3 dagen).",
+    vars: ["profileUrl", "unsubscribeUrl"],
+  },
 ] as const;
 
 export type EditableTemplateCode = (typeof EDITABLE_TEMPLATES)[number]["code"];
