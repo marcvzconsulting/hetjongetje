@@ -617,26 +617,6 @@ function BookSection() {
             Voor op het nachtkastje, of om ooit aan hun eigen kinderen voor
             te lezen.
           </p>
-          <div
-            style={{
-              marginTop: 32,
-              display: "flex",
-              alignItems: "baseline",
-              gap: 12,
-              fontFamily: V2.display,
-            }}
-          >
-            <span style={{ fontSize: 32, fontWeight: 400 }}>€29,95</span>
-            <span
-              style={{
-                fontFamily: V2.ui,
-                fontSize: 14,
-                color: V2.inkMute,
-              }}
-            >
-              of €19,95 met jaarabonnement
-            </span>
-          </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div
