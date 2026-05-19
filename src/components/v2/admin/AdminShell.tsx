@@ -4,6 +4,7 @@ import { V2 } from "@/components/v2/tokens";
 import { Logo } from "@/components/v2";
 import { SignOutButtonV2 } from "@/components/v2/app/SignOutButton";
 import { AdminMobileNav } from "@/components/v2/admin/AdminMobileNav";
+import { SentryUserSync } from "@/components/monitoring/SentryUserSync";
 
 type NavItem = {
   label: string;
@@ -76,6 +77,7 @@ export function AdminShell({
         gridTemplateColumns: "240px 1fr",
       }}
     >
+      <SentryUserSync />
       <style
         dangerouslySetInnerHTML={{
           __html: `

@@ -4,6 +4,7 @@ import { V2 } from "@/components/v2/tokens";
 import { Logo } from "@/components/v2";
 import { Avatar } from "@/components/v2/Avatar";
 import { SignOutButtonV2 } from "./SignOutButton";
+import { SentryUserSync } from "@/components/monitoring/SentryUserSync";
 
 type NavItem = {
   label: string;
@@ -76,6 +77,7 @@ export function AppShell({
         minHeight: "100vh",
       }}
     >
+      <SentryUserSync />
       {/* Mobile responsive overrides for any logged-in page that uses AppShell.
           Pages opt in by adding the matching classnames. */}
       <style
