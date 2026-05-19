@@ -116,23 +116,35 @@ export function BookViewerV3({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Fullscreen-state — gehouden in sync met de browser's fullscreen-API
-  // zodat ook ESC-uittreden de knop terugdraait.
+  // zodat ook ESC-uittreden de knop terugdraait. iOS Safari ondersteunt
+  // de full-element-fullscreen-API niet; daar tonen we de knop niet.
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [supportsFullscreen, setSupportsFullscreen] = useState(false);
   useEffect(() => {
+    setSupportsFullscreen(
+      typeof document.documentElement.requestFullscreen === "function",
+    );
     const onChange = () =>
       setIsFullscreen(document.fullscreenElement !== null);
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
   const toggleFullscreen = () => {
+    // iOS Safari heeft geen Element.requestFullscreen op `<html>` — alleen
+    // op video. Feature-detect synchroon zodat we niet in een TypeError
+    // belanden (een .catch() vangt 'm niet op want de error is synchroon).
     if (document.fullscreenElement) {
-      void document.exitFullscreen();
-    } else {
-      void document.documentElement.requestFullscreen().catch(() => {
-        // iOS Safari heeft geen volledige fullscreen-API; we slikken
-        // de error en de knop blijft "Volledig scherm" tonen.
-      });
+      if (typeof document.exitFullscreen === "function") {
+        void document.exitFullscreen().catch(() => {});
+      }
+      return;
     }
+    const el = document.documentElement;
+    if (typeof el.requestFullscreen === "function") {
+      void el.requestFullscreen().catch(() => {});
+    }
+    // Anders: button doet niets. Op iOS Safari is dat de enige optie
+    // tot Apple alsnog full-element fullscreen toevoegt.
   };
 
   useEffect(() => {
@@ -384,13 +396,15 @@ export function BookViewerV3({
               {!compactLabels && <span>PDF</span>}
             </a>
           )}
-          <ChromeButton
-            label={isFullscreen ? "Verlaten" : "Volledig scherm"}
-            iconName={isFullscreen ? "fullscreen-exit" : "fullscreen"}
-            active={isFullscreen}
-            onClick={toggleFullscreen}
-            compact={compactLabels}
-          />
+          {supportsFullscreen && (
+            <ChromeButton
+              label={isFullscreen ? "Verlaten" : "Volledig scherm"}
+              iconName={isFullscreen ? "fullscreen-exit" : "fullscreen"}
+              active={isFullscreen}
+              onClick={toggleFullscreen}
+              compact={compactLabels}
+            />
+          )}
 
           {!compactLabels && !readOnly && childId && (
             <Link
