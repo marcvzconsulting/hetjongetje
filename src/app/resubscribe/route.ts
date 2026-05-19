@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { verifyResubscribeToken } from "@/lib/newsletter/unsubscribe-token";
 import { subscribeToNewsletter } from "@/lib/email/brevo-contacts";
+import { rateLimit } from "@/lib/rate-limit/rate-limit";
 
 /**
  * One-click herinschrijving — `/resubscribe?email=X&token=Y` in de
@@ -18,6 +19,24 @@ export async function GET(request: NextRequest) {
   const rawEmail = url.searchParams.get("email") ?? "";
   const token = url.searchParams.get("token") ?? "";
   const email = rawEmail.trim().toLowerCase();
+
+  // Per-IP rate-limit, hetzelfde idee als /unsubscribe — voorkomt dat
+  // iemand een token-space brute-forced om een gebruiker ongewenst weer
+  // aan te melden. 60/min is genoeg voor één klant die een keer dubbelklikt
+  // of refresht, te krap voor scans.
+  const fwd = request.headers.get("x-forwarded-for");
+  const ip =
+    fwd?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    "unknown";
+  const rl = await rateLimit({
+    key: `resubscribe:${ip}`,
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (!rl.allowed) {
+    return NextResponse.redirect(new URL("/", url.origin));
+  }
 
   if (!email || !token || !verifyResubscribeToken(email, token)) {
     // Token klopt niet — terug naar landing zonder iets te doen.

@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { ContentPage, Lead, P } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
 import { prisma } from "@/lib/db";
@@ -9,7 +11,15 @@ import { deleteContact } from "@/lib/email/brevo-contacts";
 import { sendMail } from "@/lib/email/client";
 import { buildAppUrl } from "@/lib/url";
 import { buildNewsletterUnsubscribedMail } from "@/lib/email/templates/newsletter-unsubscribed";
+import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { submitUnsubscribeReasonAction } from "./actions";
+
+async function getClientIp(): Promise<string> {
+  const h = await headers();
+  const fwd = h.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]?.trim() ?? "unknown";
+  return h.get("x-real-ip") ?? "unknown";
+}
 
 type SearchParams = Promise<{
   email?: string;
@@ -35,6 +45,19 @@ export default async function UnsubscribePage({
   const rawEmail = params.email ?? "";
   const token = params.token ?? "";
   const email = rawEmail.trim().toLowerCase();
+
+  // Per-IP rate-limit zodat brute-forcen van tokens (om bv. iemand
+  // ongewenst uit te schrijven of de email-bestaande-test te draaien)
+  // niet werkt. 60/min is genoeg voor normale klik+refresh+submit, te
+  // krap voor scanning. We laten 'm als notFound zien zodat een
+  // attacker niet weet dat ze tegen de muur lopen.
+  const ip = await getClientIp();
+  const rl = await rateLimit({
+    key: `unsubscribe-view:${ip}`,
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (!rl.allowed) notFound();
 
   const valid = email && token && verifyUnsubscribeToken(email, token);
 

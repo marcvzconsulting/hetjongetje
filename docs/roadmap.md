@@ -129,7 +129,101 @@ Uit de security-deferred-hardening sessie van 2026-04-29:
 Volgende logische stappen:
 
 1. **Drukker-API** is de grootste single-feature die nog open staat. Hangt aan jouw keuze tussen PrintAPI/Peecho.
-2. **Onboarding-tour effectiviteit meten** — kijken of het cohort-overzicht in admin laat zien dat onboarding-uitval omlaag gaat zodra echte users binnenkomen.
-3. **Referral-conversie meten** — admin-stat toevoegen die laat zien hoeveel invitees per inviter er zijn en welk % tot een betaalde order leidt.
+2. **Onboarding-tour effectiviteit meten** — gedekt door punt 2 in "Verbeter-iteratie 2" hieronder.
+3. **Referral-conversie meten** — ✅ klaar (zie `/admin/referrals`).
 
 Alle 5 fases zijn klaar. Alleen parked-items + "op jouw bord"-keuzes resten.
+
+---
+
+## Verbeter-iteratie 2 (concrete plan)
+
+Acht losse items die in willekeurige volgorde aangepakt kunnen worden. Drie buckets op effort. Per item: doel, concrete stappen, en een effort-schatting.
+
+### Quick wins (~30-45 min per item)
+
+#### 1. Rate-limit op `/unsubscribe` en `/resubscribe`
+- **Doel**: voorkom dat iemand de token-space brute-forced op een specifieke e-mail om diens nieuwsbrief-status te flippen of bestaan van een account te enumeren.
+- **Stappen**:
+  - Hergebruik `rateLimit()` uit `src/lib/rate-limit/rate-limit.ts` met key `unsubscribe-view:<ip>` (60 req/min) en `resubscribe-view:<ip>` (60 req/min).
+  - Bij overschrijding: redirect naar `/?ratelimited=1` met `notFound()`-stijl response zodat een attacker niet weet dat ze in de buurt zijn.
+- **Effort**: ~30 min. Geen schema- of UI-werk.
+
+#### 2. Sentry user-context koppelen
+- **Doel**: errors in Sentry hebben nu geen user-id; debugging is daardoor traag.
+- **Stappen**:
+  - In `src/instrumentation-client.ts` na de Sentry.init: een `useEffect` (of een aparte client-component die in `AppShell` geladen wordt) die `Sentry.setUser({ id, email })` aanroept zodra de auth-sessie binnen is.
+  - Email scrubben via bestaande `scrubPII` zodat we niet ineens PII in Sentry hebben.
+- **Effort**: ~30 min. Eén commit, geen migratie.
+
+#### 3. Onboarding-effectiviteit meten
+- **Doel**: weten waar mensen uitstappen tussen registratie en eerste betaalde order.
+- **Stappen**:
+  - Nieuwe sectie op `/admin` (of een nieuwe pagina `/admin/onboarding`) met een funnel die elke trap meet vanuit bestaande DB-velden — geen nieuwe events nodig:
+    1. Geregistreerd → `User` rij bestaat
+    2. Goedgekeurd → `User.status = approved`
+    3. Eerste kindprofiel → `ChildProfile` bestaat voor user
+    4. Eerste verhaal → `Story` bestaat voor child van user
+    5. Eerste betaling → `Order.status = paid` voor user
+  - Toon absolute aantallen + percentage van top + drop-off per stap (zelfde stijl als bestaande `Funnel`-component uit `/admin`).
+  - Optioneel: filter op cohort (laatste 30/90 dagen).
+- **Effort**: ~45 min. Geen schema-changes; bestaande Funnel-component hergebruiken.
+
+### Middel (~1-2 uur per item)
+
+#### 4. Lighthouse-audit + concrete fixes
+- **Doel**: meet performance + a11y + best practices op de paginas die het meeste verkeer trekken; pak de top-3 bevindingen aan.
+- **Stappen**:
+  - Run Lighthouse (DevTools of CLI) op `/`, `/register`, `/dashboard`, `/story/[id]`, `/s/[token]`.
+  - Verwacht typische bevindingen: oversized images zonder `next/image`, missende `alt`-attributen, ontbrekende `lang` op nested elements, render-blocking inline styles op landing.
+  - Fix de top-3 per pagina; documenteer rest als parked.
+- **Effort**: ~1-2 uur afhankelijk van bevindingen. Geen risico op stuk maken (rapport is leidend).
+
+#### 5. Reminder-mail voor onaffe profielen
+- **Doel**: een ouder die wel registreerde maar nooit een kindprofiel maakte, drift weg. Een vriendelijke reminder na 3 dagen kan een deel terughalen.
+- **Stappen**:
+  - Cron-route (Vercel cron of een server-side route die elke nacht draait) die users selecteert met: `status=approved`, `createdAt < now-3 dagen`, `children.length = 0`, en geen reminder-mail meer ontvangen (nieuw veld `reminderSentAt`).
+  - Nieuwe e-mail-template `profile-incomplete-reminder` (editable via `/admin/email-templates`).
+  - Eénmalige verzending, daarna stoppen (geen herhaal-spam).
+- **Effort**: ~1.5 uur (DB-veld, route, template).
+
+#### 6. Live HTML-preview in `/admin/email-templates/[code]`
+- **Doel**: nu zie je in admin alleen de bron van een template; je weet pas wat de klant ziet als je 'm verstuurt. Live preview maakt iterair tweaken sneller.
+- **Stappen**:
+  - Op de admin-template-editor-pagina: rechts naast het bewerkingsveld een sandboxed `<iframe srcdoc={renderedHtml}>` die de samengestelde HTML toont met dummy-variabelen (`{{name}}` → "Voorbeeld" etc.).
+  - Variabelen-bewerker in een klein zijpaneel zodat je verschillende waarden kunt invullen.
+  - Sandbox-iframe gebruikt `sandbox="allow-same-origin"` — geen JS, alleen rendering.
+- **Effort**: ~1.5 uur.
+
+### Groot (een hele middag of meer)
+
+#### 7. CSP-hardening
+- **Doel**: minder XSS-risico door strictere Content-Security-Policy.
+- **Stappen** (in twee fases):
+  - **Fase A — drop `unsafe-eval`**: identificeer waar Sentry SDK `new Function()` doet; check of nieuwere Sentry versie het niet meer nodig heeft (bouwen + testen). Eventueel: `worker-src 'self' blob:` toevoegen als Sentry de feature naar workers verhuist.
+  - **Fase B — nonce-based CSP voor inline styles**: middleware genereert per request een nonce, geeft 'm mee via React context, alle `<style>`-tags krijgen `nonce={...}`. Verwijdert de noodzaak van `'unsafe-inline'`.
+  - Test op alle paginas; rollback-plan: feature flag.
+- **Effort**: ~4-6 uur, vooral test-werk.
+
+#### 8. AVG-export per user
+- **Doel**: wettelijk recht onder AVG: gebruiker kan een download krijgen van alle gegevens die we van ze bewaren. Nu zou je dat handmatig moeten compileren.
+- **Stappen**:
+  - Nieuwe knop "Download mijn gegevens" in `/account` onder Persoonsgegevens.
+  - Server action die alle relevante rows verzamelt: User, ChildProfile's, Story's + StoryPages, Order's, Subscription, ContactMessage's met deze email, NewsletterSignup, AdminAuditLog (alleen entries waar deze user target is).
+  - Output: JSON-bestand of zip (JSON + media URLs).
+  - Audit-log entry zodat we kunnen aantonen dat het verzoek is verwerkt.
+  - Rate-limit: max 1 export per 24h per user.
+- **Effort**: ~3-4 uur. Geen migratie maar veel queries en testen.
+
+---
+
+## Aanbevolen volgorde
+
+1. **#1 Rate-limit unsubscribe/resubscribe** — security leak, snel weg.
+2. **#2 Sentry user-context** — verhoogt debug-snelheid voor alle volgende werk.
+3. **#3 Onboarding-meten** — geeft je actiebare data over wat er stuk gaat.
+4. **#5 Reminder-mail** — directe retentie-impact, beste ROI op verkeer dat al gevallen is.
+5. **#4 Lighthouse** — pak op tijdens een rustig moment, geen blocker.
+6. **#6 Email-preview** — quality-of-life, niet kritiek.
+7. **#8 AVG-export** — wettelijk, doe vóór de officiële launch.
+8. **#7 CSP-hardening** — laatste, alleen als je tijd hebt; site is al redelijk veilig.
