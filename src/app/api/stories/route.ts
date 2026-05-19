@@ -20,7 +20,9 @@ import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 import { reserveStoryCredit, refundStoryCredit } from "@/lib/user-gate";
 import { sendMail } from "@/lib/email/client";
 import { buildFirstStoryMail } from "@/lib/email/templates/first-story";
+import { buildAdminStoryIncompleteMail } from "@/lib/email/templates/admin-story-incomplete";
 import { buildAppUrl } from "@/lib/url";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 // Allow extra time: story gen + illustrations + uploads
 export const maxDuration = 120;
@@ -134,6 +136,17 @@ export async function POST(request: NextRequest) {
       endingUpload,
     ]);
 
+    // Detecteer of er pagina's zonder illustratie zijn. fal.ai-fails na
+    // de retry in generateIllustrations OF R2-upload-fails resulteren
+    // beide in null. We tellen alleen de eerste 6 verhaal-pagina's mee,
+    // niet de ending — een missende ending laten we niet de status op
+    // partial zetten omdat het verhaal wel leesbaar is.
+    const failedPageNumbers: number[] = [];
+    pageUrls.forEach((url, i) => {
+      if (url === null) failedPageNumbers.push(i + 1);
+    });
+    const isPartial = failedPageNumbers.length > 0;
+
     // 4. Save to database
     const allPages = [
       ...generatedStory.pages.map((page, index) => ({
@@ -173,7 +186,7 @@ export async function POST(request: NextRequest) {
         subtitle: generatedStory.tag,
         language: "nl",
         setting: storyRequest.setting,
-        status: "ready",
+        status: isPartial ? "partial" : "ready",
         // storyRequest is een plain object met alleen string-waarden, dus
         // veilig als-is naar Prisma's Json-veld te schrijven. De
         // eerdere JSON.parse(JSON.stringify(...))-omleiding was bedoeld
@@ -193,6 +206,52 @@ export async function POST(request: NextRequest) {
       },
       include: { pages: { orderBy: { pageNumber: "asc" } } },
     });
+
+    // Partial-flow: credit teruggeven + admin waarschuwen. Best-effort
+    // — een mislukte mail mag de response niet blokkeren.
+    if (isPartial) {
+      try {
+        await refundStoryCredit(session.user.id);
+      } catch (refundErr) {
+        console.error("[stories] partial-refund failed:", refundErr);
+      }
+      (async () => {
+        try {
+          const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { email: true },
+          });
+          const reviewUrl = await buildAppUrl(`/admin/users/${session.user.id}`);
+          const mail = buildAdminStoryIncompleteMail({
+            storyId: story.id,
+            storyTitle: story.title,
+            childName: child.name,
+            userEmail: user?.email ?? session.user.id,
+            failedPages: failedPageNumbers,
+            totalPages: generatedStory.pages.length,
+            reviewUrl,
+          });
+          for (const to of getAdminNotifyEmails()) {
+            try {
+              await sendMail({
+                to,
+                subject: mail.subject,
+                html: mail.html,
+                text: mail.text,
+                tags: ["admin-story-incomplete"],
+              });
+            } catch (perAddressErr) {
+              console.error(
+                `[stories] partial admin mail to ${to} failed`,
+                perAddressErr instanceof Error ? perAddressErr.message : perAddressErr,
+              );
+            }
+          }
+        } catch (err) {
+          console.error("[stories] partial admin mail build failed", err);
+        }
+      })();
+    }
 
     // 5. Update character bible
     if (generatedStory.characterBibleUpdate) {

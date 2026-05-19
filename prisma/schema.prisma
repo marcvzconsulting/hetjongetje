@@ -411,7 +411,7 @@ model Story {
   subtitle            String?
   language            String      @default("nl") // "nl" | "en"
   setting             String      // e.g. "fantasy_forest", "space_adventure"
-  status              String      @default("generating") // "generating" | "ready" | "error"
+  status              String      @default("generating") // "generating" | "ready" | "partial" | "error"
   generationParams    Json?       @map("generation_params") // questions/answers for this story
   isFavorite          Boolean     @default(false) @map("is_favorite")
   /// How many times the parent has used "Opnieuw genereren" on this story.

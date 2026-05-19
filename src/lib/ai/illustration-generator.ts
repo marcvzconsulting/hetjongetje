@@ -92,9 +92,34 @@ export async function generateIllustrations(
   ];
 
   // Generate all illustrations with the same seed for consistency
-  const results = await Promise.all(
+  let results = await Promise.all(
     allPrompts.map((prompt) => generateOne(prompt, style, seed, lora))
   );
+
+  // Retry-pas voor pagina's die null teruggaven — fal.ai-fails zijn vaak
+  // transient (rate limit, content-filter-flikker, netwerk). Eén retry
+  // met dezelfde prompt+seed is goedkoop en redt het meeste.
+  const failedIndices = results
+    .map((r, i) => (r === null ? i : -1))
+    .filter((i) => i !== -1);
+  if (failedIndices.length > 0) {
+    console.warn(
+      `[fal.ai] ${failedIndices.length}/${results.length} illustraties mislukt — retry`,
+    );
+    const retryResults = await Promise.all(
+      failedIndices.map((i) => generateOne(allPrompts[i], style, seed, lora)),
+    );
+    results = results.slice();
+    failedIndices.forEach((origIdx, retryIdx) => {
+      results[origIdx] = retryResults[retryIdx];
+    });
+    const stillFailed = results.filter((r) => r === null).length;
+    if (stillFailed > 0) {
+      console.error(
+        `[fal.ai] ${stillFailed} illustraties NOG mislukt na retry — verhaal wordt partial`,
+      );
+    }
+  }
 
   const updatedPages = story.pages.map((page, i) => ({
     ...page,

@@ -1117,69 +1117,78 @@ function IllustrationPage({
     );
   }
 
-  // Fallback: night-sky placeholder
+  // Fallback wanneer de illustratie ontbreekt — papier-fond + duidelijke
+  // melding zodat een ouder begrijpt dat dit niet zo bedoeld is. Vroeger
+  // een night-sky look, wat oogde alsof we ze een zwart vlak hadden
+  // geserveerd; deze versie maakt duidelijk dat de illustratie nog komt.
   return (
     <div
       style={{
         width: "100%",
         height: "100%",
         position: "relative",
-        background: `linear-gradient(175deg, ${V2.night} 0%, ${V2.nightSoft} 100%)`,
+        background: V2.paperDeep,
+        backgroundImage: PAPER_NOISE,
+        backgroundBlendMode: "multiply",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: full ? "40px 48px" : "24px 28px",
+        textAlign: "center",
         overflow: "hidden",
       }}
     >
+      {/* Decoratief diamant-icoon zodat het niet leeg oogt */}
       <div
+        aria-hidden
         style={{
-          position: "absolute",
-          top: full ? "30%" : "24%",
-          right: full ? "22%" : "24%",
-          width: full ? 96 : 72,
-          height: full ? 96 : 72,
-          borderRadius: "50%",
-          background: V2.gold,
-          opacity: 0.92,
-          boxShadow: `0 0 60px ${V2.gold}66`,
+          width: full ? 36 : 28,
+          height: full ? 36 : 28,
+          background: V2.goldSoft,
+          transform: "rotate(45deg)",
+          marginBottom: full ? 24 : 18,
+          border: `1px solid ${V2.gold}`,
         }}
       />
-      {Array.from({ length: 18 }).map((_, i) => {
-        const x = ((i * 97) % 100) + 0.5;
-        const y = ((i * 53 + 11) % 100) + 0.5;
-        const s = 1 + ((i * 17) % 6) / 4;
-        return (
-          <span
-            key={i}
-            style={{
-              position: "absolute",
-              left: `${x}%`,
-              top: `${y}%`,
-              width: s,
-              height: s,
-              borderRadius: "50%",
-              background: V2.gold,
-              opacity: 0.6,
-            }}
-          />
-        );
-      })}
-      {page.description && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 24,
-            left: 24,
-            right: 24,
-            fontFamily: V2.display,
-            fontStyle: "italic",
-            fontSize: 15,
-            color: V2.paper,
-            opacity: 0.78,
-            textAlign: "center",
-            lineHeight: 1.4,
-          }}
-        >
-          {page.description}
-        </div>
-      )}
+      <div
+        style={{
+          fontFamily: V2.ui,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: V2.goldDeep,
+          marginBottom: 12,
+        }}
+      >
+        Illustratie ontbreekt
+      </div>
+      <div
+        style={{
+          fontFamily: V2.display,
+          fontStyle: "italic",
+          fontSize: full ? 18 : 15,
+          color: V2.inkSoft,
+          lineHeight: 1.5,
+          maxWidth: 460,
+          marginBottom: 16,
+        }}
+      >
+        {page.description ?? "Deze pagina-illustratie kon niet gegenereerd worden."}
+      </div>
+      <div
+        style={{
+          fontFamily: V2.body,
+          fontSize: 13,
+          color: V2.inkMute,
+          lineHeight: 1.5,
+          maxWidth: 380,
+        }}
+      >
+        Geen zorgen — je credit is teruggezet, je kunt het verhaal
+        opnieuw genereren.
+      </div>
     </div>
   );
 }

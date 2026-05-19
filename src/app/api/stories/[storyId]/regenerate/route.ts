@@ -14,6 +14,10 @@ import {
   storyEndingKey,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { sendMail } from "@/lib/email/client";
+import { buildAdminStoryIncompleteMail } from "@/lib/email/templates/admin-story-incomplete";
+import { buildAppUrl } from "@/lib/url";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 /**
  * Maximum number of free regenerations a parent can run on the same
@@ -161,6 +165,17 @@ export async function POST(
       endingUpload,
     ]);
 
+    // Detect partial generation (failed illustration on één of meer
+    // verhaal-pagina's). De ending tellen we niet mee. Bij partial geven
+    // we de regen niet door (status partial + admin-mail), maar credit
+    // is hier sowieso al niet weer ingehouden — regenerate kost geen
+    // extra storyCredit.
+    const failedPageNumbers: number[] = [];
+    pageUrls.forEach((url, i) => {
+      if (url === null) failedPageNumbers.push(i + 1);
+    });
+    const isPartial = failedPageNumbers.length > 0;
+
     const newPages = [
       ...generated.pages.map((page, i) => ({
         pageNumber: i + 1,
@@ -202,6 +217,7 @@ export async function POST(
           subtitle: generated.tag,
           regenerationCount: newCount,
           aiCostCents: newAiCostCents,
+          status: isPartial ? "partial" : "ready",
           // Wipe any earlier feedback — the parent is reacting to the
           // OLD version; we want a fresh judgment on the new one.
           feedbackKind: null,
@@ -212,7 +228,58 @@ export async function POST(
       }),
     ]);
 
-    return NextResponse.json({ ok: true, storyId });
+    // Bij partial: admin-notificatie. We geven hier geen credit terug —
+    // regenerate kost de gebruiker geen extra credit, dus er valt niets
+    // terug te geven. Wel resetten we de regenerationCount-bump zodat de
+    // parent het opnieuw mag proberen.
+    if (isPartial) {
+      try {
+        await prisma.story.update({
+          where: { id: storyId },
+          data: { regenerationCount: story.regenerationCount },
+        });
+      } catch (resetErr) {
+        console.error("[regen] partial regen-count reset failed:", resetErr);
+      }
+      (async () => {
+        try {
+          const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { email: true },
+          });
+          const reviewUrl = await buildAppUrl(`/admin/users/${session.user.id}`);
+          const mail = buildAdminStoryIncompleteMail({
+            storyId,
+            storyTitle: generated.title,
+            childName: story.childProfile.name,
+            userEmail: user?.email ?? session.user.id,
+            failedPages: failedPageNumbers,
+            totalPages: generated.pages.length,
+            reviewUrl,
+          });
+          for (const to of getAdminNotifyEmails()) {
+            try {
+              await sendMail({
+                to,
+                subject: mail.subject,
+                html: mail.html,
+                text: mail.text,
+                tags: ["admin-story-incomplete"],
+              });
+            } catch (perAddressErr) {
+              console.error(
+                `[regen] partial admin mail to ${to} failed`,
+                perAddressErr instanceof Error ? perAddressErr.message : perAddressErr,
+              );
+            }
+          }
+        } catch (err) {
+          console.error("[regen] partial admin mail build failed", err);
+        }
+      })();
+    }
+
+    return NextResponse.json({ ok: true, storyId, partial: isPartial });
   } catch (err) {
     console.error(`[regen] failed for story ${storyId}`, err);
     return NextResponse.json(
