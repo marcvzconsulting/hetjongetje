@@ -693,11 +693,15 @@ function TileGrid({
   onPick: (v: string) => void;
   cols: 3 | 4;
 }) {
+  // auto-fit met min-breedte: op brede schermen krijgen we cols kolommen,
+  // op smalle (mobile) valt het automatisch terug naar 2 — voorheen knelde
+  // 4 kolommen × "Mysterieus" op iPhone-breedtes.
+  const minColWidth = cols === 4 ? 130 : 150;
   return (
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(auto-fit, minmax(${minColWidth}px, 1fr))`,
         gap: 8,
         marginTop: 14,
       }}
@@ -710,17 +714,18 @@ function TileGrid({
             type="button"
             onClick={() => onPick(o.value)}
             style={{
-              padding: "20px 16px",
+              padding: "16px 12px",
               textAlign: "center",
               background: selected ? V2.ink : "transparent",
               color: selected ? V2.paper : V2.ink,
               border: `1px solid ${selected ? V2.ink : V2.paperShade}`,
               cursor: "pointer",
               fontFamily: V2.display,
-              fontSize: 17,
+              fontSize: "clamp(14px, 3.6vw, 17px)",
               fontWeight: 400,
               fontStyle: selected ? "italic" : "normal",
-              letterSpacing: -0.2,
+              letterSpacing: 0,
+              lineHeight: 1.2,
               transition: "background .15s",
             }}
           >

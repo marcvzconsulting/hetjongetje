@@ -63,7 +63,7 @@ export function LoraConsentForm({
         }}
       >
         Om {childName} in alle verhalen steeds hetzelfde eruit te laten
-        zien, trainen we een klein model (LoRA) op 5 tot 15 foto&rsquo;s
+        zien, trainen we een klein, persoonlijk model op 5 tot 15 foto&rsquo;s
         die jullie uploaden. Dit is{" "}
         <strong>strikt optioneel</strong>, verhalen werken ook zonder.
       </p>
@@ -105,7 +105,7 @@ export function LoraConsentForm({
             <strong>binnen 7 dagen</strong> bij beide partijen gewist
           </LiCheck>
           <LiCheck>
-            Het getrainde LoRA-bestand (géén herkenbare foto&rsquo;s) blijft
+            Het getrainde model (géén herkenbare foto&rsquo;s) blijft
             zolang {childName}&rsquo;s profiel bestaat
           </LiCheck>
         </ul>
@@ -126,7 +126,7 @@ export function LoraConsentForm({
             klik
           </LiCheck>
           <LiCheck>
-            Bij intrekking wordt het LoRA + alle foto&rsquo;s binnen 30
+            Bij intrekking worden het model + alle foto&rsquo;s binnen 30
             dagen verwijderd
           </LiCheck>
           <LiCheck>
@@ -169,9 +169,9 @@ export function LoraConsentForm({
           label={
             <>
               Ik geef <strong>expliciete toestemming</strong> voor het
-              verwerken van foto&rsquo;s van {childName} om een
-              character-LoRA te trainen. Ik weet dat dit optioneel is en
-              dat ik het altijd kan intrekken.
+              verwerken van foto&rsquo;s van {childName} om
+              character-herkenning voor {childName} te trainen. Ik weet
+              dat dit optioneel is en dat ik het altijd kan intrekken.
             </>
           }
         />

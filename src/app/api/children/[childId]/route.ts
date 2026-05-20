@@ -6,6 +6,7 @@ import {
   childProfileUpdateSchema,
   parseJsonBody,
 } from "@/lib/validation";
+import { normalizeChildName, normalizeNamesIn } from "@/lib/utils/name";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -33,12 +34,16 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   // Bouw alleen de velden die expliciet meegegeven zijn — Prisma slaat
   // 'undefined' over, dus partial-update werkt vanzelf.
   const data: Prisma.ChildProfileUpdateInput = {
-    name: parsed.name,
+    name: parsed.name ? normalizeChildName(parsed.name) : undefined,
     dateOfBirth: parsed.dateOfBirth ? new Date(parsed.dateOfBirth) : undefined,
     gender: parsed.gender,
     interests: parsed.interests,
-    pets: parsed.pets as Prisma.InputJsonValue | undefined,
-    friends: parsed.friends as Prisma.InputJsonValue | undefined,
+    pets:
+      (normalizeNamesIn(parsed.pets) as Prisma.InputJsonValue | undefined) ??
+      (parsed.pets as Prisma.InputJsonValue | undefined),
+    friends:
+      (normalizeNamesIn(parsed.friends) as Prisma.InputJsonValue | undefined) ??
+      (parsed.friends as Prisma.InputJsonValue | undefined),
     favoriteThings: parsed.favoriteThings as Prisma.InputJsonValue | undefined,
     fears: parsed.fears,
     hairColor: parsed.hairColor,

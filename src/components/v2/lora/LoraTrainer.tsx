@@ -224,8 +224,8 @@ export function LoraTrainer({
             </>
           ) : (
             <>
-              Train een{" "}
-              <span style={{ fontStyle: "italic" }}>character-LoRA.</span>
+              Train de{" "}
+              <span style={{ fontStyle: "italic" }}>character-herkenning.</span>
             </>
           )}
         </h2>

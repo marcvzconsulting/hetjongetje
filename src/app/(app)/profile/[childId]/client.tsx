@@ -11,6 +11,7 @@ import {
   SkinColorPicker,
 } from "@/components/profile/appearance-pickers";
 import { CharacterPreview } from "@/components/profile/character-preview";
+import { INTEREST_OPTIONS } from "@/lib/constants/interests";
 
 interface ChildData {
   id: string;
@@ -39,21 +40,6 @@ interface ChildData {
 interface Props {
   child: ChildData;
 }
-
-const INTEREST_OPTIONS = [
-  { value: "animals", label: "Dieren" },
-  { value: "space", label: "Ruimte" },
-  { value: "princesses", label: "Prinsessen" },
-  { value: "dinosaurs", label: "Dinosaurussen" },
-  { value: "sports", label: "Sport" },
-  { value: "music", label: "Muziek" },
-  { value: "cars", label: "Auto's" },
-  { value: "nature", label: "Natuur" },
-  { value: "cooking", label: "Koken" },
-  { value: "art", label: "Tekenen" },
-  { value: "building", label: "Bouwen" },
-  { value: "reading", label: "Lezen" },
-];
 
 const CHARACTER_TYPES = [
   { value: "self", label: "Zichzelf", description: "Het kind is de held" },
@@ -174,6 +160,49 @@ function Dl({ rows }: { rows: [string, React.ReactNode][] }) {
   );
 }
 
+function EditChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "6px 10px 6px 14px",
+        background: V2.paper,
+        border: `1px solid ${V2.paperShade}`,
+        fontFamily: V2.body,
+        fontSize: 14,
+        color: V2.ink,
+      }}
+    >
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Verwijder"
+        style={{
+          background: "transparent",
+          border: "none",
+          color: V2.inkMute,
+          cursor: "pointer",
+          padding: 2,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <IconV2 name="close" size={12} color={V2.inkMute} />
+      </button>
+    </span>
+  );
+}
+
 export function ProfileEditor({ child }: Props) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -200,20 +229,126 @@ export function ProfileEditor({ child }: Props) {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Lokale invoer-state voor het toevoegen van huisdier/vriend/angst
+  // in edit-mode. Idem als in de wizard-stap.
+  const [petName, setPetName] = useState("");
+  const [petType, setPetType] = useState("");
+  const [petDescription, setPetDescription] = useState("");
+  const [friendName, setFriendName] = useState("");
+  const [friendRelation, setFriendRelation] = useState("");
+  const [friendDescription, setFriendDescription] = useState("");
+  const [fearInput, setFearInput] = useState("");
+
+  function addPet() {
+    if (!petName || !petType) return;
+    setData((d) => ({
+      ...d,
+      pets: [
+        ...d.pets,
+        {
+          name: petName,
+          type: petType,
+          ...(petDescription.trim() ? { description: petDescription.trim() } : {}),
+        },
+      ],
+    }));
+    setPetName("");
+    setPetType("");
+    setPetDescription("");
+  }
+  function removePet(i: number) {
+    setData((d) => ({ ...d, pets: d.pets.filter((_, idx) => idx !== i) }));
+  }
+  function addFriend() {
+    if (!friendName) return;
+    setData((d) => ({
+      ...d,
+      friends: [
+        ...d.friends,
+        {
+          name: friendName,
+          relationship: friendRelation || "vriend",
+          ...(friendDescription.trim() ? { description: friendDescription.trim() } : {}),
+        },
+      ],
+    }));
+    setFriendName("");
+    setFriendRelation("");
+    setFriendDescription("");
+  }
+  function removeFriend(i: number) {
+    setData((d) => ({ ...d, friends: d.friends.filter((_, idx) => idx !== i) }));
+  }
+  function addFear() {
+    if (!fearInput) return;
+    setData((d) => ({ ...d, fears: [...d.fears, fearInput] }));
+    setFearInput("");
+  }
+  function removeFear(i: number) {
+    setData((d) => ({ ...d, fears: d.fears.filter((_, idx) => idx !== i) }));
+  }
+
   async function handleSave() {
+    // Auto-commit nog-niet-bevestigde invoer (zelfde valkuil als in de
+    // wizard): typer typt naam+soort en klikt direct Opslaan.
+    if (petName && petType) addPet();
+    if (friendName) addFriend();
+    if (fearInput) addFear();
     setSaving(true);
     setError("");
     try {
+      // Belangrijk: addPet/addFriend/addFear muteren state async. We
+      // bouwen lokaal de payload met de pending-entries erbij zodat de
+      // PATCH ook deze meeneemt, zonder op een re-render te wachten.
+      const payload = {
+        ...data,
+        pets:
+          petName && petType
+            ? [
+                ...data.pets,
+                {
+                  name: petName,
+                  type: petType,
+                  ...(petDescription.trim()
+                    ? { description: petDescription.trim() }
+                    : {}),
+                },
+              ]
+            : data.pets,
+        friends: friendName
+          ? [
+              ...data.friends,
+              {
+                name: friendName,
+                relationship: friendRelation || "vriend",
+                ...(friendDescription.trim()
+                  ? { description: friendDescription.trim() }
+                  : {}),
+              },
+            ]
+          : data.friends,
+        fears: fearInput ? [...data.fears, fearInput] : data.fears,
+      };
       const res = await fetch(`/api/children/${child.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Opslaan mislukt");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as
+          | { issues?: { path: string; message: string }[] }
+          | null;
+        const detail = body?.issues
+          ?.map((i) => `${i.path}: ${i.message}`)
+          .join(", ");
+        throw new Error(detail || "Opslaan mislukt");
+      }
       setEditing(false);
       router.refresh();
-    } catch {
-      setError("Er ging iets mis bij het opslaan");
+    } catch (e) {
+      setError(
+        e instanceof Error ? `Er ging iets mis: ${e.message}` : "Er ging iets mis bij het opslaan",
+      );
     } finally {
       setSaving(false);
     }
@@ -737,6 +872,222 @@ export function ProfileEditor({ child }: Props) {
                 />
               </div>
             ))}
+          </div>
+        </SubCard>
+
+        {/* Pets, friends & fears */}
+        <SubCard kicker="Vrienden, huisdieren & angsten">
+          {/* Huisdieren */}
+          <div style={{ marginBottom: 28 }}>
+            <div
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 11,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: V2.inkMute,
+                marginBottom: 10,
+              }}
+            >
+              Huisdieren
+            </div>
+            {data.pets.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+              >
+                {data.pets.map((pet, i) => (
+                  <EditChip
+                    key={`p${i}`}
+                    label={`${pet.name} (${pet.type})`}
+                    onRemove={() => removePet(i)}
+                  />
+                ))}
+              </div>
+            )}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginBottom: 10,
+              }}
+            >
+              <input
+                type="text"
+                value={petName}
+                onChange={(e) => setPetName(e.target.value)}
+                placeholder="Naam (bv. Bella)"
+                style={underlineInput}
+              />
+              <input
+                type="text"
+                value={petType}
+                onChange={(e) => setPetType(e.target.value)}
+                placeholder="Soort (bv. kat)"
+                style={underlineInput}
+              />
+            </div>
+            <input
+              type="text"
+              value={petDescription}
+              onChange={(e) => setPetDescription(e.target.value)}
+              placeholder="Uiterlijk (optioneel)"
+              style={{ ...underlineInput, marginBottom: 10 }}
+            />
+            <EBtn
+              kind="ghost"
+              size="sm"
+              onClick={addPet}
+              style={{ opacity: petName && petType ? 1 : 0.4 }}
+            >
+              <IconV2 name="plus" size={12} color={V2.ink} /> Huisdier toevoegen
+            </EBtn>
+          </div>
+
+          {/* Vrienden */}
+          <div
+            style={{
+              marginBottom: 28,
+              paddingTop: 20,
+              borderTop: `1px solid ${V2.paperShade}`,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 11,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: V2.inkMute,
+                marginBottom: 10,
+              }}
+            >
+              Vrienden
+            </div>
+            {data.friends.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+              >
+                {data.friends.map((friend, i) => (
+                  <EditChip
+                    key={`f${i}`}
+                    label={
+                      friend.relationship
+                        ? `${friend.name} · ${friend.relationship}`
+                        : friend.name
+                    }
+                    onRemove={() => removeFriend(i)}
+                  />
+                ))}
+              </div>
+            )}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginBottom: 10,
+              }}
+            >
+              <input
+                type="text"
+                value={friendName}
+                onChange={(e) => setFriendName(e.target.value)}
+                placeholder="Naam (bv. Noor)"
+                style={underlineInput}
+              />
+              <input
+                type="text"
+                value={friendRelation}
+                onChange={(e) => setFriendRelation(e.target.value)}
+                placeholder="Relatie (bv. buurmeisje)"
+                style={underlineInput}
+              />
+            </div>
+            <input
+              type="text"
+              value={friendDescription}
+              onChange={(e) => setFriendDescription(e.target.value)}
+              placeholder="Uiterlijk (optioneel)"
+              style={{ ...underlineInput, marginBottom: 10 }}
+            />
+            <EBtn
+              kind="ghost"
+              size="sm"
+              onClick={addFriend}
+              style={{ opacity: friendName ? 1 : 0.4 }}
+            >
+              <IconV2 name="plus" size={12} color={V2.ink} /> Vriend toevoegen
+            </EBtn>
+          </div>
+
+          {/* Angsten */}
+          <div
+            style={{
+              paddingTop: 20,
+              borderTop: `1px solid ${V2.paperShade}`,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 11,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: V2.inkMute,
+                marginBottom: 10,
+              }}
+            >
+              Vermijden
+            </div>
+            {data.fears.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginBottom: 12,
+                }}
+              >
+                {data.fears.map((fear, i) => (
+                  <EditChip
+                    key={`fe${i}`}
+                    label={fear}
+                    onRemove={() => removeFear(i)}
+                  />
+                ))}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+              <input
+                type="text"
+                value={fearInput}
+                onChange={(e) => setFearInput(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && (e.preventDefault(), addFear())
+                }
+                placeholder="Bv. donker, spinnen, onweer"
+                style={{ ...underlineInput, flex: 1 }}
+              />
+              <EBtn
+                kind="ghost"
+                size="sm"
+                onClick={addFear}
+                style={{ opacity: fearInput ? 1 : 0.4 }}
+              >
+                <IconV2 name="plus" size={12} color={V2.ink} /> Toevoegen
+              </EBtn>
+            </div>
           </div>
         </SubCard>
 

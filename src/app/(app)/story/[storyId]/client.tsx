@@ -298,7 +298,7 @@ export function StoryPageClient({
                   lineHeight: 1.55,
                 }}
               >
-                Eén keer per verhaal kun je opnieuw laten genereren met
+                Je kunt dit verhaal één keer opnieuw laten maken met
                 dezelfde instellingen.{" "}
                 {!canRegenerate ? (
                   <span style={{ color: V2.inkMute }}>
@@ -306,10 +306,10 @@ export function StoryPageClient({
                   </span>
                 ) : (
                   <>
-                    Vertel hieronder kort wat er anders moet —{" "}
-                    <strong>het oude verhaal raak je kwijt</strong>, dus
-                    geef het wel mee, anders krijg je waarschijnlijk hetzelfde
-                    soort verhaal terug.
+                    Schrijf hieronder kort wat je anders wilt. Zonder
+                    uitleg krijg je waarschijnlijk een vergelijkbaar
+                    verhaal terug.{" "}
+                    <strong>Let op: het oude verhaal wordt overschreven.</strong>
                   </>
                 )}
               </p>

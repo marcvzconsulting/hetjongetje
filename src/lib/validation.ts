@@ -73,22 +73,28 @@ const isoDate = z
   .string()
   .refine((s) => !isNaN(new Date(s).getTime()), "ongeldige datum");
 
+// Optionele tekstvelden mogen leeg zijn — de edit-form stuurt altijd
+// alle velden mee, ook als de gebruiker uiterlijk/personage nog niet
+// heeft ingevuld. Zonder dit blokkeerde min(1) elke PATCH.
+const shortTextLoose = z.string().trim().max(120);
+const mediumTextLoose = z.string().trim().max(500);
+
 export const childProfileUpdateSchema = z
   .object({
     name: shortText.optional(),
     dateOfBirth: isoDate.optional(),
-    gender: shortText.optional(),
+    gender: shortTextLoose.optional(),
     interests: z.array(shortText).max(20).optional(),
     pets: z.unknown().optional(), // JSON-blob; downstream code accepts shape
     friends: z.unknown().optional(),
     favoriteThings: z.unknown().optional(),
     fears: z.array(shortText).max(20).optional(),
-    mainCharacterType: shortText.optional(),
-    mainCharacterDescription: mediumText.optional(),
-    hairColor: shortText.optional(),
-    hairStyle: shortText.optional(),
-    eyeColor: shortText.optional(),
-    skinColor: shortText.optional(),
+    mainCharacterType: shortTextLoose.optional(),
+    mainCharacterDescription: mediumTextLoose.optional(),
+    hairColor: shortTextLoose.optional(),
+    hairStyle: shortTextLoose.optional(),
+    eyeColor: shortTextLoose.optional(),
+    skinColor: shortTextLoose.optional(),
     wearsGlasses: z.boolean().optional(),
     hasFreckles: z.boolean().optional(),
   })

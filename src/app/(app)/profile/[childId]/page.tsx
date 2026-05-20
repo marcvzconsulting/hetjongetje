@@ -198,10 +198,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 Wanneer je een paar foto's uploadt of een gegenereerd
                 portret goedkeurt, lijkt {child.name} op elke pagina van
                 elk verhaal hetzelfde. Zonder deze stap verschilt het
-                personage soms per illustratie — daar haken ouders en
-                kinderen op af. Je kunt 'm overslaan en later weer
-                terugkomen, maar 't kost minder dan 5 minuten en het
-                verschil is groot.
+                personage soms per illustratie. Je kunt 'm overslaan en
+                later weer terugkomen, maar 't kost minder dan 5 minuten
+                en het verschil is groot.
               </div>
             </div>
           )}

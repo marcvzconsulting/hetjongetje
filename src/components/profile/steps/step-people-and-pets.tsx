@@ -205,6 +205,17 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
     onChange({ fears: data.fears.filter((_, i) => i !== index) });
   }
 
+  // Ouders vullen vaak Naam + Soort in en klikken meteen "Volgende"
+  // zonder eerst op "+ Toevoegen" te tikken — die invoer raakte zo
+  // verloren. Vóór navigatie auto-committen we wat nog in de velden
+  // staat (huisdier vereist beide, vriend alleen naam, fear vrij veld).
+  function handleNext() {
+    if (petName && petType) addPet();
+    if (friendName) addFriend();
+    if (fearInput) addFear();
+    onNext();
+  }
+
   const childName = data.name || "het kind";
 
   return (
@@ -468,7 +479,7 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
         >
           ← Vorige stap
         </button>
-        <EBtn kind="primary" size="lg" onClick={onNext}>
+        <EBtn kind="primary" size="lg" onClick={handleNext}>
           Volgende <IconV2 name="arrow" size={16} color={V2.paper} />
         </EBtn>
       </div>

@@ -2,6 +2,7 @@
 
 import { V2 } from "@/components/v2/tokens";
 import { EBtn, Kicker, IconV2 } from "@/components/v2";
+import { INTEREST_OPTIONS } from "@/lib/constants/interests";
 import type { ProfileData } from "../profile-wizard";
 
 interface Props {
@@ -10,25 +11,6 @@ interface Props {
   onNext: () => void;
   onBack: () => void;
 }
-
-const INTEREST_OPTIONS = [
-  { value: "dinosaurs", label: "Dinosaurussen" },
-  { value: "space", label: "Ruimte" },
-  { value: "animals", label: "Dieren" },
-  { value: "princesses", label: "Prinsessen" },
-  { value: "cars", label: "Auto's" },
-  { value: "sports", label: "Sport" },
-  { value: "music", label: "Muziek" },
-  { value: "cooking", label: "Koken" },
-  { value: "nature", label: "Natuur" },
-  { value: "pirates", label: "Piraten" },
-  { value: "fairies", label: "Feeën" },
-  { value: "robots", label: "Robots" },
-  { value: "art", label: "Tekenen" },
-  { value: "building", label: "Bouwen" },
-  { value: "superheroes", label: "Superhelden" },
-  { value: "swimming", label: "Zwemmen" },
-];
 
 const fieldLabel = {
   fontFamily: V2.ui,

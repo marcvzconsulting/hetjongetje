@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { normalizeChildName, normalizeNamesIn } from "@/lib/utils/name";
 
 export async function GET() {
   const session = await auth();
@@ -53,12 +54,12 @@ export async function POST(request: NextRequest) {
     const child = await prisma.childProfile.create({
       data: {
         userId: session.user.id,
-        name,
+        name: normalizeChildName(name),
         dateOfBirth: new Date(dateOfBirth),
         gender,
         interests: interests || [],
-        pets: pets || null,
-        friends: friends || null,
+        pets: normalizeNamesIn(pets) || pets || null,
+        friends: normalizeNamesIn(friends) || friends || null,
         favoriteThings: favoriteThings || null,
         fears: fears || [],
         mainCharacterType,
