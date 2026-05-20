@@ -1026,7 +1026,7 @@ async function Pricing() {
                 )}
               </div>
             </div>
-            <EBtn kind="ghost" size="sm" href="/credits">
+            <EBtn kind="ghost" size="sm" href="/losse-verhalen">
               Los bijkopen →
             </EBtn>
           </div>
