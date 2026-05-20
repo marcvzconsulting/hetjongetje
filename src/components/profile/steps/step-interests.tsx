@@ -47,7 +47,7 @@ export function StepInterests({ data, onChange, onNext, onBack }: Props) {
 
   return (
     <div>
-      <Kicker>Wat vindt het kind leuk?</Kicker>
+      <Kicker>Wat vindt {data.name || "het kind"} leuk?</Kicker>
       <h2
         style={{
           fontFamily: V2.display,

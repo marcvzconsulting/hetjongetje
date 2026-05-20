@@ -56,7 +56,7 @@ export default async function NewProfilePage() {
               lineHeight: 1.05,
             }}
           >
-            Vertel ons wie{" "}
+            Vertel ons voor wie{" "}
             <span style={{ fontStyle: "italic" }}>het verhaal</span> wordt.
           </h1>
           <p
@@ -69,9 +69,9 @@ export default async function NewProfilePage() {
               lineHeight: 1.55,
             }}
           >
-            Naam, leeftijd, knuffel, de mensen om hen heen. Dit doe je maar
-            één keer, daarna weten wij genoeg om elke avond een nieuw verhaal
-            te maken.
+            Naam, leeftijd, knuffel, de mensen om je kind heen. Dit doe
+            je maar één keer, daarna weten wij genoeg om elke avond een
+            nieuw verhaal te maken.
           </p>
         </div>
 

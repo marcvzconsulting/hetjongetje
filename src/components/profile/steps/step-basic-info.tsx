@@ -77,7 +77,7 @@ export function StepBasicInfo({ data, onChange, onNext }: Props) {
           color: V2.ink,
         }}
       >
-        Vertel ons wie <span style={{ fontStyle: "italic" }}>dit kind</span> is.
+        Vertel ons wie <span style={{ fontStyle: "italic" }}>dit</span> is.
       </h2>
       <p
         style={{

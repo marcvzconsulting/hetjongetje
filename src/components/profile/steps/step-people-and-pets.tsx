@@ -233,7 +233,7 @@ export function StepPeopleAndPets({ data, onChange, onNext, onBack }: Props) {
         }}
       >
         De mensen, en dieren,{" "}
-        <span style={{ fontStyle: "italic" }}>om hen heen.</span>
+        <span style={{ fontStyle: "italic" }}>om {childName} heen.</span>
       </h2>
       <p
         style={{
