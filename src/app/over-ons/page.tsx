@@ -141,7 +141,7 @@ export default function OverOnsPage() {
           lineHeight: 1.5,
         }}
       >
-        Marc van Zetten, oprichter van Ons Verhaaltje (MVZ Consulting)
+        Marc van Zetten, oprichter van Ons Verhaaltje
       </p>
 
       {/* JSON-LD: AboutPage + Person, zodat AI- en zoekmachines de byline
