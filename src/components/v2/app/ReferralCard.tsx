@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { V2 } from "@/components/v2/tokens";
 
 type Props = {
@@ -14,6 +14,14 @@ type Props = {
  */
 export function ReferralCard({ shareUrl }: Props) {
   const [copied, setCopied] = useState(false);
+  // Web-Share-API alleen client-side detecteren — anders mismatch tussen
+  // SSR (geen knop) en hydratie (knop). Pas na mount renderen we 'm.
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    // SSR rendert false; in browser zetten we 'm aan als Web Share bestaat.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCanShare(typeof navigator !== "undefined" && "share" in navigator);
+  }, []);
 
   async function copy() {
     try {
@@ -140,7 +148,7 @@ export function ReferralCard({ shareUrl }: Props) {
               {copied ? "Gekopieerd ✓" : "Kopieer link"}
             </button>
           </div>
-          {typeof navigator !== "undefined" && "share" in navigator && (
+          {canShare && (
             <button
               type="button"
               onClick={shareNative}
