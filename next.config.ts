@@ -116,6 +116,25 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * Externe image-domeinen waarvan Next/Image mag optimaliseren. Door
+   * deze toe te voegen worden story-illustraties via /_next/image
+   * geproxied, geresized naar de daadwerkelijke render-grootte, en
+   * geserveerd als AVIF/WebP met PNG-fallback. Cruciaal voor het
+   * dashboard waar tientallen 1024×1024-illustraties anders full-size
+   * worden geladen.
+   *
+   * Domeinen moeten overeenkomen met de CSP `img-src` directive
+   * hierboven.
+   */
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**.scw.cloud" },
+      { protocol: "https", hostname: "**.fal.media" },
+      { protocol: "https", hostname: "**.fal.run" },
+      { protocol: "https", hostname: "**.fal.ai" },
+    ],
+  },
   async headers() {
     return [
       {

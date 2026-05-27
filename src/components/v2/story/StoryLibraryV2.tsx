@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, IconV2 } from "@/components/v2";
@@ -162,6 +163,7 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
         />
         <div style={{ flex: 1 }} />
         <select
+          aria-label="Sorteer verhalen"
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOption)}
           style={{
@@ -407,15 +409,13 @@ function StoryCard({
           }}
         >
           {story.coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={story.coverUrl}
               alt={story.title}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
               style={{
-                width: "100%",
-                height: "100%",
                 objectFit: "cover",
-                display: "block",
               }}
             />
           ) : (
@@ -444,7 +444,7 @@ function StoryCard({
         </div>
         {/* Info */}
         <div style={{ marginTop: 14 }}>
-          <h4
+          <h3
             style={{
               fontFamily: V2.display,
               fontSize: 20,
@@ -456,7 +456,7 @@ function StoryCard({
             }}
           >
             {story.title}
-          </h4>
+          </h3>
           <p
             style={{
               fontFamily: V2.mono,

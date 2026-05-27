@@ -7,7 +7,7 @@ A personalized children's story generator web app. Parents fill in a profile abo
 
 ## Tech Stack
 - **Framework**: Next.js 16 (App Router) + TypeScript
-- **Styling**: Tailwind CSS v4 + Nunito font
+- **Styling**: Tailwind CSS v4 + Google Fonts (Fraunces display, Lora body, Inter UI) via V2 design tokens
 - **State**: TanStack Query (server) + Zustand (client)
 - **Database**: PostgreSQL + Prisma ORM
 - **AI Stories**: Claude API (Sonnet 4.5) via @anthropic-ai/sdk

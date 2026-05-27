@@ -36,8 +36,10 @@
   --color-accent: var(--accent);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --font-sans: var(--font-nunito);
-  --font-serif: var(--font-lora);
+  /* Tailwind defaults — body-fonts gebruiken het V2-token-systeem
+     (tokens.ts) i.p.v. font-sans/font-serif Tailwind-utilities. */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-lora), Georgia, serif;
 
   /* v2 colors available as Tailwind utilities: bg-paper, text-ink, border-gold, etc. */
   --color-paper: var(--v2-paper);

@@ -477,7 +477,7 @@ function WaitingCard({
       }}
     >
       <Kicker>{kicker}</Kicker>
-      <h1
+      <h2
         style={{
           fontFamily: V2.display,
           fontWeight: 300,
@@ -488,7 +488,7 @@ function WaitingCard({
         }}
       >
         {title}
-      </h1>
+      </h2>
       <p
         style={{
           fontFamily: V2.body,

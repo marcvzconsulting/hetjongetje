@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import { V2 } from "@/components/v2/tokens";
@@ -1104,15 +1105,14 @@ function IllustrationPage({
   if (page.url) {
     return (
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={page.url}
           alt={page.description || "Illustratie"}
+          fill
+          priority
+          sizes={full ? "100vw" : "(max-width: 768px) 100vw, 50vw"}
           style={{
-            width: "100%",
-            height: "100%",
             objectFit: "cover",
-            display: "block",
           }}
           draggable={false}
         />

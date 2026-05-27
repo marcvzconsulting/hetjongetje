@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { Logo, EBtn, Kicker, IconV2 } from "@/components/v2";
@@ -10,6 +11,10 @@ import { prisma } from "@/lib/db";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
+
+export const metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
@@ -293,10 +298,13 @@ function Hero() {
                 WebkitMaskImage: vignette,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/images/hero-illustration.png"
                 alt="Een klein meisje in pyjama met een knuffelolifant"
+                width={800}
+                height={800}
+                priority
+                sizes="(max-width: 768px) 90vw, 540px"
                 style={{
                   display: "block",
                   width: "100%",

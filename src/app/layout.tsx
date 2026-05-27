@@ -1,15 +1,9 @@
 import type { Metadata } from "next";
-import { Nunito, Lora, Fraunces, Inter } from "next/font/google";
+import { Lora, Fraunces, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { CookieBanner } from "@/components/v2/CookieBanner";
 import "./globals.css";
-
-const nunito = Nunito({
-  variable: "--font-nunito",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
-});
 
 const lora = Lora({
   variable: "--font-lora",
@@ -60,9 +54,9 @@ export const metadata: Metadata = {
     "kinderboekje",
   ],
   category: "kids",
-  alternates: {
-    canonical: "/",
-  },
+  // Per-page canonicals zetten op de paginas zelf via
+  // `alternates.canonical`. Een layout-level default zou alle child-pages
+  // een canonical naar "/" geven, wat Lighthouse (terecht) afkeurt.
   robots: {
     index: true,
     follow: true,
@@ -117,7 +111,7 @@ export default function RootLayout({
   return (
     <html
       lang="nl"
-      className={`${nunito.variable} ${lora.variable} ${fraunces.variable} ${inter.variable} h-full antialiased`}
+      className={`${lora.variable} ${fraunces.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
