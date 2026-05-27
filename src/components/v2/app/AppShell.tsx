@@ -217,7 +217,7 @@ export function AppShell({
           </Link>
         </div>
       </nav>
-      {children}
+      <main>{children}</main>
     </div>
   );
 }

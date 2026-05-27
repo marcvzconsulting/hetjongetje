@@ -114,6 +114,7 @@ export function ReferralCard({ shareUrl }: Props) {
             }}
           >
             <input
+              aria-label="Jouw uitnodig-link"
               readOnly
               value={shareUrl}
               onFocus={(e) => e.currentTarget.select()}

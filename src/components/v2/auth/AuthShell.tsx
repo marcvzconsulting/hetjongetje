@@ -61,7 +61,7 @@ export function AuthShell({
         }}
       >
         {/* Left: form */}
-        <div
+        <main
           style={{
             padding: "40px 32px",
             display: "flex",
@@ -108,7 +108,7 @@ export function AuthShell({
               </div>
             )}
           </div>
-        </div>
+        </main>
 
         {/* Right: decorative night panel */}
         <div

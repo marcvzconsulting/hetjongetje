@@ -29,14 +29,16 @@ export default function Home() {
       <LandingJsonLd />
       <ResponsiveStyles />
       <Nav />
-      <Hero />
-      <StoryPreviewSection />
-      <HowItGoes />
-      <NightHero />
-      <BookSection />
-      <Pricing />
-      <Testimonial />
-      <SlotCTA />
+      <main>
+        <Hero />
+        <StoryPreviewSection />
+        <HowItGoes />
+        <NightHero />
+        <BookSection />
+        <Pricing />
+        <Testimonial />
+        <SlotCTA />
+      </main>
       <LandingFooter />
     </div>
   );

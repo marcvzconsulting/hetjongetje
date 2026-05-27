@@ -17,13 +17,15 @@ export function PublicStoryReader({
   spreads,
 }: Props) {
   return (
-    <BookViewerV3
-      readOnly
-      storyId={storyId}
-      childName={childName}
-      storyTitle={storyTitle}
-      spreads={spreads}
-      isFavorite={false}
-    />
+    <main>
+      <BookViewerV3
+        readOnly
+        storyId={storyId}
+        childName={childName}
+        storyTitle={storyTitle}
+        spreads={spreads}
+        isFavorite={false}
+      />
+    </main>
   );
 }
