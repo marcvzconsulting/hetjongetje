@@ -129,10 +129,11 @@ Uit de security-deferred-hardening sessie van 2026-04-29:
 Volgende logische stappen:
 
 1. **Drukker-API** is de grootste single-feature die nog open staat. Hangt aan jouw keuze tussen PrintAPI/Peecho.
-2. **Onboarding-tour effectiviteit meten** — gedekt door punt 2 in "Verbeter-iteratie 2" hieronder.
-3. **Referral-conversie meten** — ✅ klaar (zie `/admin/referrals`).
+2. **CSP-hardening** — pas vlak voor pen-test of in rustige periode met staging-omgeving. Zie "Geparkeerd na security-audit" hierboven.
+3. **AI-catalog editing** — settings/occasions/adventure-types/moods toevoegen zonder code-deploy.
+4. **Brevo inbound parsing** — maakt admin-inbox compleet.
 
-Alle 5 fases zijn klaar. Alleen parked-items + "op jouw bord"-keuzes resten.
+Alle 5 fases zijn klaar, Verbeter-iteratie 2 is klaar (op #6 geschrapt en #7 geparkeerd na). Resteren parked-items + "op jouw bord"-keuzes.
 
 ---
 
@@ -187,43 +188,25 @@ Acht losse items die in willekeurige volgorde aangepakt kunnen worden. Drie buck
   - Eénmalige verzending, daarna stoppen (geen herhaal-spam).
 - **Effort**: ~1.5 uur (DB-veld, route, template).
 
-#### 6. Live HTML-preview in `/admin/email-templates/[code]`
-- **Doel**: nu zie je in admin alleen de bron van een template; je weet pas wat de klant ziet als je 'm verstuurt. Live preview maakt iterair tweaken sneller.
-- **Stappen**:
-  - Op de admin-template-editor-pagina: rechts naast het bewerkingsveld een sandboxed `<iframe srcdoc={renderedHtml}>` die de samengestelde HTML toont met dummy-variabelen (`{{name}}` → "Voorbeeld" etc.).
-  - Variabelen-bewerker in een klein zijpaneel zodat je verschillende waarden kunt invullen.
-  - Sandbox-iframe gebruikt `sandbox="allow-same-origin"` — geen JS, alleen rendering.
-- **Effort**: ~1.5 uur.
+#### ~~6. Live HTML-preview in `/admin/email-templates/[code]`~~ (geschrapt 2026-05-27)
+De bestaande server-rendered preview-iframe op de template-editor-pagina blijkt in de praktijk al voldoende: editor links, sandboxed iframe-preview rechts, ververst bij opslaan. De roadmap dacht "nog te bouwen" maar het stond er al. Een echte client-side live preview (update tijdens typen) zou een fetch-on-change API-route plus debouncing vereisen — meer code, meer risico, en de save-flow is in de praktijk snel genoeg.
 
-### Groot (een hele middag of meer)
-
-#### 7. CSP-hardening
-- **Doel**: minder XSS-risico door strictere Content-Security-Policy.
-- **Stappen** (in twee fases):
-  - **Fase A — drop `unsafe-eval`**: identificeer waar Sentry SDK `new Function()` doet; check of nieuwere Sentry versie het niet meer nodig heeft (bouwen + testen). Eventueel: `worker-src 'self' blob:` toevoegen als Sentry de feature naar workers verhuist.
-  - **Fase B — nonce-based CSP voor inline styles**: middleware genereert per request een nonce, geeft 'm mee via React context, alle `<style>`-tags krijgen `nonce={...}`. Verwijdert de noodzaak van `'unsafe-inline'`.
-  - Test op alle paginas; rollback-plan: feature flag.
-- **Effort**: ~4-6 uur, vooral test-werk.
-
-#### 8. AVG-export per user
-- **Doel**: wettelijk recht onder AVG: gebruiker kan een download krijgen van alle gegevens die we van ze bewaren. Nu zou je dat handmatig moeten compileren.
-- **Stappen**:
-  - Nieuwe knop "Download mijn gegevens" in `/account` onder Persoonsgegevens.
-  - Server action die alle relevante rows verzamelt: User, ChildProfile's, Story's + StoryPages, Order's, Subscription, ContactMessage's met deze email, NewsletterSignup, AdminAuditLog (alleen entries waar deze user target is).
-  - Output: JSON-bestand of zip (JSON + media URLs).
-  - Audit-log entry zodat we kunnen aantonen dat het verzoek is verwerkt.
-  - Rate-limit: max 1 export per 24h per user.
-- **Effort**: ~3-4 uur. Geen migratie maar veel queries en testen.
+#### 8. AVG-export per user ✅ (klaar 2026-05-27)
+- Nieuwe GET-route `/api/account/export` levert JSON-download met user, abonnement, kindprofielen + verhalen, boeken, orders, contact-berichten, newsletter-signup, en de admin-audit-entries waarvan deze user het target was.
+- Bewust niet meegestuurd: passwordHash, magic-link/reset-token-hashes — geen persoonsgegevens van de aanvrager.
+- Rate-limit: 1× per 24u per user via bestaande `rateLimit()`-infra.
+- Audit-trail: schrijft `gdpr.export` naar adminAuditLog zodat we kunnen aantonen dat het verzoek is verwerkt.
+- UI: nieuwe sectie "Je gegevens" op `/account` tussen wachtwoord en gevarenzone.
 
 ---
 
-## Aanbevolen volgorde
+## Aanbevolen volgorde (historisch — items klaar of geparkeerd)
 
-1. **#1 Rate-limit unsubscribe/resubscribe** — security leak, snel weg.
-2. **#2 Sentry user-context** — verhoogt debug-snelheid voor alle volgende werk.
-3. **#3 Onboarding-meten** — geeft je actiebare data over wat er stuk gaat.
-4. **#5 Reminder-mail** — directe retentie-impact, beste ROI op verkeer dat al gevallen is.
-5. **#4 Lighthouse** — pak op tijdens een rustig moment, geen blocker.
-6. **#6 Email-preview** — quality-of-life, niet kritiek.
-7. **#8 AVG-export** — wettelijk, doe vóór de officiële launch.
-8. **#7 CSP-hardening** — laatste, alleen als je tijd hebt; site is al redelijk veilig.
+1. ✅ **#1 Rate-limit unsubscribe/resubscribe** — security leak, snel weg.
+2. ✅ **#2 Sentry user-context** — verhoogt debug-snelheid voor alle volgende werk.
+3. ✅ **#3 Onboarding-meten** — geeft je actiebare data over wat er stuk gaat.
+4. ✅ **#5 Reminder-mail** — directe retentie-impact, beste ROI op verkeer dat al gevallen is.
+5. ✅ **#4 Lighthouse** — perf 81–89 → 84–91, dashboard image-savings 1.3MB → 8KB, alle canonicals + a11y main landmark + form-labels gefixed.
+6. ~~#6 Email-preview~~ — geschrapt; bestaande server-side preview voldoet.
+7. ✅ **#8 AVG-export** — wettelijk, klaar.
+8. ⏸️ **#7 CSP-hardening** — geparkeerd, zie sectie "Geparkeerd na security-audit" hierboven voor details.
