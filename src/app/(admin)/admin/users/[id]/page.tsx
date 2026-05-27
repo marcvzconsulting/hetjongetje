@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { ADMIN_DASHBOARD_TAG } from "@/lib/admin/dashboard-stats";
 import bcrypt from "bcryptjs";
 import { requireAdmin } from "@/lib/admin";
 import { auth } from "@/lib/auth";
@@ -378,6 +379,11 @@ async function updateApprovalAction(formData: FormData) {
   }
 
   revalidatePath(`/admin/users/${userId}`);
+  // Approve/suspend/unsuspend verandert de pendingUsers-teller op het
+  // dashboard. setCredits/addCredits niet — geen ramp om die ook te
+  // invalideren, scheelt een if. updateTag (i.p.v. revalidateTag) is
+  // Next 16's read-your-own-writes-variant voor server actions.
+  updateTag(ADMIN_DASHBOARD_TAG);
 }
 
 async function setLandingPreviewSlotAction(formData: FormData) {

@@ -53,22 +53,44 @@ const SECURITY_HEADERS = [
   {
     key: "Permissions-Policy",
     value: [
+      // Hardware-sensoren en device-APIs — we hebben er geen
+      // gebruik voor. Allowlist `=()` betekent: geen enkele
+      // origin (ook niet self) mag dit aanvragen.
       "camera=()",
       "microphone=()",
       "geolocation=()",
       "payment=()",
       "usb=()",
+      "bluetooth=()",
+      "serial=()",
+      "hid=()",
+      "gamepad=()",
       "accelerometer=()",
       "gyroscope=()",
       "magnetometer=()",
       "ambient-light-sensor=()",
+      "xr-spatial-tracking=()",
+      // Media + display
       "autoplay=()",
       "fullscreen=(self)",
       "picture-in-picture=()",
       "midi=()",
       "encrypted-media=()",
+      "display-capture=()",
+      "screen-wake-lock=()",
+      // Misc browser features
+      "idle-detection=()",
+      "window-management=()",
+      "local-fonts=()",
       "sync-xhr=()",
       "interest-cohort=()",
+      // Wel toestaan voor onze eigen origin:
+      // - web-share: referral- en story-deel-knoppen
+      // - clipboard-write: copy-link-knoppen
+      // clipboard-read blijft uit (we hoeven nooit te peeken).
+      "web-share=(self)",
+      "clipboard-read=()",
+      "clipboard-write=(self)",
     ].join(", "),
   },
   {

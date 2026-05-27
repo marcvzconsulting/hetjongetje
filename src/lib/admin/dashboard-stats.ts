@@ -22,10 +22,18 @@ export const REVENUE_CUTOFF = new Date("2026-05-06T00:00:00Z");
 
 export type DashboardStats = Awaited<ReturnType<typeof loadDashboardStats>>;
 
+/**
+ * Cache-tag voor admin-dashboard stats. Server-actions die counters
+ * direct beïnvloeden (user-approve, user-suspend, etc.) roepen
+ * `revalidateTag(ADMIN_DASHBOARD_TAG)` aan zodat de wijziging meteen
+ * zichtbaar is in plaats van pas na de 60s revalidate.
+ */
+export const ADMIN_DASHBOARD_TAG = "admin-dashboard";
+
 export const loadDashboardStats = unstable_cache(
   loadDashboardStatsUncached,
   ["admin-dashboard-stats-v1"],
-  { revalidate: 60 },
+  { revalidate: 60, tags: [ADMIN_DASHBOARD_TAG] },
 );
 
 function startOfDay(now: Date): Date {
