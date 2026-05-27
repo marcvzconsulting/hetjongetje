@@ -411,6 +411,46 @@ export default async function AccountPage({
           </form>
         </Section>
 
+        {/* AVG: data-export */}
+        <Section
+          title="Je gegevens"
+          meta="Download alles wat we van je bewaren (AVG art. 15 & 20)"
+        >
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontSize: 14,
+              color: V2.inkSoft,
+              lineHeight: 1.65,
+              margin: "0 0 20px",
+              maxWidth: "62ch",
+            }}
+          >
+            Eén JSON-bestand met je profiel, kindprofielen, verhalen,
+            bestellingen en abonnement. Wachtwoord-hashes en interne
+            tokens slaan we over — die geven geen informatie over jou.
+            Maximaal één download per 24 uur.
+          </p>
+          <a
+            href="/api/account/export"
+            download
+            style={{
+              display: "inline-block",
+              padding: "10px 18px",
+              background: V2.ink,
+              color: V2.paper,
+              fontFamily: V2.ui,
+              fontSize: 14,
+              fontWeight: 500,
+              letterSpacing: 0.2,
+              textDecoration: "none",
+              border: `1px solid ${V2.ink}`,
+            }}
+          >
+            Download mijn gegevens (JSON)
+          </a>
+        </Section>
+
         {/* Danger zone */}
         <section
           style={{
