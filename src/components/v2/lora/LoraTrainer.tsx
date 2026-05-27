@@ -7,7 +7,7 @@ import { LoraConsentForm } from "./LoraConsentForm";
 
 const MIN_PHOTOS = 5;
 const MAX_PHOTOS = 15;
-const POLL_INTERVAL_MS = 20_000;
+const POLL_INTERVAL_MS = 60_000;
 
 type Status = "none" | "training" | "ready" | "failed";
 

@@ -39,10 +39,18 @@ function bundleDiscountPercent(
  * voordat een bestelling start.
  */
 export default async function LosseVerhalenPage() {
-  const packs = await prisma.creditPack.findMany({
-    where: { active: true },
-    orderBy: [{ sortOrder: "asc" }, { creditAmount: "asc" }],
-  });
+  // Defensief: bij DB-uitval (bv. Neon-quota tijdens build) tonen we de
+  // "geen pakketten beschikbaar"-state in plaats van de hele page te
+  // laten falen. Matcht het patroon van landing-pricing/landing-previews.
+  let packs: Awaited<ReturnType<typeof prisma.creditPack.findMany>> = [];
+  try {
+    packs = await prisma.creditPack.findMany({
+      where: { active: true },
+      orderBy: [{ sortOrder: "asc" }, { creditAmount: "asc" }],
+    });
+  } catch (err) {
+    console.error("[losse-verhalen] DB read failed, using fallback", err);
+  }
 
   const singlePack =
     packs.find((p) => p.creditAmount === 1) ??

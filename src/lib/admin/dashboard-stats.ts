@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 
 /**
@@ -20,6 +21,12 @@ export const AI_COST_CENTS_PER_STORY = 15;
 export const REVENUE_CUTOFF = new Date("2026-05-06T00:00:00Z");
 
 export type DashboardStats = Awaited<ReturnType<typeof loadDashboardStats>>;
+
+export const loadDashboardStats = unstable_cache(
+  loadDashboardStatsUncached,
+  ["admin-dashboard-stats-v1"],
+  { revalidate: 60 },
+);
 
 function startOfDay(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -51,7 +58,7 @@ function intervalToMonths(interval: string): number {
   return 1;
 }
 
-export async function loadDashboardStats() {
+async function loadDashboardStatsUncached() {
   const now = new Date();
   // Each window's lower bound is the later of (window start, REVENUE_CUTOFF)
   // so a window that opens before live-mode collapses to the cutoff itself.
