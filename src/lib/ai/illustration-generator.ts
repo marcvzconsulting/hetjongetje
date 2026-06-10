@@ -17,6 +17,28 @@ type LoraConfig = {
   triggerWord: string;
 };
 
+type FalImageResponse = {
+  data?: {
+    images?: { url: string }[];
+    has_nsfw_concepts?: boolean[];
+  };
+};
+
+// Trekt de eerste image-URL uit een fal-respons, maar behandelt een
+// safety-flag als failure. Flux' filter geeft bij een trigger een zwart
+// frame mét geldige URL terug — zonder deze check kwam dat als "zwarte
+// pagina" bij de klant in de reader. Liever null → retry → partial-flow.
+function extractImageUrl(result: unknown): string | null {
+  const data = (result as FalImageResponse).data;
+  const url = data?.images?.[0]?.url;
+  if (!url) return null;
+  if (data?.has_nsfw_concepts?.[0] === true) {
+    console.warn("[fal.ai] NSFW-flag op illustratie — als failure behandeld");
+    return null;
+  }
+  return url;
+}
+
 async function generateOne(
   prompt: string,
   styleSignature: string,
@@ -35,11 +57,13 @@ async function generateOne(
           seed,
           loras: [{ path: lora.loraUrl, scale: 1.0 }],
           num_inference_steps: 28,
+          // Safety-checker uit — kinderverhalen met door-Claude-opgestelde
+          // prompts triggeren regelmatig false-positives (bv. "in bad",
+          // "slapen in pyjama"). Liever consistent gedrag dan zwarte vlakken.
+          enable_safety_checker: false,
         },
       });
-      const images = (result as { data?: { images?: { url: string }[] } }).data
-        ?.images;
-      return images?.[0]?.url ?? null;
+      return extractImageUrl(result);
     }
 
     // Fallback: default flux-pro path (no LoRA trained yet)
@@ -49,13 +73,14 @@ async function generateOne(
         image_size: "landscape_4_3",
         num_images: 1,
         seed,
-        safety_tolerance: "2",
+        // 6 = meest permissief. Onze prompt komt van Claude (NL→EN
+        // pipeline) en is al inhoudelijk gecontroleerd; false-positives
+        // op kinderverhaal-scènes zijn duurder dan het marginale risico.
+        safety_tolerance: "6",
       },
     });
 
-    const images = (result as { data?: { images?: { url: string }[] } }).data
-      ?.images;
-    return images?.[0]?.url ?? null;
+    return extractImageUrl(result);
   } catch (err) {
     console.error("[fal.ai] Illustratie mislukt:", err);
     return null;
