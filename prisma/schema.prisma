@@ -315,6 +315,11 @@ model CreditPack {
   sortOrder     Int      @default(0) @map("sort_order")
   /// Optional flair label shown on the card, e.g. "populairst".
   badge         String?
+  /// Bullet-list of features rendered on the landing-page pricing
+  /// card. Stored as a JSON string array zodat admin het zonder
+  /// code-deploy kan tweaken. Null = val terug op een vaste
+  /// default-lijst (zie [src/app/page.tsx]).
+  features      Json?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

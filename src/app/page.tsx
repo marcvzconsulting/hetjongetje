@@ -756,28 +756,24 @@ async function Pricing() {
   // to hardcoded copy if the DB isn't reachable yet (during a fresh
   // deploy or migration).
   let subscriptionRows: Awaited<ReturnType<typeof prisma.subscriptionPlan.findMany>> = [];
-  let smallestCreditPack: Awaited<ReturnType<typeof prisma.creditPack.findFirst>> = null;
-  let bulkCreditPack: Awaited<ReturnType<typeof prisma.creditPack.findFirst>> = null;
+  let creditPackRows: Awaited<ReturnType<typeof prisma.creditPack.findMany>> = [];
   try {
-    const [subs, single, bulk] = await Promise.all([
+    const [subs, packs] = await Promise.all([
       prisma.subscriptionPlan.findMany({
         where: { active: true },
         orderBy: [{ sortOrder: "asc" }],
       }),
-      // Cheapest single-story option for the per-verhaal headline.
-      prisma.creditPack.findFirst({
-        where: { active: true, creditAmount: 1 },
-        orderBy: [{ priceCents: "asc" }],
-      }),
-      // Pack >1 to highlight as "10 voor €12"-style deal.
-      prisma.creditPack.findFirst({
-        where: { active: true, creditAmount: { gt: 1 } },
-        orderBy: [{ creditAmount: "desc" }],
+      // Alle actieve credit-packs voor de hoofd-cards. Beperkt tot 4
+      // voor de visuele balans — drukken we packs er meer in dan
+      // wordt de pricing-grid te druk en daalt conversie.
+      prisma.creditPack.findMany({
+        where: { active: true },
+        orderBy: [{ sortOrder: "asc" }, { creditAmount: "asc" }],
+        take: 4,
       }),
     ]);
     subscriptionRows = subs;
-    smallestCreditPack = single;
-    bulkCreditPack = bulk;
+    creditPackRows = packs;
   } catch (err) {
     console.error("[landing-pricing] DB read failed, using fallback", err);
   }
@@ -794,44 +790,67 @@ async function Pricing() {
     href: string;
   };
 
-  const plans: PricingCard[] = subscriptionRows.length > 0
-    ? subscriptionRows.map((s) => ({
-        t: s.name,
-        p: `€${eurosFromCents(s.priceCents)}`,
-        u: s.description ?? "",
-        badge: s.badge ?? undefined,
-        featured: s.code === "annual",
-        f: Array.isArray(s.features) ? (s.features as string[]) : [],
-        href: "/subscribe",
-      }))
+  // Hoofd-cards = credit-packs (geen-abo-route is laagdrempeliger en
+  // sinds 2026 onze primaire conversie-route). Strip onderaan toont de
+  // abonnementen als "Liever maandelijks?"-alternatief.
+  const defaultPackFeatures = (creditAmount: number): string[] => [
+    `${creditAmount} ${creditAmount === 1 ? "verhaal" : "verhalen"} naar keuze`,
+    "Verhalen blijven bewaard",
+    "Geen abonnement",
+    "Verbruik in eigen tempo",
+  ];
+
+  const plans: PricingCard[] = creditPackRows.length > 0
+    ? creditPackRows.map((p) => {
+        const perStory = p.creditAmount > 0 ? p.priceCents / p.creditAmount : p.priceCents;
+        const dbFeatures =
+          Array.isArray(p.features) && p.features.length > 0
+            ? (p.features as string[])
+            : null;
+        return {
+          t: p.name,
+          p: `€${eurosFromCents(p.priceCents)}`,
+          u: `${p.creditAmount} ${p.creditAmount === 1 ? "verhaal" : "verhalen"} · €${eurosFromCents(perStory)} per stuk`,
+          badge: p.badge ?? undefined,
+          featured: !!p.badge,
+          f: dbFeatures ?? defaultPackFeatures(p.creditAmount),
+          href: "/register",
+        };
+      })
     : [
-        // Fallback if catalog hasn't been seeded yet — same copy as before.
+        // Fallback als de catalog nog niet geseed is.
         {
-          t: "Per maand",
-          p: "€7,95",
-          u: "per maand",
-          f: ["8 verhalen per maand", "Verhalen blijven bewaard", "Meerdere kinderen", "Opzeggen kan altijd"],
-          href: "/subscribe",
+          t: "Eén verhaal",
+          p: "€2,50",
+          u: "1 verhaal · €2,50 per stuk",
+          f: ["1 verhaal naar keuze", "Verhalen blijven bewaard", "Geen abonnement", "Verbruik in eigen tempo"],
+          href: "/register",
         },
         {
-          t: "Per jaar",
-          p: "€79",
-          u: "per jaar, bespaar €16",
-          badge: "meest gekozen",
+          t: "Vijf verhalen",
+          p: "€10",
+          u: "5 verhalen · €2,00 per stuk",
+          badge: "voordelig",
           featured: true,
-          f: ["96 verhalen per jaar", "Verhalen blijven bewaard", "Meerdere kinderen", "€10 korting op het boekje"],
-          href: "/subscribe",
+          f: ["5 verhalen naar keuze", "Verhalen blijven bewaard", "Geen abonnement", "Verbruik in eigen tempo"],
+          href: "/register",
+        },
+        {
+          t: "Tien verhalen",
+          p: "€18",
+          u: "10 verhalen · €1,80 per stuk",
+          f: ["10 verhalen naar keuze", "Verhalen blijven bewaard", "Geen abonnement", "Verbruik in eigen tempo"],
+          href: "/register",
         },
       ];
 
-  // Single-verhaal pricing wordt onder de abo-cards getoond als slanke
-  // strip — niet in dezelfde rij, want het is een andersoortig product
-  // (los i.p.v. abonnement) en de prijspunten zijn niet vergelijkbaar.
-  const singlePriceLabel = smallestCreditPack
-    ? `€${eurosFromCents(smallestCreditPack.priceCents)}`
-    : null;
-  const bulkLabel = bulkCreditPack
-    ? `pakket van ${bulkCreditPack.creditAmount} voor €${eurosFromCents(bulkCreditPack.priceCents)}`
+  // Abonnement-info wordt nu als slanke strip onderaan getoond — voor
+  // wie écht maandelijks wil. Pakken het goedkoopste abo voor de hint.
+  const cheapestSub = subscriptionRows
+    .filter((s) => s.priceCents > 0)
+    .sort((a, b) => a.priceCents - b.priceCents)[0];
+  const subPriceLabel = cheapestSub
+    ? `vanaf €${eurosFromCents(cheapestSub.priceCents)}`
     : null;
   return (
     <section
@@ -990,7 +1009,7 @@ async function Pricing() {
           })}
         </div>
 
-        {singlePriceLabel && (
+        {(subPriceLabel || subscriptionRows.length > 0) && (
           <div
             className="lp-credits-strip"
             style={{
@@ -1017,7 +1036,7 @@ async function Pricing() {
                   marginBottom: 6,
                 }}
               >
-                Liever zonder abonnement?
+                Liever maandelijks?
               </div>
               <div
                 style={{
@@ -1027,17 +1046,19 @@ async function Pricing() {
                   lineHeight: 1.5,
                 }}
               >
-                <span style={{ fontFamily: V2.display, fontSize: 22, fontWeight: 400 }}>
-                  {singlePriceLabel}
-                </span>{" "}
-                per los verhaal
-                {bulkLabel && (
-                  <span style={{ color: V2.inkMute }}> · of {bulkLabel}</span>
-                )}
+                Abonnement{" "}
+                {subPriceLabel && (
+                  <span style={{ fontFamily: V2.display, fontSize: 22, fontWeight: 400 }}>
+                    {subPriceLabel}
+                  </span>
+                )}{" "}
+                <span style={{ color: V2.inkMute }}>
+                  · vast aantal verhalen per maand · opzeggen kan altijd
+                </span>
               </div>
             </div>
-            <EBtn kind="ghost" size="sm" href="/losse-verhalen">
-              Los bijkopen →
+            <EBtn kind="ghost" size="sm" href="/subscribe">
+              Bekijk abonnementen →
             </EBtn>
           </div>
         )}

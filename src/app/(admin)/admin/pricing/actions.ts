@@ -62,6 +62,13 @@ export async function createCreditPackAction(formData: FormData) {
   const vatRate = asInt(formData.get("vatRate"), 21);
   const sortOrder = asInt(formData.get("sortOrder"), 0);
   const badge = trim(formData.get("badge")) || null;
+  const featuresRaw = trim(formData.get("features"));
+  const features = featuresRaw
+    ? featuresRaw
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+    : [];
 
   try {
     const pack = await prisma.creditPack.create({
@@ -74,6 +81,7 @@ export async function createCreditPackAction(formData: FormData) {
         vatRate,
         sortOrder,
         badge,
+        features,
       },
     });
     await logAdminAction({
@@ -112,6 +120,14 @@ export async function updateCreditPackAction(formData: FormData) {
     redirect("/admin/pricing?error=price");
   }
 
+  const featuresRaw = trim(formData.get("features"));
+  const features = featuresRaw
+    ? featuresRaw
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean)
+    : [];
+
   const data = {
     name: trim(formData.get("name")) || before!.name,
     description: trim(formData.get("description")) || null,
@@ -121,6 +137,7 @@ export async function updateCreditPackAction(formData: FormData) {
     active: trim(formData.get("active")) === "1",
     sortOrder: asInt(formData.get("sortOrder"), before!.sortOrder),
     badge: trim(formData.get("badge")) || null,
+    features,
   };
 
   await prisma.creditPack.update({ where: { id }, data });

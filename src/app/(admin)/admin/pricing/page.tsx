@@ -124,8 +124,12 @@ function CreditPackCard({
     active: boolean;
     sortOrder: number;
     badge: string | null;
+    features: unknown;
   };
 }) {
+  const featuresList = Array.isArray(pack.features)
+    ? (pack.features as string[]).join("\n")
+    : "";
   return (
     <form
       action={updateCreditPackAction}
@@ -200,6 +204,11 @@ function CreditPackCard({
         label="Beschrijving"
         defaultValue={pack.description ?? ""}
         wide
+      />
+      <FieldTextarea
+        name="features"
+        label="Features (één per regel)"
+        defaultValue={featuresList}
       />
       <div
         style={{
@@ -375,6 +384,7 @@ function NewCreditPackForm() {
           <FieldText name="badge" label="Badge" />
         </FieldGrid>
         <FieldText name="description" label="Beschrijving" wide />
+        <FieldTextarea name="features" label="Features (één per regel)" />
         <div style={{ marginTop: 12 }}>
           <SaveButton label="Toevoegen →" />
         </div>
