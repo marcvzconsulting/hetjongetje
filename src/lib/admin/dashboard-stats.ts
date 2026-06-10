@@ -30,11 +30,33 @@ export type DashboardStats = Awaited<ReturnType<typeof loadDashboardStats>>;
  */
 export const ADMIN_DASHBOARD_TAG = "admin-dashboard";
 
-export const loadDashboardStats = unstable_cache(
+const loadDashboardStatsCached = unstable_cache(
   loadDashboardStatsUncached,
   ["admin-dashboard-stats-v1"],
   { revalidate: 60, tags: [ADMIN_DASHBOARD_TAG] },
 );
+
+// unstable_cache JSON-roundtript de return-waarde, waardoor Date-velden
+// als string terugkomen op een cache-hit. Dat liet /admin crashen met
+// "a.getTime is not a function" zodra de eerste 60s-revalidate gepasseerd
+// was (digest 980450884). We coercen de bekende Date-velden hier terug
+// zodat de consumer kant alleen met echte Dates te maken heeft.
+export async function loadDashboardStats(): Promise<
+  Awaited<ReturnType<typeof loadDashboardStatsUncached>>
+> {
+  const raw = await loadDashboardStatsCached();
+  return {
+    ...raw,
+    events: raw.events.map((e) => ({ ...e, at: new Date(e.at) })),
+    feedback: {
+      ...raw.feedback,
+      recentNegative: raw.feedback.recentNegative.map((f) => ({
+        ...f,
+        feedbackAt: f.feedbackAt ? new Date(f.feedbackAt) : null,
+      })),
+    },
+  };
+}
 
 function startOfDay(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
