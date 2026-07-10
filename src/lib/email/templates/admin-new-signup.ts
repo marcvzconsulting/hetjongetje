@@ -26,12 +26,12 @@ export function buildAdminNewSignupMail(opts: AdminNewSignupMail): {
   const subject = `Nieuwe aanmelding: ${opts.userName}`;
 
   const html = wrapEditorialEmail({
-    preheader: `${opts.userName} (${opts.userEmail}) wacht op goedkeuring.`,
+    preheader: `${opts.userName} (${opts.userEmail}) heeft zich aangemeld.`,
     title: subject,
-    heading: "Nieuwe aanvraag",
+    heading: "Nieuwe aanmelding",
     body:
       bodyParagraph(
-        `Er heeft zich zojuist een nieuwe gebruiker aangemeld. Die staat op <em>pending</em> en wacht op jouw goedkeuring.`
+        `Er heeft zich zojuist een nieuwe gebruiker aangemeld. Het account is direct actief.`
       ) +
       `<hr style="border:0;border-top:1px solid #e2d7c2;margin:24px 0;" />` +
       bodyParagraph(
@@ -41,11 +41,11 @@ export function buildAdminNewSignupMail(opts: AdminNewSignupMail): {
       ),
     cta: { label: "Bekijk in admin", url: opts.reviewUrl },
     footerNote:
-      "Je ontvangt deze mail omdat we nog in de testfase zitten en elke nieuwe aanmelding handmatig goedkeuren.",
+      "Je ontvangt deze mail als notificatie bij elke nieuwe aanmelding.",
   });
 
   const text = [
-    "Nieuwe aanmelding wacht op goedkeuring.",
+    "Nieuwe aanmelding — account is direct actief.",
     "",
     `Naam:       ${opts.userName}`,
     `E-mail:     ${opts.userEmail}`,

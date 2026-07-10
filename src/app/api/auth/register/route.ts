@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildWelcomeMail } from "@/lib/email/templates/welcome";
+import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
 import {
   validatePassword,
   passwordPolicyMessage,
@@ -13,6 +14,7 @@ import {
   REFERRAL_COOKIE,
   resolveReferralCode,
 } from "@/lib/referral";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,8 +80,36 @@ export async function POST(request: NextRequest) {
       console.error("[register] welcome mail failed", mailError);
     }
 
-    // Admin-notification verwijderd — accounts zijn nu auto-approved.
-    // Nieuwe users zijn zichtbaar in het admin-dashboard.
+    // Notificatie naar alle admin-adressen bij elke nieuwe aanmelding —
+    // één mail per adres zodat één bouncing inbox de andere niet blokkeert.
+    // Accounts zijn auto-approved; dit is puur ter info, geen goedkeuring.
+    try {
+      const reviewUrl = await buildAppUrl(`/admin/users/${user.id}`);
+      const mail = buildAdminNewSignupMail({
+        userName: user.name,
+        userEmail: user.email,
+        createdAt: user.createdAt,
+        reviewUrl,
+      });
+      for (const to of getAdminNotifyEmails()) {
+        try {
+          await sendMail({
+            to,
+            subject: mail.subject,
+            html: mail.html,
+            text: mail.text,
+            tags: ["admin-new-signup"],
+          });
+        } catch (perAddressErr) {
+          console.error(
+            `[register] admin notification to ${to} failed`,
+            perAddressErr instanceof Error ? perAddressErr.message : perAddressErr,
+          );
+        }
+      }
+    } catch (adminMailError) {
+      console.error("[register] admin notification build failed", adminMailError);
+    }
 
     const response = NextResponse.json(
       { id: user.id, email: user.email, name: user.name },
