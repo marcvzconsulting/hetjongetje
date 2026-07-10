@@ -245,8 +245,10 @@ function LoginForm() {
       </form>
 
       {/* Passwordless alternative. Server action receives the email field
-          and posts a magic-link. Submitting this form is the only way to
-          log in as an admin (password login is blocked for that role).
+          and posts a magic-link. Admins are blocked from password login by
+          default (2FA-style defence) and use this — except admins on the
+          ADMIN_PASSWORD_LOGIN_ALLOWLIST env-var, who may use the password
+          form above.
 
           MagicLinkSubmit (above) shows a "Bezig met versturen…" state via
           useFormStatus while the Brevo round-trip is in flight — without

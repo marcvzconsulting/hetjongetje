@@ -22,6 +22,7 @@ const DECOY_HASH =
   "$2b$12$CwTycUXWue0Thq9StjUM0uJ8e4M.yRHaZ3.j8Ql7BjT8X7aYsMaDi";
 
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
+import { isAdminPasswordLoginAllowed } from "@/lib/admin/password-login-allowlist";
 
 /** Send the welcome + admin notification mails for a brand-new account.
  *  Fire-and-forget — never blocks the auth flow. */
@@ -134,7 +135,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // password alone is no longer enough to take over an admin
         // account. Same null response as wrong-password to avoid
         // surfacing the role to a probing attacker.
-        if (user.role === "admin") return null;
+        //
+        // Exception: admins whose email is on the explicit env-based
+        // allowlist may still use password login (e.g. the owner, to
+        // avoid waiting on a slow magic-link mail). Future admins not on
+        // the list keep the 2FA-style protection.
+        if (user.role === "admin" && !isAdminPasswordLoginAllowed(email)) {
+          return null;
+        }
 
         await prisma.user.update({
           where: { id: user.id },
