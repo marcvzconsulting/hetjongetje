@@ -4,7 +4,6 @@ import { prisma } from "@/lib/db";
 import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildWelcomeMail } from "@/lib/email/templates/welcome";
-import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
 import {
   validatePassword,
   passwordPolicyMessage,
@@ -14,7 +13,6 @@ import {
   REFERRAL_COOKIE,
   resolveReferralCode,
 } from "@/lib/referral";
-import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,14 +50,14 @@ export async function POST(request: NextRequest) {
     const refBonus = inviterId ? REFERRAL_BONUS_CREDITS : 0;
 
     const user = await prisma.user.create({
-      // 1 starter credit so a brand-new tester can immediately try the
-      // generator after their account is approved — no awkward "you're
-      // in! …now pay €1.95" moment. Plus eventuele referral-bonus.
+      // 5 starter credits — direct approved, geen goedkeuringswachtrij meer.
+      // Plus eventuele referral-bonus.
       data: {
         name,
         email,
         passwordHash,
-        storyCredits: 1 + refBonus,
+        storyCredits: 5 + refBonus,
+        status: "approved",
         referredByUserId: inviterId,
       },
     });
@@ -80,35 +78,8 @@ export async function POST(request: NextRequest) {
       console.error("[register] welcome mail failed", mailError);
     }
 
-    // Notify alle admin-adressen — één per mail zodat één bouncing
-    // inbox de andere niet blokkeert.
-    try {
-      const reviewUrl = await buildAppUrl(`/admin/users/${user.id}`);
-      const mail = buildAdminNewSignupMail({
-        userName: user.name,
-        userEmail: user.email,
-        createdAt: user.createdAt,
-        reviewUrl,
-      });
-      for (const to of getAdminNotifyEmails()) {
-        try {
-          await sendMail({
-            to,
-            subject: mail.subject,
-            html: mail.html,
-            text: mail.text,
-            tags: ["admin-new-signup"],
-          });
-        } catch (perAddressErr) {
-          console.error(
-            `[register] admin notification to ${to} failed`,
-            perAddressErr instanceof Error ? perAddressErr.message : perAddressErr,
-          );
-        }
-      }
-    } catch (adminMailError) {
-      console.error("[register] admin notification build failed", adminMailError);
-    }
+    // Admin-notification verwijderd — accounts zijn nu auto-approved.
+    // Nieuwe users zijn zichtbaar in het admin-dashboard.
 
     const response = NextResponse.json(
       { id: user.id, email: user.email, name: user.name },
