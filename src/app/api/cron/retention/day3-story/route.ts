@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
           stories: { none: {} },
         },
       },
-      newsletterOptIn: true,
+      // Reminders gaan naar iedereen — bewust géén newsletterOptIn-gate.
+      // remindersOptOutAt blijft wél gerespecteerd (expliciete afmelding).
     },
     select: {
       id: true,

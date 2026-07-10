@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
       day1ProfileReminderSentAt: null,
       remindersOptOutAt: null,
       children: { none: {} },
-      newsletterOptIn: true,
+      // Reminders gaan naar iedereen — bewust géén newsletterOptIn-gate.
+      // remindersOptOutAt blijft wél gerespecteerd (expliciete afmelding).
     },
     select: { id: true, email: true, name: true },
     take: 50,
