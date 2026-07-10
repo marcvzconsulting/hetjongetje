@@ -29,6 +29,16 @@ model User {
   /// hebben. Eenmalig per user; null = nog niet ontvangen. Cron-route
   /// /api/cron/profile-reminder leest dit veld.
   reminderSentAt        DateTime?   @map("reminder_sent_at")
+  /// Retention-reminders: opt-out timestamp. Als niet-null, verstuurt geen
+  /// van de dag-1/3/7-reminder-mails meer aan deze user. Geklikt via
+  /// unsubscribe-link in de mail.
+  remindersOptOutAt     DateTime?   @map("reminders_opt_out_at")
+  /// Wanneer de day1-profiel-reminder is verstuurd (geen child-profiel na 1 dag).
+  day1ProfileReminderSentAt DateTime? @map("day1_profile_reminder_sent_at")
+  /// Wanneer de day3-verhaal-reminder is verstuurd (geen verhaal na 3 dagen).
+  day3StoryReminderSentAt DateTime? @map("day3_story_reminder_sent_at")
+  /// Wanneer de day7-login-reminder is verstuurd (nooit ingelogd na 7 dagen).
+  day7LoginReminderSentAt DateTime? @map("day7_login_reminder_sent_at")
   /// Wanneer de 4-staps onboarding-tour is voltooid of weggeklikt.
   /// Null = nog niet gezien; ongelijk null = niet meer tonen op /dashboard.
   /// Tour-tekst kan later versie krijgen door een aparte kolom of

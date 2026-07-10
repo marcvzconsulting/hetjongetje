@@ -233,6 +233,27 @@ export const EDITABLE_TEMPLATES = [
       "Eenmalige reminder voor accounts die wel registreerden maar nog geen kindprofiel maakten (cron na 3 dagen).",
     vars: ["profileUrl", "unsubscribeUrl"],
   },
+  {
+    code: "day1-profile-reminder",
+    label: "Retentie dag 1 — profiel maken",
+    description:
+      "Reminder na ~1 dag naar accounts zonder kindprofiel. Cron /api/cron/retention/day1-profile.",
+    vars: ["name", "profileUrl", "unsubscribeUrl"],
+  },
+  {
+    code: "day3-story-reminder",
+    label: "Retentie dag 3 — eerste verhaal",
+    description:
+      "Reminder na ~3 dagen naar accounts met profiel maar zonder verhaal. Cron /api/cron/retention/day3-story.",
+    vars: ["name", "childName", "dashboardUrl", "unsubscribeUrl"],
+  },
+  {
+    code: "day7-login-reminder",
+    label: "Retentie dag 7 — nooit ingelogd",
+    description:
+      "Reminder na ~7 dagen naar accounts die nog nooit inlogden. Cron /api/cron/retention/day7-login.",
+    vars: ["name", "childName", "dashboardUrl", "unsubscribeUrl"],
+  },
 ] as const;
 
 export type EditableTemplateCode = (typeof EDITABLE_TEMPLATES)[number]["code"];
