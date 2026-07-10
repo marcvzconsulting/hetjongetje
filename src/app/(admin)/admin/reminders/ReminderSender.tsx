@@ -53,6 +53,10 @@ const TABS: TabDef[] = [
   },
 ];
 
+/** Naam van de testklant in het mail-voorbeeld (moet matchen met de
+ *  PREVIEW_VARS in page.tsx). */
+const PREVIEW_NAME = "Sanne, kind Noor";
+
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", {
@@ -62,11 +66,18 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-export function ReminderSender({ users }: { users: ReminderUserRow[] }) {
+export function ReminderSender({
+  users,
+  previews,
+}: {
+  users: ReminderUserRow[];
+  previews: Record<ReminderTrigger, { subject: string; html: string }>;
+}) {
   const [activeTrigger, setActiveTrigger] = useState<ReminderTrigger>(
     "day1-profile",
   );
   const [relevantOnly, setRelevantOnly] = useState(true);
+  const [showPreview, setShowPreview] = useState(true);
   // Selection is kept per trigger so switching tabs doesn't mix picks.
   const [selected, setSelected] = useState<Record<string, Set<string>>>({
     "day1-profile": new Set(),
@@ -217,6 +228,82 @@ export function ReminderSender({ users }: { users: ReminderUserRow[] }) {
           />
           Alleen relevante klanten
         </label>
+      </div>
+
+      {/* ── Mail-voorbeeld ─────────────────────────── */}
+      <div
+        style={{
+          border: `1px solid ${V2.paperShade}`,
+          background: V2.paperDeep,
+          marginBottom: 24,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowPreview((v) => !v)}
+          style={{
+            width: "100%",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: "12px 16px",
+            fontFamily: V2.ui,
+            fontSize: 12,
+            fontWeight: 500,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: V2.inkMute,
+          }}
+        >
+          <span>Voorbeeld van deze mail</span>
+          <span style={{ fontFamily: V2.mono }}>{showPreview ? "▾" : "▸"}</span>
+        </button>
+        {showPreview && (
+          <div style={{ padding: "0 16px 16px" }}>
+            <div
+              style={{
+                fontFamily: V2.body,
+                fontSize: 13,
+                color: V2.inkSoft,
+                padding: "8px 12px",
+                background: V2.paper,
+                border: `1px solid ${V2.paperShade}`,
+                borderBottom: "none",
+              }}
+            >
+              <strong>Onderwerp:</strong> {previews[activeTrigger].subject}
+            </div>
+            <iframe
+              title="E-mail voorbeeld"
+              srcDoc={previews[activeTrigger].html}
+              sandbox=""
+              style={{
+                width: "100%",
+                height: 460,
+                border: `1px solid ${V2.paperShade}`,
+                background: V2.paper,
+                display: "block",
+              }}
+            />
+            <p
+              style={{
+                fontFamily: V2.body,
+                fontStyle: "italic",
+                fontSize: 12,
+                color: V2.inkMute,
+                margin: "8px 0 0",
+                lineHeight: 1.5,
+              }}
+            >
+              Voorbeeld met testgegevens ({PREVIEW_NAME}). Namen, links en
+              kindnaam worden per klant automatisch ingevuld bij verzending.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Send form (hidden inputs carry the selection) ── */}

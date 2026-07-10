@@ -3,8 +3,60 @@ import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { ReminderSender, type ReminderUserRow } from "./ReminderSender";
+import { renderEditableTemplate } from "@/lib/email/template-store";
+import { day1ProfileReminderDefaults } from "@/lib/email/templates/day1-profile-reminder";
+import { day3StoryReminderDefaults } from "@/lib/email/templates/day3-story-reminder";
+import { day7LoginReminderDefaults } from "@/lib/email/templates/day7-login-reminder";
+import type { ReminderTrigger } from "./triggers";
 
 export const dynamic = "force-dynamic";
+
+/** Sample values so the preview reads like a real mail. */
+const PREVIEW_VARS = {
+  name: "Sanne",
+  childName: "Noor",
+  profileUrl: "https://onsverhaaltje.nl/profile/new",
+  dashboardUrl: "https://onsverhaaltje.nl/dashboard",
+  unsubscribeUrl:
+    "https://onsverhaaltje.nl/api/reminders/opt-out?user_id=voorbeeld",
+};
+
+/**
+ * Render each reminder's mail (override-or-default, so admin edits show
+ * up) with sample vars, for the inline preview on this page.
+ */
+async function loadPreviews(): Promise<
+  Record<ReminderTrigger, { subject: string; html: string }>
+> {
+  const defs = [
+    {
+      trigger: "day1-profile" as const,
+      code: "day1-profile-reminder",
+      defaults: day1ProfileReminderDefaults(),
+      ctaUrl: PREVIEW_VARS.profileUrl,
+    },
+    {
+      trigger: "day3-story" as const,
+      code: "day3-story-reminder",
+      defaults: day3StoryReminderDefaults(),
+      ctaUrl: PREVIEW_VARS.dashboardUrl,
+    },
+    {
+      trigger: "day7-login" as const,
+      code: "day7-login-reminder",
+      defaults: day7LoginReminderDefaults(),
+      ctaUrl: PREVIEW_VARS.dashboardUrl,
+    },
+  ];
+  const out = {} as Record<ReminderTrigger, { subject: string; html: string }>;
+  for (const d of defs) {
+    const r = await renderEditableTemplate(d.code, d.defaults, PREVIEW_VARS, {
+      ctaUrl: d.ctaUrl,
+    });
+    out[d.trigger] = { subject: r.subject, html: r.html };
+  }
+  return out;
+}
 
 type SearchParams = Promise<{
   trigger?: string;
@@ -63,6 +115,8 @@ export default async function RemindersPage({
       "day7-login": u.day7LoginReminderSentAt?.toISOString() ?? null,
     },
   }));
+
+  const previews = await loadPreviews();
 
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
@@ -131,7 +185,7 @@ export default async function RemindersPage({
         van elke reminder pas je aan via de link boven de tabel.
       </p>
 
-      <ReminderSender users={rows} />
+      <ReminderSender users={rows} previews={previews} />
     </AdminShell>
   );
 }

@@ -22,6 +22,9 @@ import { creditsPurchasedDefaults } from "@/lib/email/templates/credits-purchase
 import { subscriptionStartedDefaults } from "@/lib/email/templates/subscription-started";
 import { subscriptionCancelledDefaults } from "@/lib/email/templates/subscription-cancelled";
 import { newsletterWelcomeDefaults } from "@/lib/email/templates/newsletter-welcome";
+import { day1ProfileReminderDefaults } from "@/lib/email/templates/day1-profile-reminder";
+import { day3StoryReminderDefaults } from "@/lib/email/templates/day3-story-reminder";
+import { day7LoginReminderDefaults } from "@/lib/email/templates/day7-login-reminder";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +70,12 @@ function defaultsFor(code: string): TemplateContent {
       return subscriptionCancelledDefaults();
     case "newsletter-welcome":
       return newsletterWelcomeDefaults();
+    case "day1-profile-reminder":
+      return day1ProfileReminderDefaults();
+    case "day3-story-reminder":
+      return day3StoryReminderDefaults();
+    case "day7-login-reminder":
+      return day7LoginReminderDefaults();
     default:
       return {
         subject: "",
@@ -514,6 +523,9 @@ function sampleVarsFor(code: string): Record<string, unknown> {
         planName: "Per maand",
         endsAtFormatted: "5 juni 2026",
       };
+    case "day3-story-reminder":
+    case "day7-login-reminder":
+      return { ...common, childName: "Noor" };
     default:
       return common;
   }

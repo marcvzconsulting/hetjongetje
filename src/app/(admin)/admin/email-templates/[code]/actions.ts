@@ -199,6 +199,9 @@ function sampleVarsFor(code: string): Record<string, unknown> {
         planName: "Per maand",
         endsAtFormatted: "5 juni 2026",
       };
+    case "day3-story-reminder":
+    case "day7-login-reminder":
+      return { ...common, childName: "Noor" };
     default:
       return common;
   }
