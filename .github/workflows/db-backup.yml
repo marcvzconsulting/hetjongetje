@@ -48,6 +48,9 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SCALEWAY_SECRET_KEY }}
       AWS_DEFAULT_REGION: nl-ams
       RETENTION_DAYS: 30
+      # Ubuntu's pg_wrapper kiest de voorgeïnstalleerde v16-client; roep de
+      # v17-binaries daarom direct aan (moet matchen met Neon PG 17).
+      PG17: /usr/lib/postgresql/17/bin
 
     steps:
       - name: Install postgresql-client-17
@@ -67,7 +70,7 @@ jobs:
         run: |
           STAMP="$(date -u +%Y-%m-%d_%H%M)"
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
-          pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges \
+          "$PG17/pg_dump" "$DATABASE_URL" --format=custom --no-owner --no-privileges \
             --file "neondb-$STAMP.dump"
           ls -lh "neondb-$STAMP.dump"
 
@@ -75,12 +78,12 @@ jobs:
         env:
           PGPASSWORD: restore_test
         run: |
-          createdb -h localhost -U postgres restore_test
-          pg_restore -h localhost -U postgres -d restore_test \
+          "$PG17/createdb" -h localhost -U postgres restore_test
+          "$PG17/pg_restore" -h localhost -U postgres -d restore_test \
             --no-owner --no-privileges --exit-on-error "neondb-$STAMP.dump"
-          TABLES=$(psql -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-          USERS=$(psql -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM users")
-          STORIES=$(psql -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM stories")
+          TABLES=$("$PG17/psql" -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+          USERS=$("$PG17/psql" -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM users")
+          STORIES=$("$PG17/psql" -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM stories")
           echo "Restore-test OK: $TABLES tabellen, $USERS users, $STORIES verhalen"
           test "$TABLES" -ge 10
           test "$USERS" -ge 1
