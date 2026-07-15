@@ -3,9 +3,8 @@
  * /cookies) en imprint-blokken. Eén plek, zodat een wijziging (bv. een
  * nieuw adres) overal tegelijk doorwerkt.
  *
- * TODO(Marc): `kvk`, `btw` en `address` invullen zodra ze bekend zijn.
- * De UI toont die regels alleen als ze gevuld zijn — een lege string
- * verbergt de regel, dus de site blijft netjes zolang ze leeg zijn.
+ * De UI toont kvk/btw/address alleen als ze gevuld zijn — een lege
+ * string verbergt de regel.
  */
 export type CompanyInfo = {
   name: string;
@@ -20,7 +19,7 @@ export const COMPANY: CompanyInfo = {
   name: "MVZ Consulting",
   owner: "Marc van Zetten",
   email: "info@onsverhaaltje.nl",
-  kvk: "",
-  btw: "",
-  address: "",
+  kvk: "77282957",
+  btw: "NL003183545B28",
+  address: "Heijbergstraat 7, 3055 PP Rotterdam",
 };
