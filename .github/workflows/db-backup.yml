@@ -1,0 +1,110 @@
+# Nachtelijke backup van de Neon productie-database naar Scaleway.
+#
+# Waarom: het gratis Neon-tier heeft maar een 6-uurs restore-window (PITR);
+# deze Action bewaart 30 dagen aan nachtelijke dumps in de bestaande
+# Scaleway-bucket onder backups/.
+#
+# Volgorde per run (bewust):
+#   dump -> restore-test -> upload -> pas daarna oude backups opruimen.
+# Faalt er iets, dan stopt de run vóór het opruimen, dus er blijven altijd
+# backups staan. GitHub mailt automatisch bij een gefaalde scheduled run.
+#
+# Secrets (repo settings): NEON_DATABASE_URL (directe endpoint, geen -pooler),
+# SCALEWAY_ACCESS_KEY, SCALEWAY_SECRET_KEY.
+
+name: Nightly DB backup
+
+on:
+  schedule:
+    - cron: "30 2 * * *" # 02:30 UTC, na de Vercel retention-crons
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Wegwerp-Postgres (zelfde major als Neon, PG 17) voor de restore-test.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: restore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      S3_ENDPOINT: https://s3.nl-ams.scw.cloud
+      S3_BUCKET: ons-verhaaltje-prod
+      AWS_ACCESS_KEY_ID: ${{ secrets.SCALEWAY_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SCALEWAY_SECRET_KEY }}
+      AWS_DEFAULT_REGION: nl-ams
+      RETENTION_DAYS: 30
+
+    steps:
+      - name: Install postgresql-client-17
+        # Ubuntu-runners hebben client 16; Neon draait PG 17, dus PGDG-repo.
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump productie-database
+        env:
+          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+        run: |
+          STAMP="$(date -u +%Y-%m-%d_%H%M)"
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          pg_dump "$DATABASE_URL" --format=custom --no-owner --no-privileges \
+            --file "neondb-$STAMP.dump"
+          ls -lh "neondb-$STAMP.dump"
+
+      - name: Restore-test (faalt de test, dan geen upload en geen prune)
+        env:
+          PGPASSWORD: restore_test
+        run: |
+          createdb -h localhost -U postgres restore_test
+          pg_restore -h localhost -U postgres -d restore_test \
+            --no-owner --no-privileges --exit-on-error "neondb-$STAMP.dump"
+          TABLES=$(psql -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
+          USERS=$(psql -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM users")
+          STORIES=$(psql -h localhost -U postgres -d restore_test -tAc "SELECT count(*) FROM stories")
+          echo "Restore-test OK: $TABLES tabellen, $USERS users, $STORIES verhalen"
+          test "$TABLES" -ge 10
+          test "$USERS" -ge 1
+
+      - name: Upload naar Scaleway
+        run: |
+          aws s3 cp "neondb-$STAMP.dump" "s3://$S3_BUCKET/backups/neondb-$STAMP.dump" \
+            --endpoint-url "$S3_ENDPOINT"
+          aws s3api head-object --bucket "$S3_BUCKET" --key "backups/neondb-$STAMP.dump" \
+            --endpoint-url "$S3_ENDPOINT" > /dev/null
+          echo "Upload geverifieerd: backups/neondb-$STAMP.dump"
+
+      - name: Prune backups ouder dan 30 dagen
+        # ISO-timestamps vergelijken lexicografisch correct, dus een simpele
+        # stringvergelijking volstaat. Draait alleen na een geslaagde upload.
+        run: |
+          CUTOFF="$(date -u -d "$RETENTION_DAYS days ago" +%Y-%m-%dT%H:%M:%S)"
+          echo "Opruimen: alles ouder dan $CUTOFF"
+          aws s3api list-objects-v2 --bucket "$S3_BUCKET" --prefix backups/ \
+            --endpoint-url "$S3_ENDPOINT" \
+            --query 'Contents[].[Key,LastModified]' --output text |
+          while IFS=$'\t' read -r KEY MODIFIED; do
+            [ "$KEY" = "None" ] && continue
+            if [ "$MODIFIED" \< "$CUTOFF" ]; then
+              echo "  verwijderen: $KEY ($MODIFIED)"
+              aws s3 rm "s3://$S3_BUCKET/$KEY" --endpoint-url "$S3_ENDPOINT"
+            fi
+          done
+          echo "Huidige backups:"
+          aws s3 ls "s3://$S3_BUCKET/backups/" --endpoint-url "$S3_ENDPOINT"
