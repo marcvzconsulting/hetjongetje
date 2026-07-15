@@ -13,13 +13,19 @@ import {
   MAX_PHOTOS,
 } from "@/lib/ai/lora-training";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import {
+  moderateChildPhoto,
+  photoRejectionMessage,
+  type PhotoModerationVerdict,
+} from "@/lib/ai/photo-moderation";
 import { loadUserGate } from "@/lib/user-gate";
 import { sendMail } from "@/lib/email/client";
 import { buildLoraReadyMail } from "@/lib/email/templates/lora-ready";
 import { buildAppUrl } from "@/lib/url";
 
-// Long-running because we upload multiple photos + zip + call fal queue.
-export const maxDuration = 60;
+// Long-running: content-moderatie (Claude Vision, parallel per foto) +
+// upload van meerdere foto's + zip + fal-queue-call.
+export const maxDuration = 120;
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -229,13 +235,48 @@ export async function POST(req: NextRequest, { params }: Props) {
     }
   }
 
+  // Content-moderatie vóór er ook maar iets wordt opgeslagen of getraind:
+  // elke foto gaat langs Claude Vision. Eén afgekeurde foto blokkeert de
+  // hele batch (de trainingsset is toch alles-of-niets). Fail-closed:
+  // kunnen we niet controleren, dan uploaden we niet. De foto's zelf
+  // worden nooit gelogd — alleen categorie + interne reden.
+  const photoBuffers: { buf: Buffer; type: string }[] = [];
+  for (const f of files) {
+    photoBuffers.push({ buf: Buffer.from(await f.arrayBuffer()), type: f.type });
+  }
+  let verdicts: PhotoModerationVerdict[];
+  try {
+    verdicts = await Promise.all(
+      photoBuffers.map((p) => moderateChildPhoto(p.buf.toString("base64"), p.type))
+    );
+  } catch (err) {
+    console.error("[photo-moderation] check unavailable", err);
+    return NextResponse.json(
+      {
+        error:
+          "De veiligheidscontrole van foto's is tijdelijk niet beschikbaar. Probeer het over een paar minuten opnieuw.",
+      },
+      { status: 503 }
+    );
+  }
+  const rejectedIdx = verdicts.findIndex((v) => !v.allowed);
+  if (rejectedIdx !== -1) {
+    const v = verdicts[rejectedIdx];
+    console.warn(
+      `[photo-moderation] blocked photo ${rejectedIdx + 1}/${files.length} (child ${childId}, user ${session.user.id}): ${v.category} — ${v.reason}`
+    );
+    return NextResponse.json(
+      { error: photoRejectionMessage(rejectedIdx + 1, v.category) },
+      { status: 400 }
+    );
+  }
+
   try {
     // 1. Upload all photos to Scaleway
     const photoUrls: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      const buf = Buffer.from(await f.arrayBuffer());
-      const url = await uploadChildPhoto(childId, i + 1, buf, f.type);
+    for (let i = 0; i < photoBuffers.length; i++) {
+      const p = photoBuffers[i];
+      const url = await uploadChildPhoto(childId, i + 1, p.buf, p.type);
       photoUrls.push(url);
     }
 

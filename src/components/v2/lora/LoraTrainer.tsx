@@ -360,7 +360,9 @@ function UploadState({
         Kies {MIN_PHOTOS}–{MAX_PHOTOS} foto&rsquo;s waar het gezicht goed
         te zien is. Variatie helpt: dichtbij + verder weg, verschillende
         hoeken en uitdrukkingen. Geen zonnebrillen of half-afgedekte
-        gezichten.
+        gezichten. Gebruik gewone, geklede foto&rsquo;s (dus geen bad- of
+        zwemfoto&rsquo;s) &mdash; elke foto wordt v&oacute;&oacute;r gebruik
+        automatisch gecontroleerd.
       </p>
 
       {previews.length > 0 && (

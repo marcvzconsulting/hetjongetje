@@ -86,6 +86,14 @@ export default function PrivacyPage() {
         text-based alternatief blijft werken.
       </P>
       <P>
+        <strong>Automatische veiligheidscontrole.</strong> Elke
+        ge&uuml;ploade foto wordt v&oacute;&oacute;r opslag automatisch
+        beoordeeld door een AI-model (Anthropic Claude) op geschiktheid
+        voor een kinderapp. Afgekeurde foto&rsquo;s worden niet opgeslagen
+        en niet gebruikt; we bewaren alleen de reden van afkeuring (een
+        categorie, nooit de foto zelf) in onze logboeken.
+      </P>
+      <P>
         <strong>Wat gebeurt er met de foto&rsquo;s?</strong> De originele
         foto&rsquo;s worden via een beveiligde verbinding (HTTPS) verstuurd
         naar onze opslag bij Scaleway (datacenter nl-ams, Amsterdam). Voor
