@@ -228,6 +228,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               // registratiepad zodat de welkomstervaring gelijk is.
               storyCredits: 5,
               lastLoginAt: new Date(),
+              // Onder de Google-knop staat de kennisgeving dat doorgaan
+              // akkoord met de voorwaarden betekent (AuthTermsNotice) —
+              // dit legt dat moment vast, net als bij credentials.
+              termsAcceptedAt: new Date(),
             },
           });
           // Fire welcome + admin notification mails. Don't await — auth

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { V2 } from "@/components/v2/tokens";
 
@@ -55,6 +56,42 @@ export function GoogleSignInButton({
       <GoogleIcon />
       <span>{label}</span>
     </button>
+  );
+}
+
+/**
+ * Kleine kennisgeving direct onder de Google-knop: wie via Google
+ * doorgaat, gaat daarmee akkoord met de voorwaarden. Het credentials-
+ * formulier heeft z'n eigen expliciete checkbox; dit dekt het OAuth-pad
+ * (daar is geen formulier-moment waarop we een vinkje kunnen vragen).
+ */
+export function AuthTermsNotice() {
+  const linkStyle = {
+    color: "inherit",
+    textDecoration: "underline",
+    textUnderlineOffset: 3,
+  } as const;
+  return (
+    <p
+      style={{
+        margin: "10px 0 0",
+        fontFamily: V2.body,
+        fontSize: 12.5,
+        lineHeight: 1.55,
+        color: V2.inkMute,
+        textAlign: "center",
+      }}
+    >
+      Door verder te gaan ga je akkoord met onze{" "}
+      <Link href="/voorwaarden" target="_blank" rel="noopener" style={linkStyle}>
+        algemene voorwaarden
+      </Link>{" "}
+      en{" "}
+      <Link href="/privacy" target="_blank" rel="noopener" style={linkStyle}>
+        privacyverklaring
+      </Link>
+      .
+    </p>
   );
 }
 

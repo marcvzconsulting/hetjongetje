@@ -4,6 +4,7 @@ import {
   H2,
   P,
 } from "@/components/v2/landing/ContentPage";
+import { COMPANY } from "@/lib/legal";
 
 export const metadata = {
   title: "Privacy · Ons Verhaaltje",
@@ -29,14 +30,25 @@ export default function PrivacyPage() {
 
       <H2>Wie zijn wij?</H2>
       <P>
-        Ons Verhaaltje wordt geëxploiteerd door MVZ Consulting, gevestigd in
-        Nederland. Verantwoordelijke voor deze verwerking in de zin van de
-        AVG: Marc van Zetten. Contact via{" "}
-        <a href="mailto:info@onsverhaaltje.nl" style={{ color: "inherit" }}>
-          info@onsverhaaltje.nl
+        Ons Verhaaltje wordt geëxploiteerd door {COMPANY.name}, gevestigd
+        in Nederland. Verantwoordelijke voor deze verwerking in de zin van
+        de AVG: {COMPANY.owner}. Contact via{" "}
+        <a href={`mailto:${COMPANY.email}`} style={{ color: "inherit" }}>
+          {COMPANY.email}
         </a>
         .
       </P>
+      {(COMPANY.kvk || COMPANY.address) && (
+        <P>
+          {COMPANY.kvk && (
+            <>
+              KvK-nummer: {COMPANY.kvk}
+              <br />
+            </>
+          )}
+          {COMPANY.address && <>Adres: {COMPANY.address}</>}
+        </P>
+      )}
 
       <H2>Welke gegevens verzamelen we?</H2>
       <P>
@@ -49,6 +61,13 @@ export default function PrivacyPage() {
         uiterlijkskenmerken (haar-, oog-, huidskleur, bril, sproeten),
         interesses, mensen en huisdieren, favoriete dingen, angsten.
         Daarnaast de verhalen die wij genereren, inclusief illustraties.
+      </P>
+      <P>
+        Verder houden we een <strong>logboek van systeemmails</strong>{" "}
+        bij die we je sturen (zoals de welkomstmail of een
+        wachtwoord-reset): het e-mailadres, het onderwerp en of de mail is
+        aangekomen. Dat gebruiken we alleen voor support — zodat we
+        kunnen terugzien wat er is verstuurd als er iets misgaat.
       </P>
 
       <H2>Foto&rsquo;s van je kind: character LoRA</H2>
@@ -120,6 +139,19 @@ export default function PrivacyPage() {
         gegevens).
       </P>
 
+      <H2>Cookies</H2>
+      <P>
+        We gebruiken alleen <strong>strikt noodzakelijke cookies</strong>:
+        voor inloggen, beveiliging en — als je via een uitnodigingslink
+        binnenkwam — het onthouden daarvan. Geen tracking- of
+        advertentiecookies. Het volledige overzicht, per cookie, staat op
+        de{" "}
+        <a href="/cookies" style={{ color: "inherit" }}>
+          cookie-pagina
+        </a>
+        .
+      </P>
+
       <H2>Nieuwsbrief</H2>
       <P>
         De nieuwsbrief is <strong>opt-in</strong>: je krijgt &lsquo;m pas
@@ -150,7 +182,26 @@ export default function PrivacyPage() {
         <br />
         &middot; Verhalen + illustraties: zolang het kinderprofiel bestaat
         <br />
-        &middot; Facturen: 7 jaar (wettelijk)
+        &middot; Na een verwijderaanvraag: 30 dagen op slot (bedenktijd),
+        daarna definitief gewist
+        <br />
+        &middot; Facturen: 7 jaar (wettelijke fiscale bewaarplicht), ook
+        na accountverwijdering
+      </P>
+
+      <H2>Account verwijderen: 30 dagen bedenktijd</H2>
+      <P>
+        Als je je account verwijdert, gaat het direct op slot en krijg je
+        een bevestigingsmail. Binnen 30 dagen kun je je bedenken: log
+        gewoon opnieuw in en je account wordt hersteld, met alles erop en
+        eraan. Doe je dat niet, dan wissen we na die 30 dagen alles
+        definitief — profielen, verhalen, illustraties en eventuele
+        foto&rsquo;s en LoRA-modellen.
+      </P>
+      <P>
+        Eén uitzondering: facturen moeten we 7 jaar bewaren vanwege de
+        fiscale bewaarplicht. Die bewaren we zonder koppeling met je
+        account.
       </P>
 
       <H2>Jouw rechten</H2>
@@ -182,7 +233,7 @@ export default function PrivacyPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: april 2026.
+        Laatst bijgewerkt: juli 2026.
       </p>
     </ContentPage>
   );

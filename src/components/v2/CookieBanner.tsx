@@ -76,18 +76,18 @@ export function CookieBanner() {
         We gebruiken alleen <strong style={{ color: V2.ink, fontWeight: 600 }}>
         strikt-noodzakelijke cookies</strong>{" "}
         — voor inloggen en beveiliging. We doen niet aan tracking of
-        advertentie-cookies. Lees{" "}
+        advertentie-cookies. Op de{" "}
         <Link
-          href="/privacy"
+          href="/cookies"
           style={{
             color: V2.goldDeep,
             textDecoration: "underline",
             textUnderlineOffset: 3,
           }}
         >
-          ons privacybeleid
+          cookie-pagina
         </Link>{" "}
-        voor de details.
+        lees je precies welke cookies dat zijn.
       </p>
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button

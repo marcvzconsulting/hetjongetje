@@ -18,11 +18,21 @@ import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, termsAccepted } = await request.json();
 
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Naam, email en wachtwoord zijn verplicht" },
+        { status: 400 }
+      );
+    }
+
+    // De frontend blokkeert dit al met een checkbox; deze server-check
+    // vangt directe API-calls af. We slaan het moment van akkoord op
+    // (termsAcceptedAt) als bewijs van instemming.
+    if (termsAccepted !== true) {
+      return NextResponse.json(
+        { error: "Je moet akkoord gaan met de algemene voorwaarden" },
         { status: 400 }
       );
     }
@@ -61,6 +71,7 @@ export async function POST(request: NextRequest) {
         storyCredits: 5 + refBonus,
         status: "approved",
         referredByUserId: inviterId,
+        termsAcceptedAt: new Date(),
       },
     });
 

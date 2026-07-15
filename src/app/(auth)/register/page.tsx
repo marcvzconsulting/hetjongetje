@@ -5,10 +5,14 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
-import { EBtn } from "@/components/v2";
+import { EBtn, IconV2 } from "@/components/v2";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
-import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
+import {
+  GoogleSignInButton,
+  AuthDivider,
+  AuthTermsNotice,
+} from "@/components/v2/auth/GoogleSignInButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -16,6 +20,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -28,13 +33,20 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!termsAccepted) {
+      setError(
+        "Vink eerst aan dat je akkoord gaat met de algemene voorwaarden."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, termsAccepted: true }),
       });
 
       const data = await res.json();
@@ -88,6 +100,7 @@ export default function RegisterPage() {
       }
     >
       <GoogleSignInButton label="Aanmelden met Google" />
+      <AuthTermsNotice />
       <AuthDivider />
 
       <form onSubmit={handleSubmit} method="post" action="/register">
@@ -151,6 +164,44 @@ export default function RegisterPage() {
           autoComplete="new-password"
         />
 
+        <div style={{ margin: "4px 0 24px" }}>
+          <ConsentCheck
+            checked={termsAccepted}
+            onChange={setTermsAccepted}
+            label={
+              <>
+                Ik ga akkoord met de{" "}
+                <Link
+                  href="/voorwaarden"
+                  target="_blank"
+                  rel="noopener"
+                  style={{
+                    color: V2.ink,
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  algemene voorwaarden
+                </Link>{" "}
+                en heb de{" "}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener"
+                  style={{
+                    color: V2.ink,
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  privacyverklaring
+                </Link>{" "}
+                gelezen.
+              </>
+            }
+          />
+        </div>
+
         <EBtn
           kind="primary"
           size="lg"
@@ -161,5 +212,66 @@ export default function RegisterPage() {
         </EBtn>
       </form>
     </AuthShell>
+  );
+}
+
+/**
+ * Zelfde checkbox-patroon als ConsentCheck in LoraConsentForm: een
+ * zichtbaar getekend vinkvak + verborgen echt checkbox-input, zodat
+ * toetsenbord en screenreaders gewoon werken.
+ */
+function ConsentCheck({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: React.ReactNode;
+}) {
+  return (
+    <label
+      style={{
+        display: "flex",
+        gap: 12,
+        alignItems: "flex-start",
+        cursor: "pointer",
+        fontFamily: V2.body,
+        fontSize: 14,
+        lineHeight: 1.55,
+        color: V2.ink,
+      }}
+    >
+      <span
+        role="checkbox"
+        aria-checked={checked}
+        style={{
+          flexShrink: 0,
+          marginTop: 2,
+          width: 20,
+          height: 20,
+          border: `1.5px solid ${checked ? V2.ink : V2.paperShade}`,
+          background: checked ? V2.ink : "transparent",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {checked && <IconV2 name="check" size={12} color={V2.paper} />}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{
+          position: "absolute",
+          opacity: 0,
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+        }}
+      />
+      <span>{label}</span>
+    </label>
   );
 }

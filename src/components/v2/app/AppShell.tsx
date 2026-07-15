@@ -218,6 +218,33 @@ export function AppShell({
         </div>
       </nav>
       <main>{children}</main>
+      {/* Subtiele juridische linkregel — bewust geen volle footer, alleen
+          de plekken waar een ingelogde gebruiker soms naar zoekt. */}
+      <footer
+        style={{
+          padding: "28px 24px 32px",
+          textAlign: "center",
+          fontFamily: V2.ui,
+          fontSize: 12,
+          color: V2.inkMute,
+        }}
+      >
+        <Link href="/privacy" style={{ color: "inherit", textDecoration: "none" }}>
+          Privacy
+        </Link>
+        <span aria-hidden style={{ margin: "0 10px" }}>
+          ·
+        </span>
+        <Link href="/voorwaarden" style={{ color: "inherit", textDecoration: "none" }}>
+          Voorwaarden
+        </Link>
+        <span aria-hidden style={{ margin: "0 10px" }}>
+          ·
+        </span>
+        <Link href="/cookies" style={{ color: "inherit", textDecoration: "none" }}>
+          Cookies
+        </Link>
+      </footer>
     </div>
   );
 }

@@ -76,6 +76,12 @@ export function LandingFooter() {
             Voorwaarden
           </Link>
           <Link
+            href="/cookies"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Cookies
+          </Link>
+          <Link
             href="/veelgestelde-vragen"
             style={{ color: "inherit", textDecoration: "none" }}
           >

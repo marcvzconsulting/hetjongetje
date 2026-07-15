@@ -5,6 +5,7 @@ import {
   H2,
   P,
 } from "@/components/v2/landing/ContentPage";
+import { COMPANY } from "@/lib/legal";
 
 export const metadata = {
   title: "Voorwaarden · Ons Verhaaltje",
@@ -30,13 +31,31 @@ export default function VoorwaardenPage() {
 
       <H2>Wie zijn wij?</H2>
       <P>
-        Ons Verhaaltje is een dienst van MVZ Consulting, gevestigd in
-        Nederland. Voor vragen of klachten:{" "}
-        <a href="mailto:info@onsverhaaltje.nl" style={{ color: "inherit" }}>
-          info@onsverhaaltje.nl
+        Ons Verhaaltje is een dienst van {COMPANY.name} (
+        {COMPANY.owner}), gevestigd in Nederland. Voor vragen of
+        klachten:{" "}
+        <a href={`mailto:${COMPANY.email}`} style={{ color: "inherit" }}>
+          {COMPANY.email}
         </a>
         .
       </P>
+      {(COMPANY.kvk || COMPANY.btw || COMPANY.address) && (
+        <P>
+          {COMPANY.kvk && (
+            <>
+              KvK-nummer: {COMPANY.kvk}
+              <br />
+            </>
+          )}
+          {COMPANY.btw && (
+            <>
+              Btw-nummer: {COMPANY.btw}
+              <br />
+            </>
+          )}
+          {COMPANY.address && <>Adres: {COMPANY.address}</>}
+        </P>
+      )}
 
       <H2>Wat doet de dienst?</H2>
       <P>
@@ -87,10 +106,15 @@ export default function VoorwaardenPage() {
         beschikbaar.
       </P>
       <P>
-        Als je je hele account verwijdert, worden alle profielen,
-        verhalen, illustraties en — als je foto&rsquo;s had geüpload —
-        het LoRA-model en de bronfoto&rsquo;s definitief verwijderd. Zie
-        de{" "}
+        Als je je hele account verwijdert, geldt een{" "}
+        <strong>bedenktijd van 30 dagen</strong>. Je account gaat direct
+        op slot en je ontvangt een bevestigingsmail. Bedenk je je binnen
+        die 30 dagen, dan log je gewoon opnieuw in en wordt je account
+        hersteld. Daarna worden alle profielen, verhalen, illustraties en
+        — als je foto&rsquo;s had geüpload — het LoRA-model en de
+        bronfoto&rsquo;s definitief verwijderd. Alleen facturen bewaren
+        we 7 jaar vanwege de fiscale bewaarplicht, los van je account.
+        Zie de{" "}
         <a href="/privacy" style={{ color: "inherit" }}>
           privacy-pagina
         </a>{" "}
@@ -221,7 +245,7 @@ export default function VoorwaardenPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: april 2026.
+        Laatst bijgewerkt: juli 2026.
       </p>
     </ContentPage>
   );

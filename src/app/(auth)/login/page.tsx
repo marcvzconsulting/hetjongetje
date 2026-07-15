@@ -9,7 +9,11 @@ import { V2 } from "@/components/v2/tokens";
 import { EBtn } from "@/components/v2";
 import { AuthShell } from "@/components/v2/auth/AuthShell";
 import { AuthField } from "@/components/v2/auth/AuthField";
-import { GoogleSignInButton, AuthDivider } from "@/components/v2/auth/GoogleSignInButton";
+import {
+  GoogleSignInButton,
+  AuthDivider,
+  AuthTermsNotice,
+} from "@/components/v2/auth/GoogleSignInButton";
 import { requestMagicLinkAction } from "./actions";
 
 /**
@@ -154,6 +158,7 @@ function LoginForm() {
       }
     >
       <GoogleSignInButton callbackUrl={callbackUrl ?? "/dashboard"} />
+      <AuthTermsNotice />
       <AuthDivider />
 
       {magicSent && (
