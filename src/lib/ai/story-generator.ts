@@ -43,6 +43,23 @@ export interface StoryRequest {
   occasion?: Occasion;
   companion?: string;
   specialDetail?: string;
+  /** Gewenste verhaallengte. Default "kort"; bepaalt samen met de
+   *  leeftijd het totale woordenaantal (blijft 4 pagina's). */
+  length?: "kort" | "lang";
+  /** Vervolg-verhaal-context. Wordt server-side opgebouwd uit het
+   *  vorige verhaal (titel + alle paginateksten) — nooit rechtstreeks
+   *  uit client-input. Persisteert mee in generationParams zodat een
+   *  regenerate hetzelfde vervolg blijft. */
+  sequel?: { title: string; text: string };
+  /** Id van het verhaal waar dit een vervolg op is; alleen voor
+   *  administratie in generationParams. */
+  sequelOfStoryId?: string;
+  /** Heldkeuze zoals gemaakt in de wizard. Niet gebruikt door
+   *  generateStory (de characterBible is leidend), maar persisteert in
+   *  generationParams zodat een vervolg-verhaal dezelfde held kan
+   *  voorinvullen. */
+  mainCharacterType?: string;
+  mainCharacterDescription?: string;
   /** Free-text guidance from the parent on what to change vs. the
    *  previous version. Only set on regenerate calls; null/undefined for
    *  first-time generation. Sanitised + clamped before splicing into
@@ -94,6 +111,25 @@ function ageInstructions(age: number, snippets: AiPromptValues): string {
   if (age <= 4) return snippets["age.3-4"];
   if (age <= 7) return snippets["age.5-7"];
   return snippets["age.8-10"];
+}
+
+/**
+ * Totaal-woordenaantal voor het verhaal (4 pagina's), op basis van
+ * leeftijd én gekozen lengte. De 0-2- en 3-4-aantallen zijn na feedback
+ * van testouders verhoogd; voor die groepen betekent "meer woorden"
+ * méér korte zinnen, niet langere zinnen (dat bewaken de age-snippets).
+ */
+function wordCountRange(age: number, length: "kort" | "lang"): string {
+  if (length === "lang") {
+    if (age <= 2) return "250-400";
+    if (age <= 4) return "350-500";
+    if (age <= 7) return "500-700";
+    return "700-900";
+  }
+  if (age <= 2) return "150-250";
+  if (age <= 4) return "200-300";
+  if (age <= 7) return "300-450";
+  return "400-600";
 }
 
 // —— Aquarel stijl-handtekening voor illustraties ————————————————————
@@ -294,6 +330,22 @@ function sanitizeRequest(request: StoryRequest): StoryRequest {
     specialDetail: request.specialDetail
       ? sanitizePromptDescription(request.specialDetail)
       : undefined,
+    // Sequel-context komt uit onze eigen DB (het vorige, zelf gegenereerde
+    // verhaal), niet uit vrije ouder-invoer. Titel krijgt de korte
+    // behandeling; de tekst clampen we alleen zodat één veld nooit het
+    // hele promptbudget opeet (een "lang" verhaal past hier ruim in).
+    // Typecheck op beide velden: legacy generationParams (van vóór de
+    // server-side sequel-opbouw) kunnen een client-injected sequel met
+    // willekeurige shape bevatten — die negeren we, anders faalt elke
+    // regenerate van zo'n verhaal permanent.
+    sequel:
+      typeof request.sequel?.title === "string" &&
+      typeof request.sequel.text === "string"
+        ? {
+            title: sanitizePromptShort(request.sequel.title),
+            text: request.sequel.text.slice(0, 6000),
+          }
+        : undefined,
     regenerationFeedback: request.regenerationFeedback
       ? sanitizePromptDescription(request.regenerationFeedback)
       : undefined,
@@ -308,6 +360,7 @@ export async function generateStory(
   const request = sanitizeRequest(rawRequest);
 
   const age = calculateAge(characterBible.dateOfBirth) ?? 1;
+  const storyLength = request.length === "lang" ? "lang" : "kort";
   const charDescription = buildCharacterDescription(characterBible);
   // Load admin-editable snippets once per generation. Defaults are used
   // when no override row exists, so this is safe even on a fresh DB.
@@ -362,6 +415,11 @@ export async function generateStory(
   const prevStr = characterBible.previousAdventures?.length
     ? `\nEerdere avonturen (hou hier rekening mee):\n${characterBible.previousAdventures.map((a) => `- "${a.title}" (${a.setting}): ${a.summary}`).join("\n")}`
     : "";
+  // Vervolg-verhaal: specifieker dan previousAdventures (dat is een lijstje
+  // samenvattingen), dus deze sectie gaat vóór en bevat het hele vorige verhaal.
+  const sequelStr = request.sequel
+    ? `\nDIT VERHAAL IS EEN VERVOLG OP: '${request.sequel.title}'. Het vorige verhaal was: ${request.sequel.text}\nSchrijf een echt vervolg: verwijs in het begin kort en natuurlijk terug naar het vorige avontuur, maar het nieuwe verhaal moet ook op zichzelf te volgen en leuk zijn. Herhaal het vorige verhaal niet.`
+    : "";
 
   const prompt = `
 Je bent een Nederlandse kinderboekenauteur. Schrijf een persoonlijk kinderverhaaltje voor ${characterBible.childName} (${age} jaar).
@@ -377,6 +435,7 @@ ${petsStr}
 ${friendsStr}
 ${favStr}
 ${fearsStr}
+${sequelStr}
 ${prevStr}
 
 VERHAALINSTELLINGEN:
@@ -446,12 +505,12 @@ Regels:
 - De illustratiebeschrijving op elke pagina toont PRECIES wat er in de tekst van DIE pagina gebeurt
 - Elke illustratiebeschrijving BEGINT met de exacte karakteromschrijving hierboven
 - endingIllustrationPrompt is een aparte, rustige afsluitillustratie (slapend kind, zonsondergang, knuffelmoment)
-- Totaal ${age <= 2 ? "50-100" : age <= 4 ? "150-250" : age <= 7 ? "300-450" : "400-600"} woorden
+- Totaal ${wordCountRange(age, storyLength)} woorden${age <= 2 ? " — bereik dat aantal met MÉÉR korte zinnen, niet met langere zinnen" : ""}
 `.trim();
 
   const message = await anthropic.messages.create({
     model: "claude-sonnet-4-5-20250929",
-    max_tokens: 2000,
+    max_tokens: 5000,
     system: "Je bent een Nederlandse kinderboekenauteur. Schrijf warm, persoonlijk en leeftijdsgeschikt. Geef altijd JSON terug.",
     messages: [{ role: "user", content: prompt }],
   });

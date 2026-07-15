@@ -5,13 +5,20 @@ import { prisma } from "@/lib/db";
 import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
-import { GenerateWizardV2 } from "@/components/v2/generation/GenerateWizardV2";
+import {
+  GenerateWizardV2,
+  type SequelInfo,
+} from "@/components/v2/generation/GenerateWizardV2";
 
 interface Props {
   params: Promise<{ childId: string }>;
+  searchParams: Promise<{ vervolgVan?: string | string[] }>;
 }
 
-export default async function GeneratePage({ params }: Props) {
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export default async function GeneratePage({ params, searchParams }: Props) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -27,6 +34,42 @@ export default async function GeneratePage({ params }: Props) {
   });
 
   if (!child) notFound();
+
+  // Vervolg-verhaal: ?vervolgVan=[storyId] opent de wizard voorgevuld met
+  // de keuzes van dat verhaal. Eigendom wordt geverifieerd (verhaal hoort
+  // bij dit kind, en dit kind hoort bij de ingelogde user — dat laatste is
+  // hierboven al gecheckt); anders negeren we de parameter stilletjes.
+  const { vervolgVan } = await searchParams;
+  let sequel: SequelInfo | undefined;
+  if (typeof vervolgVan === "string" && UUID_RE.test(vervolgVan)) {
+    // Alleen id/title/generationParams zijn nodig voor de prefill — de
+    // paginateksten haalt de stories-route zelf op bij het genereren.
+    const prevStory = await prisma.story.findFirst({
+      where: { id: vervolgVan, childProfileId: childId },
+      select: { id: true, title: true, generationParams: true },
+    });
+    if (prevStory) {
+      const prevParams =
+        (prevStory.generationParams as Record<string, unknown> | null) ?? {};
+      // Slice als vangnet voor legacy generationParams zonder lengtecap,
+      // zodat een uit de kluiten gewassen waarde nooit integraal in de
+      // client-props belandt.
+      const str = (v: unknown) =>
+        typeof v === "string" ? v.slice(0, 500) : undefined;
+      sequel = {
+        storyId: prevStory.id,
+        title: prevStory.title,
+        params: {
+          setting: str(prevParams.setting),
+          mainCharacterType: str(prevParams.mainCharacterType),
+          mainCharacterDescription: str(prevParams.mainCharacterDescription),
+          adventureType: str(prevParams.adventureType),
+          mood: str(prevParams.mood),
+          occasion: str(prevParams.occasion),
+        },
+      };
+    }
+  }
 
   return (
     <AppShell
@@ -59,6 +102,7 @@ export default async function GeneratePage({ params }: Props) {
         </div>
 
         <GenerateWizardV2
+          sequel={sequel}
           child={{
             id: child.id,
             name: child.name,

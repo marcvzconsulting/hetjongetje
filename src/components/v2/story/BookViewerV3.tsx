@@ -415,6 +415,14 @@ export function BookViewerV3({
               Nieuw verhaal
             </Link>
           )}
+          {!compactLabels && !readOnly && childId && storyId && (
+            <Link
+              href={`/generate/${childId}?vervolgVan=${storyId}`}
+              style={{ color: V2.inkMute, textDecoration: "none", whiteSpace: "nowrap" }}
+            >
+              Vervolgverhaal
+            </Link>
+          )}
           {!compactLabels && !readOnly && <SignOutButtonV2 />}
 
           {readOnly && (

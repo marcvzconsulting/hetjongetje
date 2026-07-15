@@ -105,6 +105,9 @@ export type ChildProfileUpdateInput = z.infer<typeof childProfileUpdateSchema>;
 export const createStorySchema = z
   .object({
     childId: uuid,
+    /** Optioneel: id van het verhaal waar dit een vervolg op is. De route
+     *  verifieert dat het verhaal bij hetzelfde kind hoort. */
+    sequelOfStoryId: uuid.optional(),
     characterBible: z
       .object({
         childName: shortText,
@@ -122,6 +125,12 @@ export const createStorySchema = z
         occasion: shortText.optional(),
         companion: shortText.optional(),
         specialDetail: mediumText.optional(),
+        length: z.enum(["kort", "lang"]).optional(),
+        // Heldkeuze reist mee in de storyRequest zodat die via
+        // generationParams beschikbaar is voor een later vervolg.
+        // Zelfde caps als in childProfileUpdateSchema.
+        mainCharacterType: shortText.optional(),
+        mainCharacterDescription: mediumText.optional(),
         regenerationFeedback: longText.optional(),
       })
       .passthrough(),

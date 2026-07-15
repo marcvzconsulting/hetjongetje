@@ -60,6 +60,11 @@ export async function POST(request: NextRequest) {
   const childId = parsed.childId;
   const characterBible = parsed.characterBible as CharacterBible;
   const storyRequest = parsed.storyRequest as StoryRequest;
+  // Sequel-context wordt uitsluitend server-side opgebouwd (hieronder,
+  // uit het geverifieerde vorige verhaal). Een client die zelf `sequel`
+  // in de storyRequest stopt, wordt genegeerd.
+  delete storyRequest.sequel;
+  delete storyRequest.sequelOfStoryId;
 
   let creditReserved = false;
   try {
@@ -72,6 +77,28 @@ export async function POST(request: NextRequest) {
         { error: "Kindprofiel niet gevonden" },
         { status: 404 }
       );
+    }
+
+    // Vervolg-verhaal: haal het vorige verhaal op en verifieer dat het
+    // bij dit kind hoort (het kind is hierboven al aan de ingelogde user
+    // gekoppeld). De volledige tekst gaat als context mee naar de
+    // generator; sequel + sequelOfStoryId persisteren in generationParams
+    // zodat een regenerate hetzelfde vervolg blijft.
+    if (parsed.sequelOfStoryId) {
+      const prevStory = await prisma.story.findFirst({
+        where: { id: parsed.sequelOfStoryId, childProfileId: childId },
+        include: { pages: { orderBy: { pageNumber: "asc" } } },
+      });
+      if (prevStory) {
+        storyRequest.sequel = {
+          title: prevStory.title,
+          text: prevStory.pages
+            .map((p) => p.text)
+            .filter(Boolean)
+            .join("\n\n"),
+        };
+        storyRequest.sequelOfStoryId = prevStory.id;
+      }
     }
 
     // Reserve one story credit atomically. Admins bypass. New accounts with

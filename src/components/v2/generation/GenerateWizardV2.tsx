@@ -51,7 +51,37 @@ interface Params {
   adventureType: string;
   mood: string;
   occasion: string;
+  length: "kort" | "lang";
 }
+
+/** Vervolg-verhaal-context, door de server-page meegegeven wanneer de
+ *  wizard geopend is via ?vervolgVan=[storyId]. `params` zijn de
+ *  generationParams van het vorige verhaal, voor het voorinvullen. */
+export interface SequelInfo {
+  storyId: string;
+  title: string;
+  params: {
+    setting?: string;
+    mainCharacterType?: string;
+    mainCharacterDescription?: string;
+    adventureType?: string;
+    mood?: string;
+    occasion?: string;
+  };
+}
+
+const STORY_LENGTHS = [
+  {
+    value: "kort",
+    label: "Kort",
+    description: "Lekker compact — zo'n 3 minuten voorlezen",
+  },
+  {
+    value: "lang",
+    label: "Lang",
+    description: "Een uitgebreider avontuur — zo'n 5 tot 7 minuten",
+  },
+] as const;
 
 const HERO_TYPES = [
   { value: "self", label: "Zichzelf", description: "Het kind is de held" },
@@ -76,19 +106,35 @@ const TOTAL_STEPS = 4;
 
 // ── Main ────────────────────────────────────────────────────────
 
-export function GenerateWizardV2({ child }: { child: ChildData }) {
+export function GenerateWizardV2({
+  child,
+  sequel,
+}: {
+  child: ChildData;
+  sequel?: SequelInfo;
+}) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  // Vervolg-modus: aan zolang de ouder het vervolg niet via het kruisje
+  // heeft geannuleerd. De voorgevulde keuzes blijven dan gewoon staan.
+  const [sequelActive, setSequelActive] = useState(Boolean(sequel));
   const [params, setParams] = useState<Params>({
+    // Bij een vervolg blijft specialDetail leeg — daar vult de ouder
+    // "wat er vandaag gebeurd is" in. Lengte vullen we bewust niet voor.
     specialDetail: "",
-    mainCharacterType: child.mainCharacterType || "self",
-    mainCharacterDescription: child.mainCharacterDescription ?? "",
-    setting: "",
-    adventureType: "",
-    mood: "",
-    occasion: "none",
+    mainCharacterType:
+      sequel?.params.mainCharacterType || child.mainCharacterType || "self",
+    mainCharacterDescription:
+      sequel?.params.mainCharacterDescription ??
+      child.mainCharacterDescription ??
+      "",
+    setting: sequel?.params.setting ?? "",
+    adventureType: sequel?.params.adventureType ?? "",
+    mood: sequel?.params.mood ?? "",
+    occasion: sequel?.params.occasion ?? "none",
+    length: "kort",
   });
 
   function update(u: Partial<Params>) {
@@ -127,6 +173,8 @@ export function GenerateWizardV2({ child }: { child: ChildData }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           childId: child.id,
+          sequelOfStoryId:
+            sequelActive && sequel ? sequel.storyId : undefined,
           characterBible,
           storyRequest: {
             setting: params.setting,
@@ -135,6 +183,12 @@ export function GenerateWizardV2({ child }: { child: ChildData }) {
             occasion:
               params.occasion !== "none" ? params.occasion : undefined,
             specialDetail: params.specialDetail || undefined,
+            length: params.length,
+            // Heldkeuze ook in de storyRequest, zodat die via
+            // generationParams beschikbaar is voor een later vervolg.
+            mainCharacterType: params.mainCharacterType,
+            mainCharacterDescription:
+              params.mainCharacterDescription || undefined,
           },
         }),
       });
@@ -229,6 +283,69 @@ export function GenerateWizardV2({ child }: { child: ChildData }) {
           </span>
         </div>
       </div>
+
+      {sequelActive && sequel && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 16,
+            background: "rgba(227,211,166,0.25)",
+            padding: 16,
+            marginBottom: 24,
+            borderLeft: `2px solid ${V2.gold}`,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: V2.ui,
+                fontSize: 11,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: V2.goldDeep,
+                marginBottom: 4,
+              }}
+            >
+              Vervolgverhaal
+            </div>
+            <div
+              style={{
+                fontFamily: V2.body,
+                fontSize: 14,
+                color: V2.ink,
+                lineHeight: 1.5,
+              }}
+            >
+              Vervolg op:{" "}
+              <span style={{ fontFamily: V2.display, fontStyle: "italic" }}>
+                &lsquo;{sequel.title}&rsquo;
+              </span>
+              . Je keuzes van toen zijn alvast ingevuld — pas aan wat je wil.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSequelActive(false)}
+            aria-label="Vervolg annuleren en een gewoon nieuw verhaal maken"
+            title="Vervolg annuleren en een gewoon nieuw verhaal maken"
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: V2.inkMute,
+              fontFamily: V2.ui,
+              fontSize: 16,
+              lineHeight: 1,
+              padding: "2px 4px",
+              flexShrink: 0,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && (
         <div
@@ -445,6 +562,7 @@ function Step1({
               onChange={(e) =>
                 update({ mainCharacterDescription: e.target.value })
               }
+              maxLength={500}
               placeholder={
                 params.mainCharacterType === "stuffed_animal"
                   ? "Bijv. Haasje met één oog"
@@ -582,6 +700,59 @@ function Step3({
           onPick={(v) => update({ mood: v })}
           cols={4}
         />
+      </div>
+
+      <div style={{ marginTop: 40 }}>
+        <Kicker>Lengte</Kicker>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 8,
+            marginTop: 14,
+          }}
+        >
+          {STORY_LENGTHS.map((l) => {
+            const active = params.length === l.value;
+            return (
+              <button
+                key={l.value}
+                type="button"
+                onClick={() => update({ length: l.value })}
+                style={{
+                  textAlign: "left",
+                  padding: 18,
+                  background: active ? V2.ink : "transparent",
+                  color: active ? V2.paper : V2.ink,
+                  border: `1px solid ${active ? V2.ink : V2.paperShade}`,
+                  cursor: "pointer",
+                  transition: "background .15s",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: V2.display,
+                    fontSize: 20,
+                    fontStyle: active ? "italic" : "normal",
+                    fontWeight: 400,
+                  }}
+                >
+                  {l.label}
+                </div>
+                <div
+                  style={{
+                    fontFamily: V2.ui,
+                    fontSize: 12,
+                    marginTop: 4,
+                    opacity: 0.7,
+                  }}
+                >
+                  {l.description}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </>
   );
