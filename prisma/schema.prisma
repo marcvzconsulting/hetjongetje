@@ -66,6 +66,7 @@ model User {
   resetTokens        PasswordResetToken[]
   magicLinkTokens    MagicLinkToken[]
   orders             Order[]
+  emailLogs          EmailLog[]
 
   // Admin views filter on these constantly (status pill, role split,
   // recent-signups sort, last-login report). Cheap defence against
@@ -563,6 +564,36 @@ model EmailTemplate {
   updatedById    String?  @map("updated_by_id")
 
   @@map("email_templates")
+}
+
+/// Logboek van alle transactionele mails die via sendMail() de deur uit
+/// gingen (of dat probeerden). Eén rij per verzendpoging — ook voor de
+/// dev-fallback zonder BREVO_API_KEY. `userId` is nullable: mails naar
+/// externe adressen (bv. admin-notificaties) horen bij geen enkele user,
+/// en bij verwijdering van de user blijft de rij bewaard (SetNull).
+model EmailLog {
+  id           String   @id @default(uuid())
+  userId       String?  @map("user_id")
+  toEmail      String   @map("to_email")
+  toName       String?  @map("to_name")
+  subject      String
+  /// Eerste Brevo-tag — komt overeen met de template-code (bv.
+  /// "account-approved"). Null als de mail zonder tags is verstuurd.
+  templateCode String?  @map("template_code")
+  tags         String[] @default([])
+  /// "sent" (Brevo accepteerde de mail) | "failed" (fetch-/API-fout) |
+  /// "dev" (geen BREVO_API_KEY — console-fallback).
+  status       String
+  error        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Klant-detailpagina toont de laatste logs per user; de toEmail-index
+  // vangt mails die vóór (of zonder) account-koppeling zijn verstuurd.
+  @@index([userId, createdAt])
+  @@index([toEmail, createdAt])
+  @@map("email_logs")
 }
 
 /// Admin-overridable AI-prompt fragments. Same shape and lifecycle as

@@ -6,6 +6,8 @@
  * mail contents so local development works without real credentials.
  */
 
+import { prisma } from "@/lib/db";
+
 type SendMailOpts = {
   to: string;
   toName?: string;
@@ -20,6 +22,41 @@ type SendMailOpts = {
 
 const SENDER = { name: "Ons Verhaaltje", email: "info@onsverhaaltje.nl" };
 
+/**
+ * Persist one send attempt to email_logs. Best-effort only: logging must
+ * never break the actual mailing, so every failure (including the user
+ * lookup) is swallowed and console.error'd.
+ */
+async function logEmailAttempt(
+  opts: SendMailOpts,
+  status: "sent" | "failed" | "dev",
+  error?: string,
+): Promise<void> {
+  try {
+    // Link the log row to a user when the recipient address matches an
+    // account. No match (e.g. admin notifications to an external
+    // address) simply leaves userId null.
+    const user = await prisma.user.findUnique({
+      where: { email: opts.to },
+      select: { id: true },
+    });
+    await prisma.emailLog.create({
+      data: {
+        userId: user?.id ?? null,
+        toEmail: opts.to,
+        toName: opts.toName ?? null,
+        subject: opts.subject,
+        templateCode: opts.tags?.[0] ?? null,
+        tags: opts.tags ?? [],
+        status,
+        error: error ?? null,
+      },
+    });
+  } catch (err) {
+    console.error("[email] failed to write email log", err);
+  }
+}
+
 export async function sendMail(opts: SendMailOpts): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
 
@@ -33,6 +70,7 @@ export async function sendMail(opts: SendMailOpts): Promise<void> {
       console.log(`[email]   subject: ${opts.subject}`);
       console.log(`[email]   text:\n${opts.text}`);
     }
+    await logEmailAttempt(opts, "dev");
     return;
   }
 
@@ -46,18 +84,32 @@ export async function sendMail(opts: SendMailOpts): Promise<void> {
     tags: opts.tags,
   };
 
-  const res = await fetch("https://api.brevo.com/v3/smtp/email", {
-    method: "POST",
-    headers: {
-      "api-key": apiKey,
-      "content-type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  let res: Response;
+  try {
+    res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": apiKey,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    await logEmailAttempt(
+      opts,
+      "failed",
+      err instanceof Error ? err.message : String(err),
+    );
+    throw err;
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`Brevo API error ${res.status}: ${body}`);
+    const message = `Brevo API error ${res.status}: ${body}`;
+    await logEmailAttempt(opts, "failed", message);
+    throw new Error(message);
   }
+
+  await logEmailAttempt(opts, "sent");
 }

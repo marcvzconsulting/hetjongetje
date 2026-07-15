@@ -726,6 +726,19 @@ export default async function AdminUserDetailPage({
     take: 50,
   });
 
+  // E-maillogboek — laatste 50 verzendpogingen. Match op userId én op
+  // toEmail, zodat mails van vóór (of zonder) account-koppeling ook
+  // zichtbaar zijn.
+  const emailLogs = await prisma.emailLog.findMany({
+    where: { OR: [{ userId: user.id }, { toEmail: user.email }] },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+  // Echt totaal voor de sectiekop — de lijst hierboven is gecapt op 50.
+  const emailLogTotal = await prisma.emailLog.count({
+    where: { OR: [{ userId: user.id }, { toEmail: user.email }] },
+  });
+
   // Plan-catalog voor de admin-abonnement-dropdown. Toont elke actieve
   // SubscriptionPlan + houdt het huidige plan altijd in de lijst — ook
   // als het inmiddels gedeactiveerd is, anders verlies je de selectie.
@@ -1515,6 +1528,163 @@ export default async function AdminUserDetailPage({
                     </tr>
                   );
                 })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* E-maillogboek */}
+      <section style={sectionStyle}>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={sectionTitleStyle}>
+            E-mails{" "}
+            <span
+              style={{
+                fontFamily: V2.mono,
+                fontSize: 16,
+                color: V2.inkMute,
+                letterSpacing: "0.08em",
+                marginLeft: 8,
+              }}
+            >
+              · {emailLogTotal}
+            </span>
+          </h2>
+          <p style={sectionMetaStyle}>
+            Transactionele mails via Brevo — de laatste 50 verzendpogingen
+            aan dit account of e-mailadres.
+          </p>
+        </div>
+        {emailLogs.length === 0 ? (
+          <p
+            style={{
+              fontFamily: V2.body,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: V2.inkMute,
+              margin: 0,
+            }}
+          >
+            Nog geen e-mails gelogd — het logboek registreert alleen mails
+            die vanaf nu verstuurd worden.
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                minWidth: 560,
+                borderCollapse: "collapse",
+                fontFamily: V2.body,
+                fontSize: 14,
+              }}
+            >
+              <thead>
+                <tr>
+                  {["Datum", "Mail", "Status"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        fontFamily: V2.ui,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: V2.inkMute,
+                        padding: "12px 14px",
+                        textAlign: "left",
+                        background: V2.paperDeep,
+                        borderBottom: `1px solid ${V2.paperShade}`,
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {emailLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        borderBottom: `1px solid ${V2.paperShade}`,
+                        fontFamily: V2.mono,
+                        fontSize: 12,
+                        color: V2.inkSoft,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatDateTime(log.createdAt)}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        borderBottom: `1px solid ${V2.paperShade}`,
+                        color: V2.ink,
+                        maxWidth: 380,
+                      }}
+                    >
+                      {log.templateCode ? (
+                        <>
+                          <div
+                            style={{
+                              fontFamily: V2.mono,
+                              fontSize: 12,
+                            }}
+                          >
+                            {log.templateCode}
+                          </div>
+                          <div
+                            style={{
+                              fontFamily: V2.mono,
+                              fontSize: 11,
+                              color: V2.inkMute,
+                              marginTop: 3,
+                            }}
+                          >
+                            {log.subject}
+                          </div>
+                        </>
+                      ) : (
+                        <div>{log.subject}</div>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 14px",
+                        borderBottom: `1px solid ${V2.paperShade}`,
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "3px 10px",
+                          background:
+                            log.status === "sent"
+                              ? "rgba(42,157,140,0.12)"
+                              : log.status === "failed"
+                                ? "rgba(196,165,168,0.18)"
+                                : V2.paperDeep,
+                          color:
+                            log.status === "sent"
+                              ? V2.goldDeep
+                              : log.status === "failed"
+                                ? V2.heart
+                                : V2.inkMute,
+                          fontFamily: V2.ui,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {log.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
