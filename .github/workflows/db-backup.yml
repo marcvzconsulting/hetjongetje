@@ -61,6 +61,9 @@ jobs:
       - name: Dump productie-database
         env:
           DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          # Neon-URL gebruikt sslmode=verify-full; laat libpq de systeem-CA's
+          # gebruiken i.p.v. een (niet-bestaand) ~/.postgresql/root.crt.
+          PGSSLROOTCERT: system
         run: |
           STAMP="$(date -u +%Y-%m-%d_%H%M)"
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
