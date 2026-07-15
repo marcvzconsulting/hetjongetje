@@ -80,7 +80,9 @@ export default async function RemindersPage({
   const sp = await searchParams;
 
   const users = await prisma.user.findMany({
-    where: { role: "user" },
+    // Lopend verwijderverzoek (30 dagen bedenktijd) = geen mails; die
+    // accounts horen ook niet in de handmatige verzendlijst.
+    where: { role: "user", deletionRequestedAt: null },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,

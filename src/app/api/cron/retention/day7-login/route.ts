@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
       lastLoginAt: null,
       day7LoginReminderSentAt: null,
       remindersOptOutAt: null,
+      // Geen mails tijdens de 30-dagen-bedenktijd van een verwijderverzoek.
+      deletionRequestedAt: null,
       // Reminders gaan naar iedereen — bewust géén newsletterOptIn-gate.
       // remindersOptOutAt blijft wél gerespecteerd (expliciete afmelding).
     },

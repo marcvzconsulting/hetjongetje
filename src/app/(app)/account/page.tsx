@@ -13,7 +13,7 @@ import {
   updateProfileAction,
   updateAddressAction,
   changePasswordAction,
-  deleteAccountAction,
+  requestAccountDeletionAction,
   toggleNewsletterAction,
   submitAccountUnsubscribeReasonAction,
   cancelSubscriptionAction,
@@ -60,9 +60,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   password_all_same: "Wachtwoord is te eenvoudig. Gebruik meer verschillende tekens.",
   password_mismatch: "De wachtwoorden komen niet overeen",
   password_wrong_current: "Huidig wachtwoord is onjuist",
-  delete_missing: "Vul wachtwoord en email in om te bevestigen",
+  delete_missing: "Vul je email in om te bevestigen",
   delete_email_mismatch: "Het ingevulde email komt niet overeen",
-  delete_wrong_password: "Wachtwoord is onjuist",
   delete_admin_blocked:
     "Admin-accounts kunnen niet via deze pagina verwijderd worden",
   subscription_no_active:
@@ -484,8 +483,10 @@ export default async function AccountPage({
               maxWidth: "60ch",
             }}
           >
-            Permanent. Al je kindprofielen, verhalen en boeken worden
-            weggegooid. Dit kunnen we niet terugdraaien.
+            Met 30 dagen bedenktijd. Na je bevestiging gaat je account
+            direct op slot; na 30 dagen wissen we alles definitief —
+            inclusief foto&apos;s en verhalen. Tot die tijd kun je de
+            verwijdering nog ongedaan maken door in te loggen.
           </p>
           {user.role === "admin" ? (
             <p
@@ -520,7 +521,7 @@ export default async function AccountPage({
                 Account verwijderen
               </summary>
               <form
-                action={deleteAccountAction}
+                action={requestAccountDeletionAction}
                 style={{
                   marginTop: 20,
                   padding: 24,
@@ -538,8 +539,9 @@ export default async function AccountPage({
                   }}
                 >
                   Typ je email{" "}
-                  <strong style={{ color: V2.ink }}>{user.email}</strong> en
-                  je huidige wachtwoord om te bevestigen.
+                  <strong style={{ color: V2.ink }}>{user.email}</strong> om
+                  te bevestigen. Je krijgt een mail met de definitieve
+                  verwijderdatum en hoe je het verzoek nog kunt annuleren.
                 </p>
                 <div>
                   <EField
@@ -550,25 +552,16 @@ export default async function AccountPage({
                     autoComplete="off"
                   />
                 </div>
-                <div>
-                  <EField
-                    label="Huidig wachtwoord"
-                    name="password"
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                  />
-                </div>
                 <PendingButton
                   variant="primary"
-                  pendingLabel="Verwijderen…"
+                  pendingLabel="Aanvragen…"
                   style={{
                     marginTop: 16,
                     background: V2.heart,
                     borderRadius: 2,
                   }}
                 >
-                  Account definitief verwijderen
+                  Verwijdering aanvragen (30 dagen bedenktijd)
                 </PendingButton>
               </form>
             </details>

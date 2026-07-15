@@ -147,14 +147,28 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   const wasPaid = order.status === "paid";
   const becomesPaid = newStatus === "paid" && !wasPaid;
 
+  // Account verwijderd terwijl de betaling nog liep (userId is dan null
+  // via SetNull): er is niemand meer om credits of een abonnement aan
+  // toe te kennen. Alleen de orderstatus bijwerken voor de administratie.
+  if (!order.userId) {
+    if (newStatus !== order.status) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: newStatus },
+      });
+    }
+    return { ...order, status: newStatus };
+  }
+  const orderWithUser = { ...order, userId: order.userId };
+
   // Dispatch on order kind — credits, subscription, book each need
   // different handling on the pending → paid transition.
   if (becomesPaid && order.kind === "credits" && order.creditAmount) {
-    await applyCreditsPaid(order);
-    await tryGrantReferralBonus(order.userId);
+    await applyCreditsPaid(orderWithUser);
+    await tryGrantReferralBonus(orderWithUser.userId);
   } else if (becomesPaid && order.kind === "subscription") {
-    await applySubscriptionFirstPaid(order, payment);
-    await tryGrantReferralBonus(order.userId);
+    await applySubscriptionFirstPaid(orderWithUser, payment);
+    await tryGrantReferralBonus(orderWithUser.userId);
   } else if (newStatus !== order.status) {
     // Other transition (failed, expired, cancelled) — just update the
     // order row, no credit / subscription change.

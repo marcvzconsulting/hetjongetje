@@ -3,19 +3,18 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { signOut } from "@/lib/auth";
 import { requireUser } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { trim, nullIfEmpty } from "@/lib/form";
-import { deleteUserStorage } from "@/lib/storage/user-cleanup";
-import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
 import { buildAppUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildPasswordChangedMail } from "@/lib/email/templates/password-changed";
+import { buildAccountDeletionRequestedMail } from "@/lib/email/templates/account-deletion-requested";
 import {
   changeContactEmail,
   deleteContact,
   subscribeToNewsletter,
+  unsubscribeFromNewsletter,
 } from "@/lib/email/brevo-contacts";
 import { validatePassword } from "@/lib/auth/password-policy";
 import {
@@ -310,10 +309,25 @@ export async function changePasswordAction(formData: FormData) {
   redirect("/account?saved=password");
 }
 
-export async function deleteAccountAction(formData: FormData) {
+/**
+ * Verwijderverzoek met 30 dagen bedenktijd. Er wordt hier NIETS gewist:
+ * we zetten alleen `deletionRequestedAt`, waarna de app op slot gaat
+ * (redirect naar /verwijdering) en alle reminder-/nieuwsbriefmails
+ * pauzeren. De dagelijkse cron /api/cron/account-deletion voert na 30
+ * dagen de definitieve verwijdering uit via `hardDeleteUser`.
+ *
+ * Bewuste afweging: het wachtwoord-vereiste van de oude directe
+ * verwijdering is vervallen. Google-gebruikers hebben een placeholder-
+ * hash en konden dus nooit verwijderen (AVG-probleem), en het risico
+ * van een kwaadwillende met een openstaande sessie wordt afgedekt door
+ * de combinatie bedenktijd + bevestigingsmail + herstelknop: de echte
+ * eigenaar kan 30 dagen lang inloggen en het verzoek annuleren. Het
+ * exact overtypen van het e-mailadres blijft wél verplicht tegen
+ * per-ongeluk-klikken.
+ */
+export async function requestAccountDeletionAction(formData: FormData) {
   const userId = await requireUser();
 
-  const password = String(formData.get("password") ?? "");
   const emailConfirm = trim(formData.get("emailConfirm")).toLowerCase();
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -322,54 +336,81 @@ export async function deleteAccountAction(formData: FormData) {
   if (user.role === "admin") {
     redirect("/account?error=delete_admin_blocked");
   }
-  if (!password || !emailConfirm) {
+  if (!emailConfirm) {
     redirect("/account?error=delete_missing");
   }
   if (emailConfirm !== user.email.toLowerCase()) {
     redirect("/account?error=delete_email_mismatch");
   }
-  const match = await bcrypt.compare(password, user.passwordHash);
-  if (!match) {
-    redirect("/account?error=delete_wrong_password");
+
+  // Al aangevraagd (bv. dubbele submit) — gewoon naar de statuspagina.
+  if (user.deletionRequestedAt) {
+    redirect("/verwijdering");
   }
 
-  // GDPR cleanup, in order:
-  //   1. cancel in-flight LoRA training (so we don't pay for an orphan job)
-  //   2. delete bucket assets (photos, illustrations, book PDFs, previews)
-  //   3. cascade-delete the DB row (children, stories, books, etc.)
-  //   4. wipe Brevo contact (newsletter / transactional)
-  //
-  // Note on fal.ai: trained LoRA model files cannot be deleted via the
-  // public API. We drop the URL from our DB during the cascade so the
-  // file is no longer referenced; fal.ai eventually garbage-collects.
-  await cancelInProgressLoraJobs(userId);
-  const cleanup = await deleteUserStorage(userId);
-  if (cleanup.error) {
-    console.error(
-      `[account-delete] storage cleanup error for user ${userId}: ${cleanup.error}`
-    );
-  } else if (cleanup.failed.length > 0) {
-    console.error(
-      `[account-delete] ${cleanup.failed.length}/${cleanup.requested} storage keys failed to delete for user ${userId}:`,
-      cleanup.failed
-    );
-  } else {
-    console.log(
-      `[account-delete] removed ${cleanup.requested} storage objects for user ${userId}`
-    );
-  }
+  const requestedAt = new Date();
+  const deleteAt = new Date(requestedAt.getTime() + 30 * 86_400_000);
 
-  // Prisma cascade deletes children, stories, pages, books, rate limits.
-  await prisma.user.delete({ where: { id: userId } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { deletionRequestedAt: requestedAt },
+  });
 
-  // AVG: also wipe the newsletter contact in Brevo. Best-effort.
+  // Geen renewals tijdens de bedenktijd: actief Mollie-abonnement
+  // best-effort opzeggen. Bij herstel start dit NIET automatisch weer —
+  // dat vermelden we op /verwijdering. "no_active_subscription" is de
+  // normaalste uitkomst en geen fout.
   try {
-    await deleteContact(user.email);
+    await cancelSubscription(userId);
   } catch (err) {
-    console.error("[account-delete] Brevo contact deletion failed", err);
+    const message = err instanceof Error ? err.message : String(err);
+    if (message !== "no_active_subscription") {
+      console.error(
+        `[account-delete] subscription cancel during deletion request failed for user ${userId}`,
+        message,
+      );
+    }
   }
 
-  await signOut({ redirectTo: "/?deleted=1" });
+  // Nieuwsbrief-campagnes lopen via Brevo; haal het contact best-effort
+  // van de verzendlijst zodat er tijdens de bedenktijd niets binnenkomt.
+  // `newsletterOptIn` blijft staan zodat herstel het weer kan aanzetten.
+  try {
+    await unsubscribeFromNewsletter(user.email);
+  } catch (err) {
+    console.error(
+      "[account-delete] Brevo newsletter pause during deletion request failed",
+      err,
+    );
+  }
+
+  // Bevestigingsmail met wisdatum + hersteluitleg. Best-effort — de
+  // gebruiker ziet dezelfde informatie meteen op /verwijdering.
+  try {
+    const restoreUrl = await buildAppUrl("/verwijdering");
+    const mail = await buildAccountDeletionRequestedMail({
+      name: user.name,
+      deleteAt,
+      restoreUrl,
+    });
+    await sendMail({
+      to: user.email,
+      toName: user.name,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+      tags: ["account-deletion-requested"],
+    });
+  } catch (mailError) {
+    console.error(
+      "[account-delete] deletion-requested mail failed",
+      mailError,
+    );
+  }
+
+  // Bewust géén signOut: de gebruiker moet kunnen inloggen/blijven om
+  // de verwijdering via /verwijdering te kunnen herstellen.
+  redirect("/verwijdering");
 }
 
 /**

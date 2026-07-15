@@ -232,7 +232,11 @@ async function loadDashboardStatsUncached() {
   const arrCents = mrrCents * 12;
 
   // Top customers — re-fetch user details for the top-10 row set.
-  const topUserIds = topCustomers.map((c) => c.userId);
+  // Orders van verwijderde accounts hebben userId null (SetNull, fiscale
+  // bewaarplicht); die vallen terug op "(verwijderd)" hieronder.
+  const topUserIds = topCustomers
+    .map((c) => c.userId)
+    .filter((id): id is string => id !== null);
   const topUserDetails = topUserIds.length
     ? await prisma.user.findMany({
         where: { id: { in: topUserIds } },
@@ -256,7 +260,7 @@ async function loadDashboardStatsUncached() {
     : [];
   const topUserMap = new Map(topUserDetails.map((u) => [u.id, u]));
   const topCustomersHydrated = topCustomers.map((c) => {
-    const u = topUserMap.get(c.userId);
+    const u = c.userId ? topUserMap.get(c.userId) : undefined;
     const storyCount =
       u?.children?.reduce((s, c) => s + (c._count.stories ?? 0), 0) ?? 0;
     return {
@@ -292,7 +296,7 @@ async function loadDashboardStatsUncached() {
       kind: "order",
       title: `Betaling — €${(o.amountCents / 100).toFixed(2).replace(".", ",")}`,
       detail: `${o.user?.name ?? "?"} · ${o.kind === "subscription" ? "abonnement" : o.kind === "credits" ? "credits" : o.kind}`,
-      userId: o.userId,
+      userId: o.userId ?? undefined,
     });
   }
   for (const u of recentRegistrations) {

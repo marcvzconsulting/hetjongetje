@@ -227,6 +227,13 @@ export const EDITABLE_TEMPLATES = [
     vars: ["email", "resubscribeUrl"],
   },
   {
+    code: "account-deletion-requested",
+    label: "Verwijdering aangevraagd",
+    description:
+      "Bevestiging na een verwijderverzoek: definitieve wisdatum (30 dagen bedenktijd) en hoe je herstelt.",
+    vars: ["name", "deleteAtFormatted", "restoreUrl"],
+  },
+  {
     code: "profile-incomplete-reminder",
     label: "Profiel-reminder",
     description:

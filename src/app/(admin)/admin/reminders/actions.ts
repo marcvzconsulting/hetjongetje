@@ -52,6 +52,7 @@ export async function sendReminderAction(formData: FormData) {
       email: true,
       name: true,
       remindersOptOutAt: true,
+      deletionRequestedAt: true,
       children: { select: { name: true }, take: 1 },
     },
   });
@@ -64,8 +65,9 @@ export async function sendReminderAction(formData: FormData) {
   let failed = 0;
 
   for (const user of users) {
-    // Veilig: nooit mailen naar wie zich afmeldde.
-    if (user.remindersOptOutAt) {
+    // Veilig: nooit mailen naar wie zich afmeldde, en niet naar wie
+    // midden in de 30-dagen-bedenktijd van een verwijderverzoek zit.
+    if (user.remindersOptOutAt || user.deletionRequestedAt) {
       skipped++;
       continue;
     }

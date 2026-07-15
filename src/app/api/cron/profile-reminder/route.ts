@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
       // Niet spammen naar mensen die zich net hebben afgemeld voor
       // marketing-mails. Reminders zijn marketing-achtig.
       newsletterOptIn: true,
+      // Geen mails tijdens de 30-dagen-bedenktijd van een verwijderverzoek.
+      deletionRequestedAt: null,
     },
     select: { id: true, email: true, name: true },
     take: 50,

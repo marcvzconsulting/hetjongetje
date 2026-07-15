@@ -57,6 +57,16 @@ model User {
   /// Null = nog niet uitgekeerd. Zorgt dat een terugkerende klant niet
   /// telkens bonus-credits genereert.
   referralBonusGrantedAt   DateTime?   @map("referral_bonus_granted_at")
+  /// AVG-bewijs: wanneer de gebruiker bij registratie akkoord ging met de
+  /// algemene voorwaarden en privacyverklaring. Null bij accounts van vóór
+  /// deze feature.
+  termsAcceptedAt          DateTime?   @map("terms_accepted_at")
+  /// Accountverwijdering aangevraagd (30 dagen bedenktijd). Niet-null =
+  /// app is vergrendeld tot de gebruiker herstelt; de dagelijkse cron
+  /// /api/cron/account-deletion wist het account definitief zodra dit
+  /// moment 30 dagen geleden is. Alle reminder-/nieuwsbriefmails slaan
+  /// gebruikers met een niet-null waarde over.
+  deletionRequestedAt      DateTime?   @map("deletion_requested_at")
   createdAt          DateTime       @default(now()) @map("created_at")
   updatedAt          DateTime       @updatedAt @map("updated_at")
   children           ChildProfile[]
@@ -77,6 +87,8 @@ model User {
   @@index([lastLoginAt])
   // Referral-stats: count invitees per inviter.
   @@index([referredByUserId])
+  // Dagelijkse verwijder-cron scant hierop.
+  @@index([deletionRequestedAt])
   @@map("users")
 }
 
@@ -253,7 +265,10 @@ model Subscription {
 /// the webhook receives the payment id and looks up the matching Order.
 model Order {
   id              String   @id @default(uuid())
-  userId          String   @map("user_id")
+  /// Nullable + SetNull: betaalgegevens vallen onder de fiscale
+  /// bewaarplicht (7 jaar) en moeten een accountverwijdering overleven.
+  /// De rij bevat zelf al het volledige snapshot (bedrag, btw, adres).
+  userId          String?  @map("user_id")
   kind            String   // "credits" | "book"
   description     String   // human-readable label rendered on the receipt
   amountCents     Int      @map("amount_cents") // Mollie works in major+minor units; we store integer cents to avoid float drift
@@ -290,7 +305,7 @@ model Order {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   book         StoryBook?    @relation(fields: [bookId], references: [id], onDelete: SetNull)
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 

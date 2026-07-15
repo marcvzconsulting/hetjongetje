@@ -12,8 +12,7 @@ import {
   createPasswordResetToken,
   buildResetUrl,
 } from "@/lib/password-reset";
-import { deleteUserStorage } from "@/lib/storage/user-cleanup";
-import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
+import { hardDeleteUser } from "@/lib/account/deletion";
 import { logAdminAction } from "@/lib/admin/audit-log";
 import { getMollieClient, centsToMollieAmount } from "@/lib/payments/mollie";
 import { sendMail } from "@/lib/email/client";
@@ -445,27 +444,10 @@ async function deleteUserAction(formData: FormData) {
     redirect(`/admin/users/${userId}?delError=email_mismatch`);
   }
 
-  // Cancel any in-progress LoRA training so we're not paying for a job
-  // that's about to point at a non-existent profile, then drop the
-  // bucket assets. Both are best-effort and never block the delete.
-  await cancelInProgressLoraJobs(userId);
-  const cleanup = await deleteUserStorage(userId);
-  if (cleanup.error) {
-    console.error(
-      `[admin-delete] storage cleanup error for user ${userId}: ${cleanup.error}`
-    );
-  } else if (cleanup.failed.length > 0) {
-    console.error(
-      `[admin-delete] ${cleanup.failed.length}/${cleanup.requested} storage keys failed for user ${userId}:`,
-      cleanup.failed
-    );
-  } else {
-    console.log(
-      `[admin-delete] removed ${cleanup.requested} storage objects for user ${userId} (by admin ${session.user.id})`
-    );
-  }
-
-  await prisma.user.delete({ where: { id: userId } });
+  // Gedeelde verwijderlogica (LoRA-cancel → storage → DB-cascade →
+  // Brevo + AVG-restanten). Cleanup-stappen zijn best-effort en blokkeren
+  // de delete nooit; alleen de DB-delete zelf kan falen.
+  const cleanup = await hardDeleteUser(userId);
 
   // Log AFTER delete: the audit row should reflect "this happened",
   // not "this might happen" — and the row survives the user deletion
@@ -478,12 +460,51 @@ async function deleteUserAction(formData: FormData) {
     metadata: {
       email: target.email,
       name: target.name,
-      storageKeysRemoved: cleanup.requested,
-      storageKeysFailed: cleanup.failed.length,
+      storageKeysRemoved: cleanup.storageRequested,
+      storageKeysFailed: cleanup.storageFailed,
     },
   });
 
   redirect(`/admin/users?deleted=${encodeURIComponent(target.email)}`);
+}
+
+/**
+ * Annuleer een lopend verwijderverzoek (30 dagen bedenktijd) namens de
+ * klant — bv. na een telefoontje "ik wil toch blijven". Zelfde effect
+ * als de "Herstel mijn account"-knop op /verwijdering.
+ */
+async function cancelDeletionRequestAction(formData: FormData) {
+  "use server";
+  const { audit } = await requireAdminWithIdentity();
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return;
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, deletionRequestedAt: true },
+  });
+  if (!target?.deletionRequestedAt) {
+    revalidatePath(`/admin/users/${userId}`);
+    return;
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { deletionRequestedAt: null },
+  });
+
+  await logAdminAction({
+    ...audit,
+    action: "user.deletion_cancelled",
+    targetType: "user",
+    targetId: userId,
+    metadata: {
+      email: target.email,
+      deletionRequestedAt: target.deletionRequestedAt.toISOString(),
+    },
+  });
+
+  revalidatePath(`/admin/users/${userId}`);
 }
 
 // ── Styling helpers ────────────────────────────────────────────
@@ -834,6 +855,48 @@ export default async function AdminUserDetailPage({
             >
               Admin · onbeperkt
             </span>
+          )}
+          {user.deletionRequestedAt && (
+            <>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "5px 14px",
+                  background: "rgba(196,165,168,0.2)",
+                  color: V2.heart,
+                  fontFamily: V2.ui,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Verwijdering aangevraagd op{" "}
+                {user.deletionRequestedAt.toLocaleDateString("nl-NL", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}{" "}
+                — definitief op{" "}
+                {new Date(
+                  user.deletionRequestedAt.getTime() + 30 * 86_400_000,
+                ).toLocaleDateString("nl-NL", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </span>
+              <form
+                action={cancelDeletionRequestAction}
+                style={{ display: "inline-flex", margin: 0 }}
+              >
+                <input type="hidden" name="userId" value={user.id} />
+                <EBtnSubmit kind="ghost" size="sm" pendingLabel="Bezig…">
+                  Verwijdering annuleren
+                </EBtnSubmit>
+              </form>
+            </>
           )}
         </div>
       </div>

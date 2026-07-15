@@ -35,6 +35,8 @@ export async function GET(request: NextRequest) {
       createdAt: { gte: threeDaysAgo, lt: twoDaysAgo },
       day3StoryReminderSentAt: null,
       remindersOptOutAt: null,
+      // Geen mails tijdens de 30-dagen-bedenktijd van een verwijderverzoek.
+      deletionRequestedAt: null,
       children: {
         some: {
           stories: { none: {} },
