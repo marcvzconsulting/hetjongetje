@@ -13,6 +13,7 @@ import {
   MAX_PHOTOS,
 } from "@/lib/ai/lora-training";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import {
   moderateChildPhoto,
   photoRejectionMessage,
@@ -309,6 +310,7 @@ export async function POST(req: NextRequest, { params }: Props) {
     });
   } catch (err) {
     console.error("[lora] start training failed:", err);
+    await maybeAlertFalBalanceExhausted(err, "LoRA-training");
     const reason = err instanceof Error ? err.message : "Onbekende fout";
     await prisma.childProfile.update({
       where: { id: childId },

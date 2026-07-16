@@ -17,6 +17,7 @@ import {
   storyEndingKey,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import { reserveStoryCredit, refundStoryCredit } from "@/lib/user-gate";
 import { sendMail } from "@/lib/email/client";
 import { buildFirstStoryMail } from "@/lib/email/templates/first-story";
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
         generatedStory = await generateIllustrations(generatedStory, characterBible);
       } catch (err) {
         console.error("[generate] Illustraties mislukt (verhaal gaat door):", err);
+        await maybeAlertFalBalanceExhausted(err, "verhaal-illustraties");
       }
     } else {
       console.warn("[generate] FAL_KEY niet ingesteld — geen illustraties");

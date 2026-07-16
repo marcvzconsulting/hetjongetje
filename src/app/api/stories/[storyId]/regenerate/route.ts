@@ -14,6 +14,7 @@ import {
   storyEndingKey,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import { sendMail } from "@/lib/email/client";
 import { buildAdminStoryIncompleteMail } from "@/lib/email/templates/admin-story-incomplete";
 import { buildAppUrl } from "@/lib/url";
@@ -188,6 +189,7 @@ export async function POST(
         generated = await generateIllustrations(generated, bible);
       } catch (err) {
         console.error("[regen] Illustraties mislukt (verhaal gaat door):", err);
+        await maybeAlertFalBalanceExhausted(err, "regeneratie-illustraties");
       }
     }
 

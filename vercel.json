@@ -20,6 +20,10 @@
     {
       "path": "/api/cron/account-deletion",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/fal-balance",
+      "schedule": "0 7 * * *"
     }
   ]
 }

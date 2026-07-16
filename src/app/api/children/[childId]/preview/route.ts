@@ -9,6 +9,7 @@ import {
   isOwnStorageUrl,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import { loadUserGate } from "@/lib/user-gate";
 
 fal.config({ credentials: process.env.FAL_KEY! });
@@ -98,6 +99,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     });
   } catch (err) {
     console.error("Preview generation error:", err);
+    await maybeAlertFalBalanceExhausted(err, "karakterportret");
     return NextResponse.json(
       { error: "Preview genereren mislukt" },
       { status: 500 }
