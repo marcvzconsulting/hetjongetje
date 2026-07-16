@@ -1,13 +1,13 @@
-﻿/**
+/**
  * Genereer een demo-verhaal op het admin-account (PRODUCTIE) en zet het
  * in een landing-preview-slot. Gebruikt exact dezelfde generator-keten
- * als de app (generateStory â†’ generateIllustrations â†’ Scaleway-upload),
+ * als de app (generateStory → generateIllustrations → Scaleway-upload),
  * dus het resultaat is representatief voor wat klanten krijgen.
  *
  * Gebruik:  npx tsx scripts/generate-demo-story.ts
  * Config:   pas het CONFIG-blok hieronder aan voor een ander kind/slot.
  *
- * Kosten: Ã©Ã©n verhaal (~â‚¬0,10-0,15 aan Claude + FLUX).
+ * Kosten: één verhaal (~€0,10-0,15 aan Claude + FLUX).
  */
 import { config } from "dotenv";
 
@@ -40,7 +40,7 @@ const CONFIG = {
 };
 
 async function main() {
-  // Dynamische imports nÃ¡ de env-setup, zodat prisma/SDK's de juiste
+  // Dynamische imports ná de env-setup, zodat prisma/SDK's de juiste
   // (prod-)omgeving zien bij initialisatie.
   const { prisma } = await import("@/lib/db");
   const { generateStory } = await import("@/lib/ai/story-generator");
@@ -61,7 +61,7 @@ async function main() {
     where: { email: CONFIG.adminEmail },
   });
   if (!admin) throw new Error(`Admin ${CONFIG.adminEmail} niet gevonden`);
-  console.log(`âœ“ Admin: ${admin.email}`);
+  console.log(`✓ Admin: ${admin.email}`);
 
   // Kindprofiel hergebruiken of aanmaken
   let child = await prisma.childProfile.findFirst({
@@ -85,9 +85,9 @@ async function main() {
         mainCharacterType: CONFIG.storyRequest.mainCharacterType,
       },
     });
-    console.log(`âœ“ Kindprofiel aangemaakt: ${child.name} (${child.id})`);
+    console.log(`✓ Kindprofiel aangemaakt: ${child.name} (${child.id})`);
   } else {
-    console.log(`âœ“ Kindprofiel hergebruikt: ${child.name} (${child.id})`);
+    console.log(`✓ Kindprofiel hergebruikt: ${child.name} (${child.id})`);
   }
 
   const characterBible = {
@@ -105,17 +105,17 @@ async function main() {
     mainCharacterType: CONFIG.storyRequest.mainCharacterType,
   };
 
-  console.log("â³ Verhaal genereren (Claude)...");
+  console.log("⏳ Verhaal genereren (Claude)...");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let generated = await generateStory(characterBible as any, CONFIG.storyRequest as any);
-  console.log(`âœ“ "${generated.title}" â€” ${generated.pages.length} pagina's`);
+  console.log(`✓ "${generated.title}" — ${generated.pages.length} pagina's`);
 
-  console.log("â³ Illustraties genereren (FLUX)...");
+  console.log("⏳ Illustraties genereren (FLUX)...");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   generated = await generateIllustrations(generated, characterBible as any);
 
   const storyId = randomUUID();
-  console.log("â³ Illustraties naar Scaleway...");
+  console.log("⏳ Illustraties naar Scaleway...");
   const pageUrls: (string | null)[] = [];
   for (let i = 0; i < generated.pages.length; i++) {
     const src = generated.pages[i].imageUrl;
@@ -128,10 +128,10 @@ async function main() {
   const missing = pageUrls.filter((u) => !u).length;
   if (missing > 0) {
     throw new Error(
-      `${missing} pagina('s) zonder illustratie â€” demo-verhaal niet opgeslagen. Probeer opnieuw.`,
+      `${missing} pagina('s) zonder illustratie — demo-verhaal niet opgeslagen. Probeer opnieuw.`,
     );
   }
-  console.log(`âœ“ ${pageUrls.length} pagina-illustraties + ending geÃ¼pload`);
+  console.log(`✓ ${pageUrls.length} pagina-illustraties + ending geüpload`);
 
   const aiCostCents =
     generated.textUsage && generated.imageUsage
@@ -169,9 +169,9 @@ async function main() {
       },
     },
   });
-  console.log(`âœ“ Verhaal opgeslagen: ${story.id}`);
+  console.log(`✓ Verhaal opgeslagen: ${story.id}`);
 
-  // Slot vullen (Ã©Ã©n verhaal per slot)
+  // Slot vullen (één verhaal per slot)
   await prisma.story.updateMany({
     where: { landingPreviewSlot: CONFIG.slot },
     data: { landingPreviewSlot: null },
@@ -180,9 +180,9 @@ async function main() {
     where: { id: story.id },
     data: { landingPreviewSlot: CONFIG.slot },
   });
-  console.log(`âœ“ Slot ${CONFIG.slot} gevuld met "${story.title}"`);
+  console.log(`✓ Slot ${CONFIG.slot} gevuld met "${story.title}"`);
   console.log(
-    `\nKlaar! AI-kosten: ${aiCostCents !== null ? `â‚¬${(aiCostCents / 100).toFixed(2)}` : "onbekend"}. De landing toont het verhaal na de volgende deploy/revalidate.`,
+    `\nKlaar! AI-kosten: ${aiCostCents !== null ? `€${(aiCostCents / 100).toFixed(2)}` : "onbekend"}. De landing toont het verhaal na de volgende deploy/revalidate.`,
   );
 
   await prisma.$disconnect();
