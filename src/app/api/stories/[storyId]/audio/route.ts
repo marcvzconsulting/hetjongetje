@@ -134,7 +134,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       err,
     );
     return NextResponse.json(
-      { error: "Audio genereren mislukt — probeer het zo opnieuw." },
+      { error: "Audio genereren mislukt, probeer het zo opnieuw." },
       { status: 500 },
     );
   }

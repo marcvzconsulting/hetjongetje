@@ -123,7 +123,7 @@ export function StoryAudioPlayer({
       };
       if (!res.ok || !data.url) {
         setError(
-          data.error ?? "Genereren mislukt — probeer het zo opnieuw.",
+          data.error ?? "Genereren mislukt, probeer het zo opnieuw.",
         );
         return;
       }
@@ -131,7 +131,7 @@ export function StoryAudioPlayer({
       onGenerated?.({ voiceKey: key, url: data.url });
       startPlayback(key, data.url);
     } catch {
-      setError("Verbindingsfout — probeer het zo opnieuw.");
+      setError("Verbindingsfout, probeer het zo opnieuw.");
     } finally {
       setGeneratingKey(null);
     }
@@ -176,7 +176,7 @@ export function StoryAudioPlayer({
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         onError={() => {
           if (view === "player") {
-            setError("Audio laden mislukt — probeer het zo opnieuw.");
+            setError("Audio laden mislukt, probeer het zo opnieuw.");
             setView("picker");
           }
         }}

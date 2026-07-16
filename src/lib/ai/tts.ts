@@ -56,7 +56,12 @@ export async function generateSpeech(
   text: string,
   voiceKey: TtsVoiceKey,
 ): Promise<Buffer> {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  // BOM (U+FEFF) en whitespace strippen: een env-var die via een
+  // shell-pipe is gezet kan met een onzichtbare BOM beginnen, en een
+  // HTTP-header met zo'n teken laat fetch crashen ("Cannot convert
+  // argument to a ByteString").
+  const BOM = String.fromCharCode(0xfeff);
+  const apiKey = process.env.ELEVENLABS_API_KEY?.split(BOM).join("").trim();
   if (!apiKey) {
     throw new Error("ELEVENLABS_API_KEY niet ingesteld");
   }
