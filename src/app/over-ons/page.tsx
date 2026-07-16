@@ -3,6 +3,7 @@ import {
   Lead,
   P,
 } from "@/components/v2/landing/ContentPage";
+import { EBtn } from "@/components/v2";
 import { V2 } from "@/components/v2/tokens";
 
 export const metadata = {
@@ -143,6 +144,36 @@ export default function OverOnsPage() {
       >
         Marc van Zetten, oprichter van Ons Verhaaltje
       </p>
+
+      <div
+        style={{
+          marginTop: 56,
+          paddingTop: 32,
+          borderTop: `1px solid ${V2.paperShade}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+          alignItems: "flex-start",
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontFamily: V2.display,
+            fontStyle: "italic",
+            fontWeight: 300,
+            fontSize: 18,
+            color: V2.ink,
+            lineHeight: 1.5,
+          }}
+        >
+          Maak zelf zo&rsquo;n herinnering voor je kind &mdash; het eerste
+          verhaal is gratis.
+        </p>
+        <EBtn kind="primary" size="lg" href="/register">
+          Probeer het
+        </EBtn>
+      </div>
 
       {/* JSON-LD: AboutPage + Person, zodat AI- en zoekmachines de byline
           aan het bedrijf kunnen koppelen. */}

@@ -1,4 +1,5 @@
 import { ContentPage, Lead } from "@/components/v2/landing/ContentPage";
+import { EBtn } from "@/components/v2";
 import { V2 } from "@/components/v2/tokens";
 import { loadPublishedFaq } from "@/lib/faq";
 
@@ -74,6 +75,36 @@ export default async function VeelgesteldeVragenPage() {
             </div>
           </details>
         ))}
+      </div>
+
+      <div
+        style={{
+          marginTop: 56,
+          paddingTop: 32,
+          borderTop: `1px solid ${V2.paperShade}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+          alignItems: "flex-start",
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontFamily: V2.display,
+            fontStyle: "italic",
+            fontWeight: 300,
+            fontSize: 18,
+            color: V2.ink,
+            lineHeight: 1.5,
+          }}
+        >
+          Vraag beantwoord? Het eerste verhaal is gratis, dus je kunt het
+          gewoon proberen.
+        </p>
+        <EBtn kind="primary" size="lg" href="/register">
+          Probeer het
+        </EBtn>
       </div>
 
       <script

@@ -36,7 +36,8 @@ export default function Home() {
         <NightHero />
         <BookSection />
         <Pricing />
-        <Testimonial />
+        <TrustStrip />
+        <FounderNote />
         <SlotCTA />
       </main>
       <LandingFooter />
@@ -99,7 +100,7 @@ function LandingJsonLd() {
         "@type": "Product",
         name: "Gepersonaliseerd voorleesverhaal",
         description:
-          "Een nieuw, op maat geschreven en geïllustreerd voorleesverhaal van 6 pagina's, klaar binnen 5 minuten. Per maand 1 verhaal in het basis-abonnement.",
+          "Een nieuw, op maat geschreven en geïllustreerd voorleesverhaal, klaar in een paar minuten. Los te koop per verhaal (credits) of via een abonnement.",
         brand: { "@id": `${siteUrl}/#organization` },
         category: "Children's books",
         audience: {
@@ -138,6 +139,8 @@ function ResponsiveStyles() {
   .lp-2col-steps { grid-template-columns: 1fr !important; gap: 36px !important; }
   .lp-step-row { grid-template-columns: 56px 1fr !important; gap: 16px !important; }
   .lp-step-num { font-size: 32px !important; }
+  .lp-step-spot { display: none !important; }
+  .lp-trust { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
   .lp-section-h2 { font-size: 36px !important; }
   .lp-pricing {
     grid-template-columns: 1fr !important;
@@ -395,16 +398,22 @@ function HowItGoes() {
       n: "I",
       t: "Jullie vullen het profiel in",
       b: "Naam, leeftijd, de knuffel, de mensen, de grapjes die thuis terugkomen. Dit doe je maar één keer, daarna weten wij genoeg.",
+      img: "/images/spots/vertellen.png",
+      alt: "Aquarel van een kind met een knuffelkonijn op schoot",
     },
     {
       n: "II",
       t: "Vertel wat er vanavond speelt",
       b: "Een zin is genoeg. Of vertel meer: 'Er was vandaag een tekening van oma', 'Noor wilde vanmiddag alleen olifantenbrood'.",
+      img: "/images/spots/schrijven.png",
+      alt: "Aquarel van een opengeslagen schrijfboekje met een pen",
     },
     {
       n: "III",
       t: "Voorlezen, of laten voorlezen",
       b: "Op de tablet, of op papier. Aan het einde van het jaar bundel je de mooiste verhalen in een echt gedrukt boekje.",
+      img: "/images/spots/voorlezen.png",
+      alt: "Aquarel van een slapend kind met een boek en een teddybeer",
     },
   ];
   return (
@@ -450,10 +459,11 @@ function HowItGoes() {
                 className="lp-step-row"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px 1fr",
+                  gridTemplateColumns: "80px 1fr 128px",
                   gap: 24,
                   padding: "28px 0",
                   borderTop: `1px solid ${V2.paperShade}`,
+                  alignItems: "center",
                 }}
               >
                 <div
@@ -494,6 +504,25 @@ function HowItGoes() {
                   >
                     {s.b}
                   </p>
+                </div>
+                <div
+                  className="lp-step-spot"
+                  style={{
+                    position: "relative",
+                    width: 128,
+                    height: 128,
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    border: `1px solid ${V2.paperShade}`,
+                  }}
+                >
+                  <Image
+                    src={s.img}
+                    alt={s.alt}
+                    fill
+                    sizes="128px"
+                    style={{ objectFit: "cover" }}
+                  />
                 </div>
               </div>
             ))}
@@ -1079,13 +1108,104 @@ async function Pricing() {
   );
 }
 
-// ── Testimonial ────────────────────────────────────────────────────
+// ── Trust strip ─────────────────────────────────────────────────────
+// Vertrouwenssignalen voor twijfelende ouders, direct na de prijzen.
+// De claims hieronder zijn allemaal echt gebouwd: EU-hosting (Neon
+// Frankfurt/Scaleway Amsterdam), foto-moderatie + verwijdering na
+// LoRA-training, alleen functionele cookies, 30-dagen-verwijderflow.
 
-function Testimonial() {
+function TrustStrip() {
+  const items = [
+    {
+      t: "Gemaakt en gehost in de EU",
+      s: "Jullie gegevens blijven binnen Europa (AVG).",
+    },
+    {
+      t: "Foto's automatisch gescreend",
+      s: "En na het maken van het tekenpersonage verwijderd.",
+    },
+    {
+      t: "Geen tracking, geen advertenties",
+      s: "Alleen strikt noodzakelijke cookies.",
+    },
+    {
+      t: "Opzeggen wanneer je wilt",
+      s: "Je account en alle gegevens wissen kan altijd.",
+    },
+  ];
+  return (
+    <section
+      className="lp-section"
+      style={{
+        padding: "56px 48px",
+        borderTop: `1px solid ${V2.paperShade}`,
+        background: V2.paperShade + "55",
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div
+          className="lp-trust"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 32,
+          }}
+        >
+          {items.map((it) => (
+            <div key={it.t}>
+              <div
+                style={{
+                  fontFamily: V2.ui,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: 0.2,
+                }}
+              >
+                <span aria-hidden style={{ color: V2.goldDeep, marginRight: 8 }}>
+                  ✓
+                </span>
+                {it.t}
+              </div>
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  lineHeight: 1.55,
+                  color: V2.inkSoft,
+                  margin: "6px 0 0",
+                }}
+              >
+                {it.s}
+              </p>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 28, textAlign: "center" }}>
+          <Link
+            href="/privacy"
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 13,
+              color: V2.inkMute,
+              textDecoration: "underline",
+              textUnderlineOffset: 4,
+            }}
+          >
+            Lees hoe we met jullie gegevens omgaan →
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Founder note ───────────────────────────────────────────────────
+
+function FounderNote() {
   return (
     <section className="lp-section lp-section-tall" style={{ padding: "120px 48px" }}>
       <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
-        <Kicker>Ouders vertellen</Kicker>
+        <Kicker>Waarom dit bestaat</Kicker>
         <blockquote
           style={{
             fontFamily: V2.display,
@@ -1097,11 +1217,12 @@ function Testimonial() {
             fontStyle: "italic",
           }}
         >
-          &ldquo;Onze {SAMPLE_NAME} vraagt elke avond:{" "}
+          &ldquo;Mijn vader vertelde vroeger elke avond over het jongetje.
+          Pas jaren later viel het kwartje:{" "}
           <span style={{ fontStyle: "normal", color: V2.goldDeep }}>
-            mag ik mijn verhaal?
-          </span>{" "}
-          Niet een verhaal. Háár verhaal.&rdquo;
+            ík was het jongetje.
+          </span>
+          &rdquo;
         </blockquote>
         <div
           style={{
@@ -1128,16 +1249,30 @@ function Testimonial() {
               fontStyle: "italic",
             }}
           >
-            S
+            M
           </span>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontFamily: V2.ui, fontSize: 14, fontWeight: 500 }}>
-              Sanne de Groot
+              Marc van Zetten
             </div>
             <div style={{ fontFamily: V2.ui, fontSize: 13, color: V2.inkMute }}>
-              moeder van {SAMPLE_NAME} (5)
+              oprichter van Ons Verhaaltje
             </div>
           </div>
+        </div>
+        <div style={{ marginTop: 28 }}>
+          <Link
+            href="/over-ons"
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 14,
+              color: V2.inkSoft,
+              textDecoration: "underline",
+              textUnderlineOffset: 4,
+            }}
+          >
+            Lees het hele verhaal →
+          </Link>
         </div>
       </div>
     </section>

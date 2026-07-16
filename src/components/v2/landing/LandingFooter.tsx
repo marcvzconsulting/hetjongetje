@@ -82,6 +82,12 @@ export function LandingFooter() {
             Cookies
           </Link>
           <Link
+            href="/losse-verhalen"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Prijzen
+          </Link>
+          <Link
             href="/veelgestelde-vragen"
             style={{ color: "inherit", textDecoration: "none" }}
           >
