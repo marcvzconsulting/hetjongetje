@@ -11,11 +11,17 @@ import {
   loadRevenueTimeSeries,
   loadFunnelStats,
   loadCohortRetention,
+} from "@/lib/admin/dashboard-stats";
+import {
   AI_COST_CENTS_PER_STORY,
   REVENUE_CUTOFF,
   type DashboardStats,
   type Granularity,
 } from "@/lib/admin/dashboard-stats";
+import {
+  loadReminderEffect,
+  type ReminderTriggerStats,
+} from "@/lib/admin/reminder-stats";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -139,6 +145,7 @@ export default async function AdminDashboardPage({
     openInboxCount,
     newsletterReasonsThisMonth,
     recentNewsletterNotes,
+    reminderEffect,
   ] = await Promise.all([
     loadDashboardStats(),
     loadRevenueTimeSeries({
@@ -180,6 +187,7 @@ export default async function AdminDashboardPage({
       take: 10,
       select: { createdAt: true, reason: true, note: true },
     }),
+    loadReminderEffect(),
   ]);
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
@@ -343,7 +351,59 @@ export default async function AdminDashboardPage({
               return `${eur(stats.margin.aiCostMonthCents)} AI-kosten (${tracked}/${total} gemeten, rest geschat)`;
             })()}
           />
+          <Stat
+            label="Openstaande credits"
+            value={String(stats.credits.outstanding)}
+            sub="nog te genereren verhalen (klant-tegoed)"
+          />
         </Grid>
+      </Section>
+
+      {/* ── Reminder-effect ─────────────────────────────── */}
+      <Section title="Reminder-effect">
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: V2.inkMute,
+            margin: "0 0 14px",
+            lineHeight: 1.5,
+          }}
+        >
+          Kwamen klanten in beweging na een reminder? Gemeten vanaf het
+          verzendmoment (cron én handmatig via{" "}
+          <Link href="/admin/reminders" style={{ color: "inherit" }}>
+            Reminders
+          </Link>
+          ): &ldquo;doel behaald&rdquo; is de actie waar de mail om vroeg,
+          &ldquo;teruggekomen&rdquo; is opnieuw ingelogd.
+        </p>
+        <Grid>
+          {reminderEffect.triggers.map((t: ReminderTriggerStats) => (
+            <Panel key={t.key} title={t.label}>
+              <Row label="Verstuurd">{String(t.sent)}</Row>
+              <Row
+                label={`Doel behaald (${t.goalLabel})`}
+                emphasised={t.sent > 0 && t.goalReached > 0}
+              >
+                {t.sent === 0
+                  ? "—"
+                  : `${t.goalReached} (${Math.round((t.goalReached / t.sent) * 100)}%)`}
+              </Row>
+              <Row label="Teruggekomen (ingelogd)">
+                {t.sent === 0
+                  ? "—"
+                  : `${t.returned} (${Math.round((t.returned / t.sent) * 100)}%)`}
+              </Row>
+            </Panel>
+          ))}
+        </Grid>
+        <FootNote>
+          Verwijderde accounts vallen uit de meting. Een klant telt als
+          &ldquo;doel behaald&rdquo; zodra de actie ná het verzendmoment
+          plaatsvond — ook als de mail daar niet de oorzaak van was.
+        </FootNote>
       </Section>
 
       {/* ── Conversie-funnel ────────────────────────────── */}
@@ -465,6 +525,14 @@ export default async function AdminDashboardPage({
             warning={stats.health.failedJobs > 0}
           >
             {stats.health.failedJobs}
+          </Row>
+          <Row label="LoRA-trainingen bezig">{stats.health.lora.training}</Row>
+          <Row label="LoRA klaar (totaal)">{stats.health.lora.ready}</Row>
+          <Row
+            label="LoRA mislukt"
+            warning={stats.health.lora.failed > 0}
+          >
+            {stats.health.lora.failed}
           </Row>
         </Panel>
       </div>

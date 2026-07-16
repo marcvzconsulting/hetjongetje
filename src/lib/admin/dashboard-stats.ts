@@ -126,6 +126,8 @@ async function loadDashboardStatsUncached() {
     aiCostLifetimeAgg,
     storiesMonthWithCost,
     storiesLifetimeWithCost,
+    creditsOutstandingAgg,
+    loraStatusCounts,
   ] = await Promise.all([
     sumOrderAmount({ paidAt: { gte: today } }),
     sumOrderAmount({ paidAt: { gte: monthStart } }),
@@ -216,7 +218,21 @@ async function loadDashboardStatsUncached() {
       where: { aiCostCents: { not: null }, createdAt: { gte: monthStart } },
     }),
     prisma.story.count({ where: { aiCostCents: { not: null } } }),
+    // Openstaande story-credits — de "schuld" aan klanten in nog te
+    // genereren verhalen. Relevant voor betaalmodel-beslissingen.
+    prisma.user.aggregate({
+      where: { role: "user" },
+      _sum: { storyCredits: true },
+    }),
+    // LoRA-trainingen per status (none-rijen filteren we er in JS uit).
+    prisma.childProfile.groupBy({
+      by: ["loraStatus"],
+      _count: { _all: true },
+    }),
   ]);
+
+  const loraCount = (status: string) =>
+    loraStatusCounts.find((r) => r.loraStatus === status)?._count._all ?? 0;
 
   // MRR — sum of normalised monthly contribution per active subscription.
   const planMap = new Map(plans.map((p) => [p.code, p]));
@@ -385,6 +401,16 @@ async function loadDashboardStatsUncached() {
       pendingUsers,
       failedJobs,
       processingJobs,
+      /** LoRA-trainingen per status; "none" is eruit gefilterd. */
+      lora: {
+        training: loraCount("training"),
+        ready: loraCount("ready"),
+        failed: loraCount("failed"),
+      },
+    },
+    credits: {
+      /** Som van alle openstaande story-credits bij klanten. */
+      outstanding: creditsOutstandingAgg._sum.storyCredits ?? 0,
     },
     topCustomers: topCustomersHydrated,
     events: activity,
