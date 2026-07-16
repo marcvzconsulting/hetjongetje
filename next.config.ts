@@ -100,6 +100,10 @@ const SECURITY_HEADERS = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.scw.cloud https://*.fal.media https://*.fal.run https://*.fal.ai",
+      // Voorlees-audio (mp3) komt uit onze eigen Scaleway-bucket; zonder
+      // media-src valt <audio> terug op default-src 'self' en blokkeert
+      // de browser het bestand stilletjes.
+      "media-src 'self' https://*.scw.cloud",
       "font-src 'self' data:",
       `connect-src ${[...PROD_CONNECT, ...(isDev ? DEV_EXTRA_CONNECT : [])].join(" ")}`,
       // Lock down the niche directives explicitly so a browser default
