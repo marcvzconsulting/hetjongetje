@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -7,6 +8,7 @@ import { loadUserGate } from "@/lib/user-gate";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn } from "@/components/v2";
 import { Avatar } from "@/components/v2/Avatar";
+import { PaperGrain } from "@/components/v2/PaperGrain";
 import { StarField } from "@/components/v2/StarField";
 import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { StoryLibraryV2 } from "@/components/v2/story/StoryLibraryV2";
@@ -79,6 +81,9 @@ export default async function DashboardPage() {
       name: true,
       dateOfBirth: true,
       gender: true,
+      // Goedgekeurd AI-portret — het warmste beeld dat we van het kind
+      // hebben; de bibliotheek toont het als medaillon i.p.v. een letter.
+      approvedPreviewUrl: true,
       stories: {
         where: { status: "ready" },
         orderBy: { createdAt: "desc" },
@@ -120,6 +125,10 @@ export default async function DashboardPage() {
         />
       )}
 
+      {/* Papierkorrel over de hele bibliotheek — zelfde tactiliteit als
+          een echt boek; puur decoratief. */}
+      <PaperGrain />
+
       {/* Hero strip */}
       <section
         className="app-section-pad"
@@ -132,7 +141,45 @@ export default async function DashboardPage() {
         }}
       >
         <StarField count={14} />
+        {/* Zacht gemaskeerde aquarel rechts — de warmte van de landing,
+            nu ook binnen de app. Verdwijnt op smalle schermen. */}
         <div
+          className="app-hero-art"
+          aria-hidden
+          style={{
+            position: "absolute",
+            right: 48,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 240,
+            height: 240,
+            opacity: 0.92,
+            maskImage:
+              "radial-gradient(circle, black 52%, transparent 71%)",
+            WebkitMaskImage:
+              "radial-gradient(circle, black 52%, transparent 71%)",
+          }}
+        >
+          <Image
+            src="/images/spots/voorlezen.png"
+            alt=""
+            fill
+            sizes="240px"
+            style={{ objectFit: "cover" }}
+          />
+        </div>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+.app-hero-inner { padding-right: 280px; }
+@media (max-width: 900px) {
+  .app-hero-art { display: none; }
+  .app-hero-inner { padding-right: 0; }
+}`,
+          }}
+        />
+        <div
+          className="app-hero-inner"
           style={{
             position: "relative",
             maxWidth: 1200,
@@ -213,13 +260,25 @@ export default async function DashboardPage() {
               coverUrl: s.pages[0]?.illustrationUrl ?? null,
             }));
             return (
-              <div key={child.id} style={{ marginBottom: idx === children.length - 1 ? 0 : 80 }}>
+              // Elk kind een eigen "plank": zachte kaart zodat meerdere
+              // kinderen visueel gescheiden blijven i.p.v. één lange scroll.
+              <div
+                key={child.id}
+                style={{
+                  marginBottom: idx === children.length - 1 ? 0 : 48,
+                  background: V2.paperDeep,
+                  border: `1px solid ${V2.paperShade}`,
+                  borderRadius: 16,
+                  padding: "32px 32px 40px",
+                }}
+              >
                 <ChildSectionHeader
                   name={child.name}
                   age={age}
                   gender={child.gender}
                   storyCount={child.stories.length}
                   childId={child.id}
+                  previewUrl={child.approvedPreviewUrl}
                 />
                 <StoryLibraryV2
                   stories={serialized}
@@ -351,12 +410,14 @@ function ChildSectionHeader({
   gender,
   storyCount,
   childId,
+  previewUrl,
 }: {
   name: string;
   age: number;
   gender: string;
   storyCount: number;
   childId: string;
+  previewUrl: string | null;
 }) {
   return (
     <div
@@ -370,7 +431,7 @@ function ChildSectionHeader({
       }}
     >
       <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-        <Avatar name={name} size={64} />
+        <Avatar name={name} size={72} src={previewUrl} />
         <div>
           <Kicker size="lg">{name}&rsquo;s plankje</Kicker>
           <h2

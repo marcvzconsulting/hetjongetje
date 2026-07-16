@@ -526,6 +526,18 @@ export default async function AdminDashboardPage({
           >
             {stats.health.failedJobs}
           </Row>
+          <Row
+            label="fal.ai-tegoed"
+            href="https://fal.ai/dashboard/billing"
+            warning={
+              stats.health.falBalanceUsd !== null &&
+              stats.health.falBalanceUsd < 5
+            }
+          >
+            {stats.health.falBalanceUsd === null
+              ? "—"
+              : `$${stats.health.falBalanceUsd.toFixed(2)}`}
+          </Row>
           <Row label="LoRA-trainingen bezig">{stats.health.lora.training}</Row>
           <Row label="LoRA klaar (totaal)">{stats.health.lora.ready}</Row>
           <Row

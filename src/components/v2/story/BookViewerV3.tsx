@@ -211,9 +211,20 @@ export function BookViewerV3({
   }, [go]);
 
   // ── Auto-hide chrome ─────────────────────────────────────────
+  // Alleen op touch-apparaten: daar wint het boek van de knoppen. Op een
+  // laptop/desktop (echte muis: hover + fine pointer) blijven de pijltjes
+  // en de balk gewoon staan — wegspringende knoppen onder een muiscursor
+  // voelen als een bug, niet als rust.
   const [chromeVisible, setChromeVisible] = useState(true);
   const chromeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
+    const hasMouse = window.matchMedia(
+      "(hover: hover) and (pointer: fine)",
+    ).matches;
+    if (hasMouse) {
+      setChromeVisible(true);
+      return;
+    }
     function bump() {
       setChromeVisible(true);
       if (chromeTimerRef.current) clearTimeout(chromeTimerRef.current);

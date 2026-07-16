@@ -144,6 +144,7 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
 
   return (
     <div>
+      <LibStyles />
       {/* Controls */}
       <div
         style={{
@@ -162,6 +163,8 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
           usedSettings={usedSettings}
         />
         <div style={{ flex: 1 }} />
+        {/* Native select (toegankelijk) in de huisstijl: eigen chevron,
+            geen OS-chrome. */}
         <select
           aria-label="Sorteer verhalen"
           value={sort}
@@ -169,11 +172,15 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
           style={{
             fontFamily: V2.ui,
             fontSize: 13,
-            padding: "8px 12px",
+            padding: "8px 34px 8px 14px",
             border: `1px solid ${V2.paperShade}`,
-            background: "transparent",
+            background: `${V2.paper} url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231f1e3a' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center`,
             color: V2.ink,
-            borderRadius: 2,
+            borderRadius: 999,
+            appearance: "none",
+            WebkitAppearance: "none",
+            MozAppearance: "none",
+            cursor: "pointer",
           }}
         >
           <option value="newest">Nieuwste eerst</option>
@@ -210,7 +217,7 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            gap: 32,
+            gap: "44px 32px",
           }}
         >
           {sorted.map((story, i) => (
@@ -299,7 +306,7 @@ function StoryCard({
   const settingInfo =
     STORY_SETTINGS[story.setting as keyof typeof STORY_SETTINGS];
   return (
-    <div style={{ position: "relative" }}>
+    <div className="lib-card" style={{ position: "relative" }}>
       {/* Delete confirmation overlay */}
       {confirming && (
         <div
@@ -377,7 +384,7 @@ function StoryCard({
         style={{
           position: "absolute",
           top: 12,
-          left: 12,
+          left: 18,
           zIndex: 10,
           width: 26,
           height: 26,
@@ -399,13 +406,17 @@ function StoryCard({
         href={`/story/${story.id}`}
         style={{ textDecoration: "none", color: "inherit", display: "block" }}
       >
-        {/* Cover */}
+        {/* Cover — als boekje: rug links, pagina-randje rechts, diepte. */}
         <div
+          className="lib-card-cover"
           style={{
             aspectRatio: "4 / 5",
             background: V2.night,
             position: "relative",
             overflow: "hidden",
+            borderRadius: "4px 12px 12px 4px",
+            boxShadow:
+              "0 1px 2px rgba(31,30,58,0.10), 0 10px 26px rgba(31,30,58,0.14)",
           }}
         >
           {story.coverUrl ? (
@@ -421,8 +432,35 @@ function StoryCard({
           ) : (
             <NightDecoration />
           )}
+          {/* Boekrug */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: 0,
+              width: 12,
+              background:
+                "linear-gradient(90deg, rgba(0,0,0,0.32), rgba(0,0,0,0.10) 55%, transparent)",
+              pointerEvents: "none",
+            }}
+          />
+          {/* Pagina-randje */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 4,
+              bottom: 4,
+              right: 2.5,
+              width: 1.5,
+              background: "rgba(245,239,228,0.35)",
+              pointerEvents: "none",
+            }}
+          />
           {story.isFavorite && (
-            <div style={{ position: "absolute", top: 12, right: 12 }}>
+            <div style={{ position: "absolute", top: 12, right: 14 }}>
               <IconV2 name="heart" size={16} color={V2.heart} filled />
             </div>
           )}
@@ -430,7 +468,7 @@ function StoryCard({
             style={{
               position: "absolute",
               bottom: 12,
-              left: 12,
+              left: 18,
               right: 12,
               fontFamily: V2.mono,
               fontSize: 10,
@@ -476,57 +514,145 @@ function StoryCard({
   );
 }
 
+/**
+ * Cover-fallback voor verhalen zonder illustratie: een nachtelijk
+ * boekomslag-tafereel (gloeiende maansikkel, gevarieerde sterren,
+ * heuvels, gouden binnenkader) i.p.v. het oude kale CSS-maantje.
+ */
 function NightDecoration() {
+  const stars = [
+    { x: 12, y: 14, s: 2, o: 0.9 },
+    { x: 30, y: 8, s: 1.5, o: 0.55 },
+    { x: 48, y: 18, s: 2.5, o: 0.8 },
+    { x: 82, y: 10, s: 1.5, o: 0.6 },
+    { x: 16, y: 38, s: 1.5, o: 0.5 },
+    { x: 88, y: 34, s: 2, o: 0.75 },
+    { x: 60, y: 44, s: 1.5, o: 0.5 },
+    { x: 26, y: 55, s: 2, o: 0.65 },
+    { x: 74, y: 58, s: 1.5, o: 0.45 },
+    { x: 42, y: 34, s: 1, o: 0.4 },
+    { x: 68, y: 24, s: 1, o: 0.5 },
+    { x: 90, y: 66, s: 1.5, o: 0.4 },
+  ];
   return (
     <>
-      {/* moon */}
+      {/* Nachtlucht met wat diepte */}
       <div
         style={{
           position: "absolute",
-          top: "22%",
-          right: "22%",
-          width: 42,
-          height: 42,
-          borderRadius: "50%",
-          background: V2.gold,
-          opacity: 0.85,
+          inset: 0,
+          background: `linear-gradient(180deg, ${V2.night} 0%, ${V2.nightSoft} 78%, ${V2.night} 100%)`,
         }}
       />
-      {/* some stars */}
-      {[
-        { x: 14, y: 28 },
-        { x: 28, y: 14 },
-        { x: 62, y: 42 },
-        { x: 18, y: 68 },
-        { x: 48, y: 72 },
-        { x: 78, y: 82 },
-      ].map((s, i) => (
+      {/* Maan-glow */}
+      <div
+        style={{
+          position: "absolute",
+          top: "16%",
+          right: "18%",
+          width: 84,
+          height: 84,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(201,169,97,0.35) 0%, rgba(201,169,97,0) 70%)",
+        }}
+      />
+      {/* Maansikkel: gouden schijf met nacht-schijf eroverheen */}
+      <div
+        style={{
+          position: "absolute",
+          top: "21%",
+          right: "24%",
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          background: V2.gold,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: "19%",
+          right: "21%",
+          width: 36,
+          height: 36,
+          borderRadius: "50%",
+          background: V2.night,
+        }}
+      />
+      {/* Sterren, gevarieerd in grootte en helderheid */}
+      {stars.map((s, i) => (
         <span
           key={i}
           style={{
             position: "absolute",
             left: `${s.x}%`,
             top: `${s.y}%`,
-            width: 2,
-            height: 2,
+            width: s.s,
+            height: s.s,
             borderRadius: "50%",
             background: V2.gold,
-            opacity: 0.7,
+            opacity: s.o,
+            boxShadow: s.s > 2 ? `0 0 6px 1px rgba(201,169,97,0.5)` : undefined,
           }}
         />
       ))}
-      {/* horizon */}
+      {/* Heuvels */}
       <div
         style={{
           position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "28%",
+          bottom: "-14%",
+          left: "-20%",
+          width: "90%",
+          height: "38%",
+          borderRadius: "50%",
           background: V2.nightSoft,
-          opacity: 0.6,
+          opacity: 0.9,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "-18%",
+          right: "-24%",
+          width: "100%",
+          height: "40%",
+          borderRadius: "50%",
+          background: "rgba(201,169,97,0.10)",
+        }}
+      />
+      {/* Gouden binnenkader — boekomslag-gevoel */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 10,
+          border: "1px solid rgba(201,169,97,0.38)",
+          borderRadius: 8,
+          pointerEvents: "none",
         }}
       />
     </>
+  );
+}
+
+/** Hover-gedrag van de kaarten (één keer geïnjecteerd per bibliotheek). */
+function LibStyles() {
+  return (
+    <style
+      dangerouslySetInnerHTML={{
+        __html: `
+.lib-card { transition: transform .18s ease; }
+.lib-card:hover { transform: translateY(-5px); }
+.lib-card .lib-card-cover { transition: box-shadow .18s ease; }
+.lib-card:hover .lib-card-cover {
+  box-shadow: 0 2px 4px rgba(31,30,58,0.12), 0 18px 38px rgba(31,30,58,0.22);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lib-card, .lib-card .lib-card-cover { transition: none; }
+  .lib-card:hover { transform: none; }
+}
+`,
+      }}
+    />
   );
 }
