@@ -46,6 +46,7 @@ export function StoryPageClient({
   const [regenError, setRegenError] = useState<string>("");
   const [regenInFlight, setRegenInFlight] = useState(false);
   const [regenFeedback, setRegenFeedback] = useState<string>("");
+  const [quickAdjustments, setQuickAdjustments] = useState<string[]>([]);
   const [, startTransition] = useTransition();
   const [reactOpen, setReactOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -97,6 +98,21 @@ export function StoryPageClient({
   const canRegenerate = regenerationCount < regenerationLimit;
   const hasFeedback = feedbackKind !== null;
 
+  // Snelknoppen: korter↔langer en grappiger↔rustiger sluiten elkaar uit.
+  function toggleAdjustment(key: string) {
+    const EXCLUSIVE: Record<string, string> = {
+      shorter: "longer",
+      longer: "shorter",
+      funnier: "calmer",
+      calmer: "funnier",
+    };
+    setQuickAdjustments((prev) =>
+      prev.includes(key)
+        ? prev.filter((k) => k !== key)
+        : [...prev.filter((k) => k !== EXCLUSIVE[key]), key],
+    );
+  }
+
   async function toggleFavorite() {
     const newValue = !isFavorite;
     setIsFavorite(newValue);
@@ -141,6 +157,9 @@ export function StoryPageClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           feedback: regenFeedback.trim() || undefined,
+          quickAdjustments: quickAdjustments.length
+            ? quickAdjustments
+            : undefined,
         }),
       });
       if (!res.ok) {
@@ -306,13 +325,47 @@ export function StoryPageClient({
                   </span>
                 ) : (
                   <>
-                    Schrijf hieronder kort wat je anders wilt. Zonder
-                    uitleg krijg je waarschijnlijk een vergelijkbaar
-                    verhaal terug.{" "}
+                    Kies hieronder wat er anders mag, of schrijf het
+                    zelf.{" "}
                     <strong>Let op: het oude verhaal wordt overschreven.</strong>
                   </>
                 )}
               </p>
+              {canRegenerate && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginBottom: 12,
+                  }}
+                >
+                  <ThumbButton
+                    label="Korter"
+                    glyph="✂️"
+                    active={quickAdjustments.includes("shorter")}
+                    onClick={() => toggleAdjustment("shorter")}
+                  />
+                  <ThumbButton
+                    label="Langer"
+                    glyph="📖"
+                    active={quickAdjustments.includes("longer")}
+                    onClick={() => toggleAdjustment("longer")}
+                  />
+                  <ThumbButton
+                    label="Grappiger"
+                    glyph="😄"
+                    active={quickAdjustments.includes("funnier")}
+                    onClick={() => toggleAdjustment("funnier")}
+                  />
+                  <ThumbButton
+                    label="Rustiger"
+                    glyph="🌙"
+                    active={quickAdjustments.includes("calmer")}
+                    onClick={() => toggleAdjustment("calmer")}
+                  />
+                </div>
+              )}
               {canRegenerate && (
                 <textarea
                   placeholder={

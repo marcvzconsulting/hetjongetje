@@ -28,6 +28,23 @@ import { getAdminNotifyEmails } from "@/lib/admin/notify";
  */
 const MAX_REGENERATIONS_PER_STORY = 1;
 
+/**
+ * Snelknoppen uit de "Niet helemaal goed?"-modal. Elke knop mapt naar
+ * een vaste instructiezin; korter/langer schakelen daarnaast de
+ * length-parameter om zodat het woordbudget in de prompt meebeweegt.
+ */
+const QUICK_ADJUSTMENTS = {
+  shorter:
+    "Maak deze versie duidelijk korter en compacter dan de vorige.",
+  longer:
+    "Maak deze versie langer en rijker dan de vorige, met meer detail en meer verhaal.",
+  funnier:
+    "Maak deze versie grappiger: meer humor, gekke momenten en grapjes die een kind snapt.",
+  calmer:
+    "Maak deze versie rustiger en zachter: minder spanning, meer een kalm slaapverhaaltje-gevoel.",
+} as const;
+type QuickAdjustment = keyof typeof QUICK_ADJUSTMENTS;
+
 export const maxDuration = 120;
 
 async function persistImage(
@@ -121,18 +138,46 @@ export async function POST(
   // Optional parent guidance for THIS regeneration. Body may be empty
   // (e.g. preflight); read JSON defensively.
   let regenerationFeedback: string | undefined;
+  let quickAdjustments: QuickAdjustment[] = [];
   try {
-    const body = (await request.json()) as { feedback?: unknown };
+    const body = (await request.json()) as {
+      feedback?: unknown;
+      quickAdjustments?: unknown;
+    };
     if (typeof body?.feedback === "string") {
       regenerationFeedback = body.feedback.trim().slice(0, 1000) || undefined;
+    }
+    if (Array.isArray(body?.quickAdjustments)) {
+      quickAdjustments = body.quickAdjustments.filter(
+        (a): a is QuickAdjustment =>
+          typeof a === "string" && a in QUICK_ADJUSTMENTS,
+      );
     }
   } catch {
     // No body / not JSON — fine, regen without extra feedback.
   }
 
+  // Snelknoppen: korter/langer zetten óók de echte length-parameter om
+  // (betrouwbaarder woordbudget dan alleen prompt-feedback); alle
+  // knoppen voegen een instructiezin toe aan de regeneration-feedback.
+  const lengthOverride = quickAdjustments.includes("longer")
+    ? ("lang" as const)
+    : quickAdjustments.includes("shorter")
+      ? ("kort" as const)
+      : undefined;
+  const combinedFeedback =
+    [
+      ...quickAdjustments.map((a) => QUICK_ADJUSTMENTS[a]),
+      regenerationFeedback,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .slice(0, 1200) || undefined;
+
   const storyRequest: StoryRequest = {
     ...baseRequest,
-    regenerationFeedback,
+    ...(lengthOverride ? { length: lengthOverride } : {}),
+    regenerationFeedback: combinedFeedback,
   };
 
   try {
