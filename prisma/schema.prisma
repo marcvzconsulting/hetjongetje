@@ -480,6 +480,7 @@ model Story {
   pages        StoryPage[]
   jobs         GenerationJob[]
   bookStories  BookStory[]
+  audio        StoryAudio[]
 
   @@index([landingPreviewSlot])
   // Dashboard library query: stories per child filtered by "ready" status,
@@ -492,6 +493,26 @@ model Story {
   @@index([createdAt])
   @@index([feedbackKind])
   @@map("stories")
+}
+
+/// Gecachte voorlees-audio per verhaal per stem. Eén keer gegenereerd via
+/// ElevenLabs, daarna altijd uit Scaleway geserveerd — genereren kost geld,
+/// afspelen niet. Rijen worden gewist (incl. bucket-object) wanneer de
+/// verhaaltekst wijzigt via regenerate, en verdwijnen mee met het verhaal
+/// via de cascade.
+model StoryAudio {
+  id        String   @id @default(uuid())
+  storyId   String   @map("story_id")
+  voiceKey  String   @map("voice_key")
+  url       String
+  /// Aantal tekens dat naar ElevenLabs ging (kostenbewaking).
+  chars     Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, voiceKey])
+  @@map("story_audio")
 }
 
 model StoryPage {

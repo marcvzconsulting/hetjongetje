@@ -22,6 +22,7 @@ export default async function StoryPage({ params }: Props) {
     include: {
       pages: { orderBy: { pageNumber: "asc" } },
       childProfile: { select: { name: true, id: true } },
+      audio: { select: { voiceKey: true, url: true } },
     },
   });
 
@@ -55,6 +56,10 @@ export default async function StoryPage({ params }: Props) {
       initialFeedbackKind={story.feedbackKind as "up" | "down" | null}
       initialFeedbackNote={story.feedbackNote}
       initialShareToken={story.shareToken}
+      initialAudios={story.audio.map((a) => ({
+        voiceKey: a.voiceKey,
+        url: a.url,
+      }))}
     />
   );
 }

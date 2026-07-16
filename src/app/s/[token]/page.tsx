@@ -26,6 +26,7 @@ async function loadSharedStory(token: string) {
     include: {
       pages: { orderBy: { pageNumber: "asc" } },
       childProfile: { select: { name: true } },
+      audio: { select: { voiceKey: true, url: true } },
     },
   });
 }
@@ -104,6 +105,10 @@ export default async function SharedStoryPage({ params }: Props) {
       childName={story.childProfile.name}
       storyTitle={story.title}
       spreads={spreads}
+      audios={story.audio.map((a) => ({
+        voiceKey: a.voiceKey,
+        url: a.url,
+      }))}
     />
   );
 }

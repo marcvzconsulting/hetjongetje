@@ -4,6 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Spread } from "@/lib/story/spread-types";
 import { BookViewerV3 } from "@/components/v2/story/BookViewerV3";
+import {
+  StoryAudioPlayer,
+  type StoryAudioEntry,
+} from "@/components/v2/story/StoryAudioPlayer";
 import { V2 } from "@/components/v2/tokens";
 
 interface Props {
@@ -19,6 +23,8 @@ interface Props {
   initialFeedbackNote: string | null;
   /** Bestaande share-token uit DB; null = nog niet gedeeld. */
   initialShareToken: string | null;
+  /** Al gegenereerde voorlees-audio's (per stem één). */
+  initialAudios: StoryAudioEntry[];
 }
 
 export function StoryPageClient({
@@ -33,6 +39,7 @@ export function StoryPageClient({
   initialFeedbackKind,
   initialFeedbackNote,
   initialShareToken,
+  initialAudios,
 }: Props) {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
@@ -53,6 +60,8 @@ export function StoryPageClient({
   const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
   const [shareInFlight, setShareInFlight] = useState(false);
   const [copyConfirmed, setCopyConfirmed] = useState(false);
+  const [listenOpen, setListenOpen] = useState(false);
+  const [audios, setAudios] = useState<StoryAudioEntry[]>(initialAudios);
 
   const shareUrl = shareToken
     ? typeof window !== "undefined"
@@ -195,7 +204,26 @@ export function StoryPageClient({
         isShared={!!shareToken}
         onReactClick={() => setReactOpen(true)}
         hasFeedback={hasFeedback}
+        onListenClick={() => setListenOpen(true)}
+        hasAudio={audios.length > 0}
       />
+
+      {/* Voorlezen — stemkeuze + spelerbalk. */}
+      {listenOpen && (
+        <StoryAudioPlayer
+          storyId={storyId}
+          audios={audios}
+          canGenerate
+          onClose={() => setListenOpen(false)}
+          onGenerated={(entry) =>
+            setAudios((prev) =>
+              prev.some((a) => a.voiceKey === entry.voiceKey)
+                ? prev
+                : [...prev, entry],
+            )
+          }
+        />
+      )}
 
       {/* Modal — slides up from bottom on mobile, centered card on
           desktop. Click outside or press Esc closes. */}

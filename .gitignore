@@ -60,3 +60,9 @@ cloudflared.exe
 
 # scripts/backup-restore-test.ts dump-target
 /tmp/
+
+# TTS-experimenten (losse proefbestanden, niet voor productie)
+/tts-proef/
+
+.vercel
+.env*

@@ -147,6 +147,11 @@ export function storyEndingKey(storyId: string): string {
   return `stories/${storyId}/ending.jpg`;
 }
 
+/** Voorlees-audio (ElevenLabs mp3) — één object per verhaal per stem. */
+export function storyAudioKey(storyId: string, voiceKey: string): string {
+  return `stories/${storyId}/audio-${voiceKey}.mp3`;
+}
+
 export function approvedPreviewKey(childId: string): string {
   return `previews/${childId}/approved.jpg`;
 }

@@ -12,6 +12,8 @@ import {
   uploadFromUrl,
   storyPageKey,
   storyEndingKey,
+  deleteObjects,
+  keyFromUrl,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
@@ -274,6 +276,32 @@ export async function POST(
         },
       }),
     ]);
+
+    // De verhaaltekst is vervangen → alle gecachte voorlees-audio is
+    // ongeldig. Best-effort opruimen (bucket-objecten + DB-rijen); een
+    // fout hier mag de geslaagde regen nooit breken. Bij een halve
+    // opruiming genereert de audio-route gewoon opnieuw (rij weg) of
+    // blijft er hooguit een wees-object in de bucket achter.
+    try {
+      const staleAudio = await prisma.storyAudio.findMany({
+        where: { storyId },
+        select: { url: true },
+      });
+      if (staleAudio.length > 0) {
+        const staleKeys = staleAudio
+          .map((a) => keyFromUrl(a.url))
+          .filter((k): k is string => k !== null);
+        if (staleKeys.length > 0) {
+          await deleteObjects(staleKeys);
+        }
+        await prisma.storyAudio.deleteMany({ where: { storyId } });
+      }
+    } catch (audioErr) {
+      console.error(
+        `[regen] Opruimen voorlees-audio mislukt voor story ${storyId}:`,
+        audioErr,
+      );
+    }
 
     // Bij partial: admin-notificatie. We geven hier geen credit terug —
     // regenerate kost de gebruiker geen extra credit, dus er valt niets

@@ -26,6 +26,10 @@ export const RATE_LIMITS = {
   loginAttemptByEmail: { limit: 10, windowSeconds: 15 * 60 }, // 10 per 15 min
   // Same defence at the IP layer in case an attacker rotates targets.
   loginAttemptByIp: { limit: 30, windowSeconds: 15 * 60 }, // 30 per 15 min
+  // Voorlees-audio via ElevenLabs (~duizenden tekens per verhaal). Cache
+  // vangt herhaald afspelen af; dit begrenst alleen het aantal nieuwe
+  // generaties (verhaal × stem-combinaties) per gebruiker.
+  storyAudio: { limit: 10, windowSeconds: 60 * 60 }, // 10 per hour
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
@@ -47,6 +51,7 @@ const FRIENDLY_LABELS: Record<RateLimitAction, string> = {
   passwordResetIp: "wachtwoord-reset-aanvragen",
   loginAttemptByEmail: "login-pogingen",
   loginAttemptByIp: "login-pogingen",
+  storyAudio: "voorlees-audio's",
 };
 
 /**

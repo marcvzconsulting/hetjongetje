@@ -3,7 +3,8 @@ import { deleteObjects, keyFromUrl } from "./scaleway";
 
 /**
  * Collect every storage key this user owns: child character previews,
- * reference photos, story page illustrations, and book assets (covers + PDFs).
+ * reference photos, story page illustrations, read-aloud audio, and book
+ * assets (covers + PDFs).
  *
  * Only keys for URLs that live in our own bucket are returned — external URLs
  * (fal.ai originals, etc.) are skipped.
@@ -19,6 +20,7 @@ export async function collectUserStorageKeys(userId: string): Promise<string[]> 
         select: {
           id: true,
           pages: { select: { illustrationUrl: true } },
+          audio: { select: { url: true } },
         },
       },
       books: {
@@ -38,6 +40,9 @@ export async function collectUserStorageKeys(userId: string): Promise<string[]> 
     for (const story of child.stories) {
       for (const page of story.pages) {
         urls.push(page.illustrationUrl);
+      }
+      for (const audio of story.audio) {
+        urls.push(audio.url);
       }
     }
     for (const book of child.books) {
