@@ -42,6 +42,14 @@ export function isTtsQuotaError(err: unknown): err is TtsQuotaError {
 export type WordTiming = { w: string; s: number; e: number };
 
 /**
+ * Vaste uitro voor de eindpagina (de pagina met lege tekst en de
+ * afsluitende illustratie). Pas deze tekst gerust aan — bestaande
+ * eind-audio's blijven gecachet tot een regenerate ze wist, dus een
+ * nieuwe tekst geldt alleen voor nieuw gegenereerde audio.
+ */
+export const ENDING_NARRATION = "Einde. Tot het volgende verhaaltje!";
+
+/**
  * Bouw de voorleestekst voor één pagina. Bewust ZONDER de verhaaltitel —
  * ook op pagina 1. De viewer toont de titel namelijk niet in de
  * paginatekst, en door alleen de paginatekst in te spreken mappen de

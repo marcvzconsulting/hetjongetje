@@ -3,7 +3,10 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Spread } from "@/lib/story/spread-types";
-import { spreadsToPageNumbers } from "@/lib/story/spread-audio";
+import {
+  endingNarrationPageNumber,
+  spreadsToPageNumbers,
+} from "@/lib/story/spread-audio";
 import {
   BookViewerV3,
   type WordHighlight,
@@ -72,7 +75,8 @@ export function StoryPageClient({
   const [wordHighlight, setWordHighlight] = useState<WordHighlight | null>(
     null,
   );
-  // Per spread het voorleesbare DB-paginanummer (null = titel/einde).
+  // Per spread het voorlees-item: 0 = titel, daarna de tekstpagina's,
+  // als laatste de eindpagina (null = spread zonder audio).
   const spreadPageNumbers = useMemo(
     () => spreadsToPageNumbers(spreads),
     [spreads],
@@ -81,8 +85,13 @@ export function StoryPageClient({
     () => spreadPageNumbers.filter((p): p is number => p !== null),
     [spreadPageNumbers],
   );
+  const endingPageNumber = useMemo(
+    () => endingNarrationPageNumber(spreads),
+    [spreads],
+  );
   const currentPageNumber = spreadPageNumbers[currentSpreadIdx] ?? null;
-  // Zit de zichtbare spread ná de laatste tekstpagina? (eindspread)
+  // Zit de zichtbare spread ná het laatste voorleesbare item? (alleen
+  // relevant wanneer de eindspread zelf geen audio heeft)
   const afterLastPage =
     currentPageNumber === null &&
     spreadPageNumbers
@@ -245,6 +254,7 @@ export function StoryPageClient({
           canGenerate
           currentPageNumber={currentPageNumber}
           pageNumbers={pageNumbers}
+          endingPageNumber={endingPageNumber}
           afterLastPage={afterLastPage}
           onClose={() => {
             setListenOpen(false);

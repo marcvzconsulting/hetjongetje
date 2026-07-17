@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 import type { Spread } from "@/lib/story/spread-types";
-import { spreadsToPageNumbers } from "@/lib/story/spread-audio";
+import {
+  endingNarrationPageNumber,
+  spreadsToPageNumbers,
+} from "@/lib/story/spread-audio";
 import {
   BookViewerV3,
   type WordHighlight,
@@ -37,7 +40,8 @@ export function PublicStoryReader({
     null,
   );
 
-  // Per spread het voorleesbare DB-paginanummer (null = titel/einde).
+  // Per spread het voorlees-item: 0 = titel, daarna de tekstpagina's,
+  // als laatste de eindpagina (null = spread zonder audio).
   const spreadPageNumbers = useMemo(
     () => spreadsToPageNumbers(spreads),
     [spreads],
@@ -45,6 +49,10 @@ export function PublicStoryReader({
   const pageNumbers = useMemo(
     () => spreadPageNumbers.filter((p): p is number => p !== null),
     [spreadPageNumbers],
+  );
+  const endingPageNumber = useMemo(
+    () => endingNarrationPageNumber(spreads),
+    [spreads],
   );
   const currentPageNumber = spreadPageNumbers[currentSpreadIdx] ?? null;
   const afterLastPage =
@@ -89,6 +97,7 @@ export function PublicStoryReader({
           canGenerate={false}
           currentPageNumber={currentPageNumber}
           pageNumbers={pageNumbers}
+          endingPageNumber={endingPageNumber}
           afterLastPage={afterLastPage}
           onClose={() => {
             setListenOpen(false);

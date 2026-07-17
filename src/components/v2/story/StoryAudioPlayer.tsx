@@ -9,6 +9,7 @@ import {
   type TtsVoiceKey,
 } from "@/lib/ai/tts-voices";
 import type { WordTiming } from "@/lib/ai/tts";
+import { TITLE_PAGE_NUMBER } from "@/lib/story/spread-audio";
 import type { WordHighlight } from "@/components/v2/story/BookViewerV3";
 
 /** Eén gegenereerde audio: stem + DB-paginanummer + url + timings. */
@@ -27,14 +28,20 @@ type Props = {
   /** Eigenaar-pagina: mag nieuwe stemmen genereren. Deelpagina: alleen
    *  afspelen van stemmen waarvoor ALLE pagina's al audio hebben. */
   canGenerate: boolean;
-  /** DB-paginanummer van de tekst op de zichtbare spread; null wanneer de
-   *  spread geen voorleesbare tekst heeft (titel- of eindspread). */
+  /** Voorlees-item van de zichtbare spread: 0 = titelspread, anders het
+   *  DB-paginanummer (tekst- of eindpagina); null wanneer de spread geen
+   *  audio heeft. */
   currentPageNumber: number | null;
-  /** Alle voorleesbare DB-paginanummers, op leesvolgorde. */
+  /** Alle voorleesbare items op leesvolgorde, typisch
+   *  [0, 1..N, eindpagina]. */
   pageNumbers: number[];
-  /** True wanneer de zichtbare spread ná de laatste tekstpagina ligt —
-   *  dan tonen we "Het verhaaltje is uit" i.p.v. "Blader naar het
-   *  verhaal". */
+  /** DB-paginanummer van de eindspread-audio (vaste uitro), of null als
+   *  het verhaal geen eindpagina met illustratie heeft. Daar tonen we
+   *  geen woord-markering en na afloop "Het verhaaltje is uit". */
+  endingPageNumber?: number | null;
+  /** True wanneer de zichtbare spread ná het laatste voorleesbare item
+   *  ligt zonder eigen audio — dan tonen we "Het verhaaltje is uit"
+   *  i.p.v. "Blader naar het verhaal". */
   afterLastPage?: boolean;
   onClose: () => void;
   /** Meld een vers gegenereerde audio aan de parent zodat die z'n
@@ -82,6 +89,7 @@ export function StoryAudioPlayer({
   canGenerate,
   currentPageNumber,
   pageNumbers,
+  endingPageNumber = null,
   afterLastPage = false,
   onClose,
   onGenerated,
@@ -176,11 +184,20 @@ export function StoryAudioPlayer({
       emitHighlight(null);
       return;
     }
+    // Titel- en eindspread renderen geen woord-spans: eventuele
+    // opgeslagen wordTimings daar bewust negeren, geen markering emitten.
+    if (
+      entry.pageNumber === TITLE_PAGE_NUMBER ||
+      (endingPageNumber !== null && entry.pageNumber === endingPageNumber)
+    ) {
+      emitHighlight(null);
+      return;
+    }
     const idx = findActiveWord(entry.wordTimings, el.currentTime);
     emitHighlight(
       idx === null ? null : { pageNumber: entry.pageNumber, wordIndex: idx },
     );
-  }, [emitHighlight]);
+  }, [emitHighlight, endingPageNumber]);
 
   const stopHighlightLoop = useCallback(() => {
     if (rafRef.current !== null) {
@@ -220,10 +237,16 @@ export function StoryAudioPlayer({
       setError(null);
       try {
         for (const p of targets) {
+          // De teller telt titel en einde gewoon mee ("2 van 6").
           const pos = pageNumbers.indexOf(p) + 1;
-          setGenLabel(
-            `Stem voorbereiden, pagina ${pos} van ${pageNumbers.length}…`,
-          );
+          const total = pageNumbers.length;
+          const what =
+            p === TITLE_PAGE_NUMBER
+              ? `de titel (${pos} van ${total})`
+              : endingPageNumber !== null && p === endingPageNumber
+                ? `het einde (${pos} van ${total})`
+                : `pagina ${pos} van ${total}`;
+          setGenLabel(`Stem voorbereiden, ${what}…`);
           const res = await fetch(`/api/stories/${storyId}/audio`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -261,7 +284,7 @@ export function StoryAudioPlayer({
         setGenLabel(null);
       }
     },
-    [storyId, pageNumbers],
+    [storyId, pageNumbers, endingPageNumber],
   );
 
   function activate(voice: TtsVoiceKey) {
@@ -426,11 +449,22 @@ export function StoryAudioPlayer({
         : "Deze pagina heeft nog geen audio");
     statusTone = "gold";
   } else if (pageEnded) {
-    statusText = "Sla de bladzijde om →";
+    // Na de uitro van de eindpagina is het verhaal echt klaar.
+    statusText =
+      endingPageNumber !== null && currentPageNumber === endingPageNumber
+        ? "Het verhaaltje is uit"
+        : "Sla de bladzijde om →";
     statusTone = "gold";
   } else if (needsTap) {
     statusText = "Druk op de afspeelknop om te luisteren";
     statusTone = "gold";
+  } else if (currentPageNumber === TITLE_PAGE_NUMBER) {
+    statusText = "leest de titel";
+  } else if (
+    endingPageNumber !== null &&
+    currentPageNumber === endingPageNumber
+  ) {
+    statusText = "leest het einde";
   } else {
     statusText =
       pagePos > 0 ? `leest pagina ${pagePos} van ${pageNumbers.length}` : "";

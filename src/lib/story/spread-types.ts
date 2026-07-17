@@ -40,7 +40,18 @@ export type PageType =
       url?: string;
       colorTheme?: IllustrationTheme;
     }
-  | { type: "ending"; text: string; sign?: string };
+  | {
+      type: "ending";
+      text: string;
+      sign?: string;
+      /**
+       * DB-paginanummer (StoryPage.pageNumber) van de échte eindpagina
+       * (lege tekst + ending-illustratie), zodat de voorleesfunctie er
+       * de vaste uitro-audio aan kan koppelen. Undefined wanneer het
+       * verhaal geen eindpagina met illustratie heeft.
+       */
+      pageNumber?: number;
+    };
 
 export interface Spread {
   left: PageType;

@@ -44,6 +44,14 @@ export function storyToSpreads(story: StoryForSpreads): Spread[] {
   // Content pages = pages with text, ending page = page without text (just illustration).
   const contentPages = story.pages.filter((p) => p.text && p.text.trim().length > 0);
   const endingPage = story.pages.find((p) => !p.text || p.text.trim().length === 0);
+  // De échte eindpagina voor de voorleesfunctie: hoogste paginanummer
+  // met lege tekst én een illustratie — zelfde criterium als de
+  // audio-route, zodat de uitro-audio alleen daar gekoppeld wordt.
+  const endingAudioPage = [...story.pages]
+    .filter(
+      (p) => (!p.text || p.text.trim().length === 0) && p.illustrationUrl,
+    )
+    .sort((a, b) => b.pageNumber - a.pageNumber)[0];
 
   // Spread 0: cover — first page's illustration (left) + title (right)
   const firstPage = contentPages[0];
@@ -101,6 +109,8 @@ export function storyToSpreads(story: StoryForSpreads): Spread[] {
       type: "ending",
       text: `En zo eindigde het avontuur van ${story.childName}.`,
       sign: `Welterusten, lieve ${story.childName}!`,
+      // Koppelt de vaste uitro-audio (ENDING_NARRATION) aan deze spread.
+      pageNumber: endingAudioPage?.pageNumber,
     },
     pageNumbers: [pageNumber++, pageNumber++],
   });
