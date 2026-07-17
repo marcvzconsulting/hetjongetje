@@ -184,6 +184,16 @@ export default async function AdminUsersPage({
   const deletedEmail = params.deleted ?? "";
   const nowMs = new Date().getTime();
 
+  // Plan-filteropties uit de echte catalogus i.p.v. hardcoded codes —
+  // nieuwe plannen via /admin/pricing verschijnen hier vanzelf. "free"
+  // blijft apart: dat is een legacy-waarde op subscriptions, geen
+  // catalogusregel.
+  const planOptions = await prisma.subscriptionPlan.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: "asc" },
+    select: { code: true, name: true },
+  });
+
   const where: Prisma.UserWhereInput = {};
   if (status) where.status = status;
   if (q) {
@@ -380,8 +390,11 @@ export default async function AdminUsersPage({
             <option value="">Alle abonnementen</option>
             <option value="none">Geen abonnement</option>
             <option value="free">Free</option>
-            <option value="basic">Basic</option>
-            <option value="premium">Premium</option>
+            {planOptions.map((p) => (
+              <option key={p.code} value={p.code}>
+                {p.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>
