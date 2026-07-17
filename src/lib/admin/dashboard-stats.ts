@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db";
 import { fetchFalBalance } from "@/lib/ai/fal-balance";
+import { fetchElevenLabsUsage } from "@/lib/ai/elevenlabs-quota";
 
 /**
  * Estimated AI cost per generated story — Claude (text) ≈ €0.05 plus
@@ -130,6 +131,7 @@ async function loadDashboardStatsUncached() {
     creditsOutstandingAgg,
     loraStatusCounts,
     falBalanceUsd,
+    elevenLabsUsage,
   ] = await Promise.all([
     sumOrderAmount({ paidAt: { gte: today } }),
     sumOrderAmount({ paidAt: { gte: monthStart } }),
@@ -234,6 +236,8 @@ async function loadDashboardStatsUncached() {
     // fal.ai-tegoed (dollars) — best-effort extern; null = onbekend.
     // Valt onder dezelfde 60s-cache als de rest van het dashboard.
     fetchFalBalance(),
+    // ElevenLabs tekens-quotum (voorlezen) — idem best-effort.
+    fetchElevenLabsUsage(),
   ]);
 
   const loraCount = (status: string) =>
@@ -414,6 +418,8 @@ async function loadDashboardStatsUncached() {
       },
       /** fal.ai-tegoed in dollars; null = niet op te vragen. */
       falBalanceUsd,
+      /** ElevenLabs tekens-verbruik (voorlezen); null = niet op te vragen. */
+      elevenLabs: elevenLabsUsage,
     },
     credits: {
       /** Som van alle openstaande story-credits bij klanten. */

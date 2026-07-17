@@ -11,6 +11,7 @@ import {
   isTtsQuotaError,
 } from "@/lib/ai/tts";
 import { TITLE_PAGE_NUMBER } from "@/lib/story/spread-audio";
+import { maybeAlertElevenLabsQuotaExhausted } from "@/lib/ai/elevenlabs-quota";
 import { uploadBuffer, storyAudioPageKey } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 
@@ -41,7 +42,8 @@ function toSpokenSentence(raw: string): string {
  *
  * Drie soorten items:
  * - pageNumber 0 (TITLE_PAGE_NUMBER): de titelspread — geen DB-pagina;
- *   de tekst is de verhaaltitel plus eventuele subtitel.
+ *   de tekst is de verhaaltitel plus "Een verhaal voor {naam}", exact
+ *   zoals de spread het toont.
  * - Tekstpagina's: alleen de paginatekst, bewust zonder de verhaaltitel,
  *   ook voor de eerste pagina — zo mappen de meegeleverde wordTimings
  *   1-op-1 op de woorden die de viewer toont.
@@ -83,8 +85,8 @@ export async function POST(request: NextRequest, { params }: Props) {
     select: {
       id: true,
       title: true,
-      subtitle: true,
       status: true,
+      childProfile: { select: { name: true } },
       pages: {
         orderBy: { pageNumber: "asc" },
         select: { pageNumber: true, text: true, illustrationUrl: true },
@@ -104,10 +106,12 @@ export async function POST(request: NextRequest, { params }: Props) {
   // Bepaal de in te spreken tekst per soort item (zie de route-doc).
   let text: string;
   if (pageNumber === TITLE_PAGE_NUMBER) {
-    // Titelspread: geen DB-pagina; titel + eventuele subtitel.
+    // Spreek uit wat de titelspread daadwerkelijk TOONT: de titel plus
+    // "Een verhaal voor {naam}" (zie storyToSpreads) — niet de
+    // AI-subtitel uit de DB, die op het scherm niet zichtbaar is.
     text = [
       toSpokenSentence(story.title),
-      toSpokenSentence(story.subtitle ?? ""),
+      toSpokenSentence(`Een verhaal voor ${story.childProfile.name}`),
     ]
       .filter(Boolean)
       .join(" ");
@@ -230,6 +234,7 @@ export async function POST(request: NextRequest, { params }: Props) {
         `[tts] ElevenLabs quota/abonnement-fout voor story ${storyId} (stem ${voiceKey}, pagina ${pageNumber}):`,
         err,
       );
+      await maybeAlertElevenLabsQuotaExhausted("voorlees-audio");
       return NextResponse.json(
         {
           error:

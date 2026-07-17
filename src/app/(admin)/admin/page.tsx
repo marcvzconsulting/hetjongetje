@@ -538,6 +538,18 @@ export default async function AdminDashboardPage({
               ? "—"
               : `$${stats.health.falBalanceUsd.toFixed(2)}`}
           </Row>
+          <Row
+            label="ElevenLabs-tegoed (voorlezen)"
+            href="https://elevenlabs.io/app/subscription"
+            warning={
+              stats.health.elevenLabs !== null &&
+              stats.health.elevenLabs.remaining < 5000
+            }
+          >
+            {stats.health.elevenLabs === null
+              ? "—"
+              : `${(stats.health.elevenLabs.remaining / 1000).toFixed(1)}k / ${(stats.health.elevenLabs.limit / 1000).toFixed(0)}k tekens`}
+          </Row>
           <Row label="LoRA-trainingen bezig">{stats.health.lora.training}</Row>
           <Row label="LoRA klaar (totaal)">{stats.health.lora.ready}</Row>
           <Row

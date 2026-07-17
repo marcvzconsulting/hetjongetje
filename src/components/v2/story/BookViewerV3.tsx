@@ -166,8 +166,13 @@ export function BookViewerV3({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [supportsFullscreen, setSupportsFullscreen] = useState(false);
   useEffect(() => {
-    setSupportsFullscreen(
-      typeof document.documentElement.requestFullscreen === "function",
+    // queueMicrotask: synchrone setState in een effect-body triggert
+    // cascading renders (lint set-state-in-effect); een microtask
+    // ontkoppelt de write van de render-fase.
+    queueMicrotask(() =>
+      setSupportsFullscreen(
+        typeof document.documentElement.requestFullscreen === "function",
+      ),
     );
     const onChange = () =>
       setIsFullscreen(document.fullscreenElement !== null);
@@ -274,10 +279,9 @@ export function BookViewerV3({
     const hasMouse = window.matchMedia(
       "(hover: hover) and (pointer: fine)",
     ).matches;
-    if (hasMouse) {
-      setChromeVisible(true);
-      return;
-    }
+    // Muis aanwezig: chrome blijft gewoon staan. Geen setState nodig —
+    // de state initialiseert al op true en niets zet hem hier uit.
+    if (hasMouse) return;
     function bump() {
       setChromeVisible(true);
       if (chromeTimerRef.current) clearTimeout(chromeTimerRef.current);
