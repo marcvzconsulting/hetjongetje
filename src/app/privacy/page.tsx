@@ -107,10 +107,13 @@ export default function PrivacyPage() {
           fal.ai
         </a>
         . Zodra de training is voltooid worden de originele foto&rsquo;s
-        binnen 7 dagen van beide locaties verwijderd. Het getrainde LoRA
-        zelf (een klein bestand met statistische informatie, geen
+        binnen enkele dagen bij ons (Scaleway) verwijderd; bij ons worden
+        ze bovendien versleuteld en niet-publiek opgeslagen. Het getrainde
+        LoRA zelf (een klein bestand met statistische informatie, geen
         herkenbare foto&rsquo;s) wordt bewaard zolang het profiel van je
-        kind bestaat.
+        kind bestaat. Bij onze AI-partner fal.ai vragen we verwijdering aan;
+        omdat fal.ai daarvoor geen automatische functie biedt, kan dat iets
+        langer duren dan bij ons.
       </P>
       <P>
         <strong>Je kunt je toestemming altijd intrekken.</strong> In het
@@ -136,10 +139,32 @@ export default function PrivacyPage() {
         genereren
         <br />
         &middot; <em>fal.ai</em>: illustraties genereren en eventuele LoRA
-        trainen
+        trainen (VS)
+        <br />
+        &middot; <em>ElevenLabs</em>: de tekst van een verhaal (inclusief de
+        voornaam van je kind) omzetten naar voorlees-audio, als je die
+        functie gebruikt (VS)
+        <br />
+        &middot; <em>Mollie</em>: betalingen en abonnementen verwerken
+        (Nederland)
+        <br />
+        &middot; <em>Sentry</em>: foutmeldingen om de app stabiel te houden;
+        persoonsgegevens worden hierbij uitgefilterd (EU-regio)
         <br />
         &middot; <em>Brevo</em>: transactionele e-mail (wachtwoord-reset,
         welkom, nieuwsbrief); EU-servers, Frans bedrijf
+      </P>
+      <P>
+        Verwerkers buiten de EU (Anthropic, fal.ai, ElevenLabs — alle in de
+        VS) verwerken gegevens onder een verwerkersovereenkomst met
+        passende waarborgen voor internationale doorgifte.
+      </P>
+      <P>
+        Voor de betrouwbaarheid maken we dagelijks een back-up van de
+        database, die versleuteld en niet-publiek wordt bewaard en na
+        maximaal 30 dagen automatisch wordt verwijderd. Een verwijderd
+        account kan daardoor nog kort in een back-up voorkomen, maar wordt
+        daaruit binnen die termijn definitief gewist.
       </P>
       <P>
         We delen niets met adverteerders, brokers of analytics-partijen

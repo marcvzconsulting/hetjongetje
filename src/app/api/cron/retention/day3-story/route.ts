@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/email/client";
 import { buildDay3StoryReminderMail } from "@/lib/email/templates/day3-story-reminder";
 import { buildAppUrl } from "@/lib/url";
+import { buildReminderOptOutUrl } from "@/lib/reminders/opt-out-url";
 
 /**
  * Day 3 retention: Stuur reminder naar users die een profiel hebben maar
@@ -63,9 +64,7 @@ export async function GET(request: NextRequest) {
     try {
       const childName = user.children[0]?.name || "je kind";
       const dashboardUrl = await buildAppUrl("/dashboard");
-      const unsubscribeUrl = await buildAppUrl(
-        `/api/reminders/opt-out?user_id=${encodeURIComponent(user.id)}`,
-      );
+      const unsubscribeUrl = await buildReminderOptOutUrl(user.id);
       const mail = await buildDay3StoryReminderMail({
         name: user.name,
         childName,

@@ -21,6 +21,11 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // Retention-reminders are opt-in (unchecked by default).
+  const [remindersOptIn, setRemindersOptIn] = useState(false);
+  // Honeypot — hidden from humans, bots tend to fill it. Sent to the API,
+  // which rejects any non-empty value.
+  const [website, setWebsite] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -46,7 +51,14 @@ export default function RegisterPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, termsAccepted: true }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          termsAccepted: true,
+          website,
+          remindersOptIn,
+        }),
       });
 
       const data = await res.json();
@@ -104,6 +116,24 @@ export default function RegisterPage() {
       <AuthDivider />
 
       <form onSubmit={handleSubmit} method="post" action="/register">
+        {/* Honeypot: off-screen, not tab-reachable, not autofilled. Real
+            users never see it; bots that fill it get rejected server-side. */}
+        <input
+          type="text"
+          name="website"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "-9999px",
+            width: 1,
+            height: 1,
+            opacity: 0,
+          }}
+        />
         {error && (
           <div
             style={{
@@ -197,6 +227,20 @@ export default function RegisterPage() {
                   privacyverklaring
                 </Link>{" "}
                 gelezen.
+              </>
+            }
+          />
+        </div>
+
+        <div style={{ margin: "0 0 24px" }}>
+          <ConsentCheck
+            checked={remindersOptIn}
+            onChange={setRemindersOptIn}
+            label={
+              <>
+                Ja, stuur me af en toe een vriendelijke herinnering of tip om
+                op weg te helpen. (Optioneel — je kunt je altijd weer
+                afmelden.)
               </>
             }
           />

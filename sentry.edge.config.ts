@@ -3,7 +3,7 @@
  * Loaded by src/instrumentation.ts.
  */
 import * as Sentry from "@sentry/nextjs";
-import { scrubPII } from "./src/lib/monitoring/scrub-pii";
+import { scrubPII, scrubTransactionPII } from "./src/lib/monitoring/scrub-pii";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -12,6 +12,9 @@ Sentry.init({
   sendDefaultPii: false,
   beforeSend(event) {
     return scrubPII(event);
+  },
+  beforeSendTransaction(event) {
+    return scrubTransactionPII(event);
   },
   ignoreErrors: ["NEXT_REDIRECT", "NEXT_NOT_FOUND"],
 });

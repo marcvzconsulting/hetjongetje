@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { buildAppUrl } from "@/lib/url";
+import { buildTrustedUrl } from "@/lib/url";
 import {
   validatePassword,
   type PasswordPolicyReason,
@@ -103,5 +103,7 @@ export async function consumeTokenAndSetPassword(
 }
 
 export async function buildResetUrl(token: string): Promise<string> {
-  return buildAppUrl(`/reset-password?token=${encodeURIComponent(token)}`);
+  // Trusted (env) base only — never a request header. Prevents reset-link
+  // poisoning via a spoofed Host / X-Forwarded-Host.
+  return buildTrustedUrl(`/reset-password?token=${encodeURIComponent(token)}`);
 }

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { logAdminAction } from "@/lib/admin/audit-log";
 import { sendMail } from "@/lib/email/client";
 import { buildAppUrl } from "@/lib/url";
+import { buildReminderOptOutUrl } from "@/lib/reminders/opt-out-url";
 import { buildDay1ProfileReminderMail } from "@/lib/email/templates/day1-profile-reminder";
 import { buildDay3StoryReminderMail } from "@/lib/email/templates/day3-story-reminder";
 import { buildDay7LoginReminderMail } from "@/lib/email/templates/day7-login-reminder";
@@ -73,9 +74,7 @@ export async function sendReminderAction(formData: FormData) {
     }
 
     try {
-      const unsubscribeUrl = await buildAppUrl(
-        `/api/reminders/opt-out?user_id=${encodeURIComponent(user.id)}`,
-      );
+      const unsubscribeUrl = await buildReminderOptOutUrl(user.id);
       const childName = user.children[0]?.name || "je kind";
 
       const mail =

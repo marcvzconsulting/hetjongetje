@@ -195,11 +195,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
                 <span style={{ fontStyle: "italic" }}>{child.name}</span>.
               </div>
               <div style={{ fontSize: 14, color: V2.inkSoft, maxWidth: "60ch" }}>
-                Wanneer je een paar foto's uploadt of een gegenereerd
+                Wanneer je een paar foto&apos;s uploadt of een gegenereerd
                 portret goedkeurt, lijkt {child.name} op elke pagina van
                 elk verhaal hetzelfde. Zonder deze stap verschilt het
-                personage soms per illustratie. Je kunt 'm overslaan en
-                later weer terugkomen, maar 't kost minder dan 5 minuten
+                personage soms per illustratie. Je kunt &apos;m overslaan en
+                later weer terugkomen, maar &apos;t kost minder dan 5 minuten
                 en het verschil is groot.
               </div>
             </div>

@@ -15,10 +15,40 @@ import {
   resolveReferralCode,
 } from "@/lib/referral";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
+import { rateLimit } from "@/lib/rate-limit/rate-limit";
+
+function clientIp(request: NextRequest): string {
+  const fwd = request.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0]!.trim();
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, termsAccepted } = await request.json();
+    const { name, email, password, termsAccepted, website, remindersOptIn } =
+      await request.json();
+
+    // Honeypot: a hidden field real users never fill. Bots that populate it
+    // get a fake success so they don't learn they were blocked.
+    if (typeof website === "string" && website.trim() !== "") {
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
+    // Per-IP rate limit BEFORE any work: each signup grants 5 free credits
+    // (real AI spend) and fires an admin mail, so unthrottled registration
+    // is a credit-farming and inbox-flooding vector.
+    const ip = clientIp(request);
+    const limited = await rateLimit({
+      key: `register:${ip}`,
+      limit: 10,
+      windowSeconds: 60 * 60,
+    });
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { error: "Te veel registratiepogingen. Probeer het over een uur opnieuw." },
+        { status: 429 }
+      );
+    }
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -72,6 +102,11 @@ export async function POST(request: NextRequest) {
         status: "approved",
         referredByUserId: inviterId,
         termsAcceptedAt: new Date(),
+        // Retention-reminders zijn opt-IN: wie de checkbox niet aanvinkt,
+        // wordt meteen als afgemeld gemarkeerd (de reminder-crons filteren
+        // op remindersOptOutAt: null). Bestaande gebruikers houden hun
+        // huidige gedrag; dit geldt alleen voor nieuwe registraties.
+        remindersOptOutAt: remindersOptIn === true ? null : new Date(),
       },
     });
 

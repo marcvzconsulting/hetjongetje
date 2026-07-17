@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { auth } from "@/lib/auth";
@@ -80,6 +80,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY: never trust a client-supplied loraUrl/loraTriggerWord. A
+    // client could otherwise point generation at an arbitrary fal model or
+    // URL (SSRF-via-fal / another child's trained character). Always derive
+    // them from the verified child profile — same as the regenerate route.
+    characterBible.loraUrl =
+      child.loraStatus === "ready" ? child.loraUrl ?? undefined : undefined;
+    characterBible.loraTriggerWord = characterBible.loraUrl
+      ? child.loraTriggerWord ?? undefined
+      : undefined;
+
     // Vervolg-verhaal: haal het vorige verhaal op en verifieer dat het
     // bij dit kind hoort (het kind is hierboven al aan de ingelogde user
     // gekoppeld). De volledige tekst gaat als context mee naar de
@@ -122,6 +132,15 @@ export async function POST(request: NextRequest) {
               "Je hebt geen verhalen meer over. Neem contact op om je tegoed bij te vullen.",
           },
           { status: 402 }
+        );
+      }
+      if (reserved.reason === "pending_deletion") {
+        return NextResponse.json(
+          {
+            error:
+              "Je account staat gepland voor verwijdering. Herstel je account eerst om nieuwe verhalen te maken.",
+          },
+          { status: 403 }
         );
       }
       return NextResponse.json(
@@ -241,10 +260,14 @@ export async function POST(request: NextRequest) {
     if (isPartial) {
       try {
         await refundStoryCredit(session.user.id);
+        // Mark the reservation as settled so the catch-block below can't
+        // refund a SECOND credit if a later step (character-bible update,
+        // mail build) throws after we've already refunded here.
+        creditReserved = false;
       } catch (refundErr) {
         console.error("[stories] partial-refund failed:", refundErr);
       }
-      (async () => {
+      after(async () => {
         try {
           const user = await prisma.user.findUnique({
             where: { id: session.user.id },
@@ -279,7 +302,7 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           console.error("[stories] partial admin mail build failed", err);
         }
-      })();
+      });
     }
 
     // 5. Update character bible
@@ -291,10 +314,15 @@ export async function POST(request: NextRequest) {
         setting: storyRequest.setting,
         summary: generatedStory.characterBibleUpdate,
       });
+      // Cap at the 10 most recent adventures. The full list is fed into the
+      // generation prompt, so leaving it unbounded makes every story of a
+      // loyal customer slower and pricier (and bloats the JSON we ship on
+      // each /api/children read).
+      const cappedAdventures = previousAdventures.slice(-10);
       await prisma.childProfile.update({
         where: { id: childId },
         data: {
-          characterBible: { ...currentBible, previousAdventures },
+          characterBible: { ...currentBible, previousAdventures: cappedAdventures },
         },
       });
     }
@@ -306,7 +334,7 @@ export async function POST(request: NextRequest) {
     // The flag was added later, so accounts that pre-date it have it null
     // even though they already have many stories. Without this guard those
     // users would receive the "first story" mail on their next generation.
-    (async () => {
+    after(async () => {
       try {
         const user = await prisma.user.findUnique({
           where: { id: session.user.id },
@@ -352,7 +380,7 @@ export async function POST(request: NextRequest) {
       } catch (mailErr) {
         console.error("[first-story] mail send failed", mailErr);
       }
-    })();
+    });
 
     return NextResponse.json({ story });
   } catch (error) {

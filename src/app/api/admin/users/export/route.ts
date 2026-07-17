@@ -5,7 +5,14 @@ import type { Prisma } from "@prisma/client";
 
 function csvEscape(value: unknown): string {
   if (value === null || value === undefined) return "";
-  const str = String(value);
+  let str = String(value);
+  // CSV formula-injection guard: a cell starting with = + - @ (or a
+  // leading tab/CR) is interpreted as a formula by Excel/Sheets. User-set
+  // fields (name, email) flow into this export, so neutralise them by
+  // prefixing an apostrophe before the normal quoting.
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
   if (/[",\n\r]/.test(str)) return `"${str.replace(/"/g, '""')}"`;
   return str;
 }

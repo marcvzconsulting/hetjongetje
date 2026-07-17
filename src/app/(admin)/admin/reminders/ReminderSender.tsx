@@ -472,7 +472,7 @@ export function ReminderSender({
         >
           Afgemelde klanten kunnen niet worden geselecteerd. Na verzending
           wordt de reminder als verstuurd gemarkeerd zodat de automatische
-          cron 'm niet nóg eens stuurt — handmatig opnieuw sturen mag wel.
+          cron &apos;m niet nóg eens stuurt — handmatig opnieuw sturen mag wel.
         </p>
       </form>
     </div>

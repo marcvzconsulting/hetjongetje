@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
@@ -20,7 +21,10 @@ async function getClientIp(): Promise<string> {
   return h.get("x-real-ip") ?? "unknown";
 }
 
-async function loadSharedStory(token: string) {
+// Wrapped in React.cache so generateMetadata and the page body share one
+// DB round-trip per request instead of loading the full story (pages +
+// audio + timings) twice.
+const loadSharedStory = cache(async (token: string) => {
   if (!TOKEN_PATTERN.test(token)) return null;
   return prisma.story.findFirst({
     where: { shareToken: token, status: "ready" },
@@ -37,7 +41,7 @@ async function loadSharedStory(token: string) {
       },
     },
   });
-}
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params;

@@ -13,9 +13,12 @@ const isDev = process.env.NODE_ENV !== "production";
  * currently composes inline `<style>` blocks (responsive overrides
  * etc.). Switching to nonce-based CSP requires per-request nonces from
  * middleware and component-side <style nonce={...}> wiring — a known
- * follow-up that's been parked. `'unsafe-eval'` is also still on
- * `script-src` in both dev and prod because Next.js's Server Components
- * runtime and the Sentry browser SDK both use new Function() in places.
+ * follow-up that's been parked.
+ *
+ * `'unsafe-eval'` on `script-src` is now DEV-ONLY: the webpack/HMR dev
+ * runtime needs it, but a Next.js production build doesn't evaluate code
+ * from strings in the browser, so we drop it in prod to restore the XSS
+ * mitigation there. (Verify with a prod smoke-test after deploy.)
  *
  * Dev only: `ws:`/`wss:` permitted on connect-src for HMR over
  * WebSocket. Production responses don't include them.
@@ -97,7 +100,7 @@ const SECURITY_HEADERS = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry.io https://va.vercel-scripts.com",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.sentry.io https://va.vercel-scripts.com`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.scw.cloud https://*.fal.media https://*.fal.run https://*.fal.ai",
       // Voorlees-audio (mp3) komt uit onze eigen Scaleway-bucket; zonder

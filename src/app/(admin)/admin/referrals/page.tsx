@@ -141,12 +141,6 @@ export default async function AdminReferralsPage() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     monthMap.set(monthKey(d), { registered: 0, converted: 0 });
   }
-  for (const inv of allInviteesForAggregation as Array<{
-    referredByUserId: string | null;
-    referralBonusGrantedAt: Date | null;
-  }> & { createdAt?: Date }[]) {
-    // (defensief — we hebben createdAt in invitees, niet in deze query)
-  }
   // Voor de maand-grafiek doen we een aparte gerichte query met createdAt
   const inviteesWithDate = await prisma.user.findMany({
     where: {

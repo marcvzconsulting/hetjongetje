@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
@@ -316,7 +316,7 @@ export async function POST(
       } catch (resetErr) {
         console.error("[regen] partial regen-count reset failed:", resetErr);
       }
-      (async () => {
+      after(async () => {
         try {
           const user = await prisma.user.findUnique({
             where: { id: session.user.id },
@@ -351,7 +351,7 @@ export async function POST(
         } catch (err) {
           console.error("[regen] partial admin mail build failed", err);
         }
-      })();
+      });
     }
 
     return NextResponse.json({ ok: true, storyId, partial: isPartial });

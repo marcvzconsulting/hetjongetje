@@ -35,6 +35,27 @@ export async function buildAppUrl(path: string): Promise<string> {
 }
 
 /**
+ * Base URL from ENV ONLY — never from request headers. Use this for
+ * security-sensitive links in outgoing e-mail (password reset, magic
+ * link): resolving the host from a request header lets an attacker who
+ * spoofs `X-Forwarded-Host` make us send a victim a genuine reset mail
+ * whose link points at attacker.com — classic reset poisoning / account
+ * takeover. Pinning to a trusted env value removes that entirely.
+ */
+export function getTrustedBaseUrl(): string {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXTAUTH_URL ??
+    "http://localhost:3000";
+  return base.replace(/\/$/, "");
+}
+
+export function buildTrustedUrl(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  return `${getTrustedBaseUrl()}${normalized}`;
+}
+
+/**
  * Build a URL voor publieke webhooks (Mollie e.d.). In productie identiek
  * aan `buildAppUrl`; in dev kun je `MOLLIE_WEBHOOK_BASE_URL` zetten op een
  * tunnel-host (bv. cloudflared/ngrok) zodat Mollie de webhook kan bereiken

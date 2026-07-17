@@ -17,6 +17,11 @@ export async function buyCreditsAction(formData: FormData) {
   if (!session?.user?.id) redirect("/login");
 
   const gate = await loadUserGate(session.user.id);
+  if (gate?.isPendingDeletion) {
+    // Account is scheduled for deletion — don't take payment for credits
+    // the hard-delete will wipe. Send them to the recovery page.
+    redirect("/verwijdering");
+  }
   if (!gate?.isApproved) {
     // Pending users can't buy yet — we don't want to take payment from
     // accounts that aren't approved. Refund flows are nasty for AI credits.

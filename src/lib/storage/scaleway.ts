@@ -1,9 +1,12 @@
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { assertSafeFetchUrl } from "./url-guard";
 
 const REGION = process.env.SCALEWAY_REGION || "nl-ams";
@@ -87,6 +90,49 @@ export async function uploadBuffer(
   return `${PUBLIC_BASE_URL}/${key}`;
 }
 
+/**
+ * Upload an object PRIVATELY — no public-read ACL, so it can only be read
+ * with signed credentials. Used for real children's photos (LoRA training
+ * inputs) which must never sit on a guessable public URL. Returns the
+ * storage key (not a URL — there is no public URL for a private object;
+ * use {@link getPresignedGetUrl} to hand out a short-lived read link).
+ */
+export async function uploadPrivateBuffer(
+  buffer: Buffer,
+  key: string,
+  contentType: string
+): Promise<string> {
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: BUCKET!,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      // No ACL → object inherits the bucket default (private). No long
+      // immutable cache: these are short-lived training inputs.
+      CacheControl: "private, no-store",
+    })
+  );
+  return key;
+}
+
+/**
+ * Create a short-lived presigned GET URL for a private object. Used to
+ * hand fal.ai a temporary link to the training zip without making it
+ * publicly readable. Default TTL 1 hour — long enough for fal to fetch,
+ * short enough that a leaked link expires quickly.
+ */
+export async function getPresignedGetUrl(
+  key: string,
+  ttlSeconds = 3600
+): Promise<string> {
+  return getSignedUrl(
+    getClient(),
+    new GetObjectCommand({ Bucket: BUCKET!, Key: key }),
+    { expiresIn: ttlSeconds }
+  );
+}
+
 export async function deleteObject(key: string): Promise<void> {
   await getClient().send(
     new DeleteObjectCommand({ Bucket: BUCKET!, Key: key })
@@ -123,6 +169,51 @@ export async function deleteObjects(keys: string[]): Promise<string[]> {
   }
 
   return failed;
+}
+
+/**
+ * List every object key under a prefix, following pagination. Prefixes
+ * are per-child / per-story (e.g. `stories/<id>/`, `lora-training/<id>/`),
+ * so this is the authoritative way to find everything we ever wrote for
+ * that entity — including objects whose URL is no longer referenced in
+ * the DB (e.g. an orphaned training zip).
+ */
+export async function listKeysByPrefix(prefix: string): Promise<string[]> {
+  const client = getClient();
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+  do {
+    const res = await client.send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET!,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      })
+    );
+    for (const obj of res.Contents ?? []) {
+      if (obj.Key) keys.push(obj.Key);
+    }
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return keys;
+}
+
+/**
+ * Delete every object under a prefix. Returns how many keys were targeted
+ * and which failed. Never throws — callers treat storage cleanup as
+ * best-effort.
+ */
+export async function deleteByPrefix(
+  prefix: string
+): Promise<{ requested: number; failed: string[] }> {
+  try {
+    const keys = await listKeysByPrefix(prefix);
+    if (keys.length === 0) return { requested: 0, failed: [] };
+    const failed = await deleteObjects(keys);
+    return { requested: keys.length, failed };
+  } catch {
+    return { requested: 0, failed: [prefix] };
+  }
 }
 
 /** Extract the storage key from a URL we produced, or null if it's not ours. */

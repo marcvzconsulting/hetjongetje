@@ -60,8 +60,14 @@ export async function GET() {
       country: true,
       newsletterOptIn: true,
       newsletterOptInAt: true,
+      termsAcceptedAt: true,
+      remindersOptOutAt: true,
+      deletionRequestedAt: true,
       firstStoryEmailSentAt: true,
       reminderSentAt: true,
+      day1ProfileReminderSentAt: true,
+      day3StoryReminderSentAt: true,
+      day7LoginReminderSentAt: true,
       onboardedAt: true,
       referralCode: true,
       referredByUserId: true,
@@ -82,6 +88,7 @@ export async function GET() {
     contactMessages,
     newsletterSignup,
     auditEntries,
+    emailLogs,
   ] = await Promise.all([
     prisma.subscription.findUnique({
       where: { userId },
@@ -93,6 +100,7 @@ export async function GET() {
           orderBy: { createdAt: "asc" },
           include: {
             pages: { orderBy: { pageNumber: "asc" } },
+            audio: true,
           },
         },
       },
@@ -118,6 +126,12 @@ export async function GET() {
       where: { targetType: "user", targetId: userId },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.emailLog.findMany({
+      where: {
+        OR: [{ userId }, { toEmail: user.email }],
+      },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   const exportData = {
@@ -135,6 +149,7 @@ export async function GET() {
     contactMessages,
     newsletterSignup,
     auditEntries,
+    emailLogs,
   };
 
   // Audit het verzoek zelf zodat we kunnen aantonen dat we het hebben

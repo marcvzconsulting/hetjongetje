@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/email/client";
 import { buildDay1ProfileReminderMail } from "@/lib/email/templates/day1-profile-reminder";
 import { buildAppUrl } from "@/lib/url";
+import { buildReminderOptOutUrl } from "@/lib/reminders/opt-out-url";
 
 /**
  * Day 1 retention: Stuur reminder naar users die geen child-profiel hebben
@@ -49,9 +50,7 @@ export async function GET(request: NextRequest) {
   for (const user of candidates) {
     try {
       const profileUrl = await buildAppUrl("/profile/new");
-      const unsubscribeUrl = await buildAppUrl(
-        `/api/reminders/opt-out?user_id=${encodeURIComponent(user.id)}`,
-      );
+      const unsubscribeUrl = await buildReminderOptOutUrl(user.id);
       const mail = await buildDay1ProfileReminderMail({
         name: user.name,
         profileUrl,

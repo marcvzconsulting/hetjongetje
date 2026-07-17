@@ -9,6 +9,13 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
+    // Each warm serverless instance keeps its own pool. Cap it low so a
+    // burst of concurrent instances can't collectively exhaust Neon's
+    // connection limit. Use the Neon "-pooler" (PgBouncer) endpoint in
+    // DATABASE_URL for the real headroom — verify that in Vercel env.
+    max: 5,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000,
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });

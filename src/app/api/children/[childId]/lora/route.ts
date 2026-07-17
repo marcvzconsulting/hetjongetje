@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   buildTriggerWord,
   buildTrainingZip,
+  presignTrainingZip,
   startLoraTraining,
   pollLoraTraining,
   cancelLoraTraining,
@@ -77,11 +78,11 @@ export async function GET(_req: NextRequest, { params }: Props) {
           loraFailureReason: null,
         },
       });
-      // Best-effort cleanup of original photos — GDPR promise.
+      // Best-effort cleanup of original photos + zip — GDPR promise.
+      deleteTrainingAssets(childId).catch((e) =>
+        console.error("[lora] photo cleanup failed:", e)
+      );
       if (child.referenceImages.length > 0) {
-        deleteTrainingAssets(child.referenceImages).catch((e) =>
-          console.error("[lora] photo cleanup failed:", e)
-        );
         await prisma.childProfile.update({
           where: { id: childId },
           data: { referenceImages: [] },
@@ -90,7 +91,7 @@ export async function GET(_req: NextRequest, { params }: Props) {
 
       // Notify the parent — one-shot, idempotent via loraReadyEmailSentAt.
       if (!child.loraReadyEmailSentAt) {
-        (async () => {
+        after(async () => {
           try {
             const user = await prisma.user.findUnique({
               where: { id: session.user.id },
@@ -118,7 +119,7 @@ export async function GET(_req: NextRequest, { params }: Props) {
           } catch (mailErr) {
             console.error("[lora-ready] mail send failed", mailErr);
           }
-        })();
+        });
       }
 
       return NextResponse.json({
@@ -273,18 +274,24 @@ export async function POST(req: NextRequest, { params }: Props) {
   }
 
   try {
-    // 1. Upload all photos to Scaleway
-    const photoUrls: string[] = [];
+    // 1. Upload all photos PRIVATELY (real child photos — never public).
+    //    referenceImages stores the storage keys (not public URLs).
+    const photoKeys: string[] = [];
     for (let i = 0; i < photoBuffers.length; i++) {
       const p = photoBuffers[i];
-      const url = await uploadChildPhoto(childId, i + 1, p.buf, p.type);
-      photoUrls.push(url);
+      const key = await uploadChildPhoto(childId, i + 1, p.buf, p.type);
+      photoKeys.push(key);
     }
 
-    // 2. Bundle into a training zip on our bucket
-    const zipUrl = await buildTrainingZip(childId, photoUrls);
+    // 2. Bundle into a private training zip, built straight from the
+    //    buffers we already hold (no re-fetch of the private objects).
+    const zipKey = await buildTrainingZip(
+      childId,
+      photoBuffers.map((p) => ({ buffer: p.buf, mimeType: p.type }))
+    );
 
-    // 3. Submit to fal.ai
+    // 3. Hand fal.ai a short-lived presigned URL to the private zip.
+    const zipUrl = await presignTrainingZip(zipKey);
     const triggerWord = buildTriggerWord(childId);
     const { requestId } = await startLoraTraining({ zipUrl, triggerWord });
 
@@ -292,7 +299,7 @@ export async function POST(req: NextRequest, { params }: Props) {
     await prisma.childProfile.update({
       where: { id: childId },
       data: {
-        referenceImages: photoUrls,
+        referenceImages: photoKeys,
         loraStatus: "training",
         loraTrainingRequestId: requestId,
         loraTriggerWord: triggerWord,
@@ -347,12 +354,11 @@ export async function DELETE(_req: NextRequest, { params }: Props) {
     await cancelLoraTraining(child.loraTrainingRequestId);
   }
 
-  // Delete photos + zip from our bucket.
-  if (child.referenceImages.length > 0) {
-    await deleteTrainingAssets(child.referenceImages).catch((e) =>
-      console.error("[lora] delete failed:", e)
-    );
-  }
+  // Delete photos + zip from our bucket (prefix sweep — catches the zip
+  // and any object whose URL we no longer track).
+  await deleteTrainingAssets(childId).catch((e) =>
+    console.error("[lora] delete failed:", e)
+  );
 
   await prisma.childProfile.update({
     where: { id: childId },

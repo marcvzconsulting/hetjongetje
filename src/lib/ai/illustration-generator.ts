@@ -57,10 +57,13 @@ async function generateOne(
           seed,
           loras: [{ path: lora.loraUrl, scale: 1.0 }],
           num_inference_steps: 28,
-          // Safety-checker uit — kinderverhalen met door-Claude-opgestelde
-          // prompts triggeren regelmatig false-positives (bv. "in bad",
-          // "slapen in pyjama"). Liever consistent gedrag dan zwarte vlakken.
-          enable_safety_checker: false,
+          // Safety-checker AAN op het LoRA-pad. Dit pad genereert de
+          // gelijkenis van een echt kind, dus een NSFW-vangnet weegt zwaarder
+          // dan de kans op een false-positive. extractImageUrl behandelt de
+          // has_nsfw_concepts-flag als failure → retry → partial-flow met
+          // credit-refund. Beter een zeldzame herkansing dan ongepast beeld
+          // met een kindgezicht dat in de bucket belandt.
+          enable_safety_checker: true,
         },
       });
       return extractImageUrl(result);
