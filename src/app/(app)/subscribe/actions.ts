@@ -29,6 +29,11 @@ export async function subscribeAction(formData: FormData) {
   if (!session?.user?.id) redirect(ERROR_REDIRECTS.unauth);
 
   const gate = await loadUserGate(session.user.id);
+  if (gate?.isPendingDeletion) {
+    // Account scheduled for deletion — starting a fresh SEPA mandate now
+    // would keep charging after the account is gone. Send to recovery.
+    redirect("/verwijdering");
+  }
   if (!gate?.isApproved) {
     redirect(ERROR_REDIRECTS.not_approved);
   }

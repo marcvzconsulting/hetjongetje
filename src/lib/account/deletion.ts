@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { deleteUserStorage } from "@/lib/storage/user-cleanup";
 import { cancelInProgressLoraJobs } from "@/lib/ai/lora-training";
 import { deleteContact } from "@/lib/email/brevo-contacts";
+import { getMollieClient } from "@/lib/payments/mollie";
 
 export type HardDeleteResult = {
   /** Aantal storage-objecten waarvoor verwijdering is aangevraagd. */
@@ -42,6 +43,37 @@ export async function hardDeleteUser(userId: string): Promise<HardDeleteResult> 
   });
 
   await cancelInProgressLoraJobs(userId);
+
+  // Safety net: cancel any live Mollie recurring schedule so it can't keep
+  // charging a mandate after the account is gone. Best-effort — a failure
+  // here must never block the deletion. (The self-service flow already
+  // cancels on request, but an admin-delete or a subscription started
+  // during the grace period may still be live.)
+  try {
+    const sub = await prisma.subscription.findUnique({
+      where: { userId },
+      select: {
+        status: true,
+        mollieCustomerId: true,
+        mollieSubscriptionId: true,
+      },
+    });
+    if (
+      sub?.mollieCustomerId &&
+      sub.mollieSubscriptionId &&
+      sub.status !== "cancelled"
+    ) {
+      await getMollieClient().customerSubscriptions.cancel(
+        sub.mollieSubscriptionId,
+        { customerId: sub.mollieCustomerId },
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[account-delete] Mollie subscription cancel failed for user ${userId}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
 
   const cleanup = await deleteUserStorage(userId);
   if (cleanup.error) {

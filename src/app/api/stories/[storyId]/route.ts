@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseJsonBody, updateStorySchema } from "@/lib/validation";
+import { deleteStoryStorage } from "@/lib/storage/user-cleanup";
 
 interface Props {
   params: Promise<{ storyId: string }>;
@@ -63,6 +64,17 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
 
   if (!story) {
     return NextResponse.json({ error: "Verhaal niet gevonden" }, { status: 404 });
+  }
+
+  // Delete every bucket object for this story (page illustrations, ending
+  // image, read-aloud audio) BEFORE the row — the DB is the only place the
+  // URLs live, so afterwards they'd be unreachable and leak on public URLs.
+  const cleanup = await deleteStoryStorage(storyId);
+  if (cleanup.failed.length > 0) {
+    console.error(
+      `[stories] ${cleanup.failed.length} storage targets failed to delete for story ${storyId}:`,
+      cleanup.failed
+    );
   }
 
   await prisma.story.delete({ where: { id: storyId } });

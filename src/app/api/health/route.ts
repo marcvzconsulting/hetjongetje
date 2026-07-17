@@ -1,53 +1,59 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 /**
  * Public health-check endpoint voor uptime-monitoring (BetterStack /
- * UptimeRobot / pingdom). Ontworpen om elke minuut gepingd te worden:
- * licht, geen auth, geen externe API-calls.
+ * UptimeRobot / pingdom). Licht, geen auth, geen externe API-calls.
  *
- * Wat we WEL checken:
- *   - DB-connectiviteit (één SELECT 1)
- *   - Process is up genoeg om JSON terug te geven
+ * BELANGRIJK — Neon free tier: een DB-hit bij ELKE minuut-ping houdt de
+ * database permanent wakker en verbrandt zo het gratis compute-quotum.
+ * Daarom is de DB-check nu OPT-IN via `?deep=1`. Configureer je monitor
+ * zo dat de meeste pings de lichte variant raken (proces-up, geen DB) en
+ * een aparte, minder frequente check `?deep=1` gebruikt voor DB-status.
  *
- * Wat we NIET checken:
- *   - Mollie / Anthropic / fal.ai — die hebben eigen status-pagina's,
- *     en als één van hen even traag is willen we niet dat onze
- *     uptime-monitor false-positives geeft
- *   - Authenticatie — uptime-services moeten dit zonder credentials
- *     kunnen bereiken
+ * Wat we NIET checken: Mollie / Anthropic / fal.ai (eigen statuspagina's),
+ * authenticatie (monitors hebben geen credentials).
  *
  * Response codes:
- *   200 → alles ok
- *   503 → DB onbereikbaar (uptime-monitor moet alarmeren)
+ *   200 → ok
+ *   503 → alleen bij `deep=1` wanneer de DB onbereikbaar is
  */
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const startedAt = Date.now();
-  let dbOk = false;
+  const deep = new URL(request.url).searchParams.get("deep") === "1";
+
+  let dbOk: boolean | null = null;
   let dbLatencyMs: number | null = null;
   let dbError: string | undefined;
 
-  try {
-    const dbStart = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
-    dbLatencyMs = Date.now() - dbStart;
-    dbOk = true;
-  } catch (err) {
-    dbError = err instanceof Error ? err.message : "unknown";
+  if (deep) {
+    try {
+      const dbStart = Date.now();
+      await prisma.$queryRaw`SELECT 1`;
+      dbLatencyMs = Date.now() - dbStart;
+      dbOk = true;
+    } catch (err) {
+      dbOk = false;
+      dbError = err instanceof Error ? err.message : "unknown";
+    }
   }
 
+  const healthy = dbOk !== false; // null (shallow) or true → healthy
   const body = {
-    status: dbOk ? "ok" : "degraded",
+    status: healthy ? "ok" : "degraded",
     ts: new Date().toISOString(),
     uptimeSeconds: Math.round(process.uptime()),
-    db: {
-      ok: dbOk,
-      latencyMs: dbLatencyMs,
-      ...(dbError ? { error: dbError.slice(0, 200) } : {}),
-    },
+    db: deep
+      ? {
+          checked: true,
+          ok: dbOk,
+          latencyMs: dbLatencyMs,
+          ...(dbError ? { error: dbError.slice(0, 200) } : {}),
+        }
+      : { checked: false },
     // Vercel injecteert deze automatisch in productie. Lokaal undefined.
     commitSha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7),
     deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
@@ -56,7 +62,7 @@ export async function GET() {
   };
 
   return NextResponse.json(body, {
-    status: dbOk ? 200 : 503,
+    status: healthy ? 200 : 503,
     headers: {
       "Cache-Control": "no-store, max-age=0",
     },

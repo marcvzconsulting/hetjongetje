@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { prisma } from "@/lib/db";
-import { buildAppUrl } from "@/lib/url";
+import { buildTrustedUrl } from "@/lib/url";
 
 const TOKEN_BYTES = 32;
 const LIFETIME_MS = 15 * 60 * 1000; // 15 minutes — email is the second factor
@@ -66,5 +66,7 @@ export async function consumeMagicLinkToken(
 }
 
 export async function buildMagicLinkUrl(token: string): Promise<string> {
-  return buildAppUrl(`/auth/magic?token=${encodeURIComponent(token)}`);
+  // Trusted (env) base only — never a request header. Prevents a spoofed
+  // Host from redirecting a genuine login link to an attacker domain.
+  return buildTrustedUrl(`/auth/magic?token=${encodeURIComponent(token)}`);
 }

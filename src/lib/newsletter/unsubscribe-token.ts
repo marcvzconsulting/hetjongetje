@@ -40,6 +40,22 @@ export function verifyResubscribeToken(email: string, token: string): boolean {
   return verifyWithPurpose("resubscribe", email, token);
 }
 
+/**
+ * Retention-reminder opt-out, keyed on the user id. Without a signature
+ * anyone who knows a user's UUID could opt them out; the HMAC ties the
+ * link to AUTH_SECRET so only links WE generated are honoured.
+ */
+export function signReminderOptOutToken(userId: string): string {
+  return signWithPurpose("reminder-optout", userId);
+}
+
+export function verifyReminderOptOutToken(
+  userId: string,
+  token: string,
+): boolean {
+  return verifyWithPurpose("reminder-optout", userId, token);
+}
+
 function signWithPurpose(purpose: string, email: string): string {
   return crypto
     .createHmac("sha256", getSecret())

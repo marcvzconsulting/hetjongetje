@@ -1,7 +1,10 @@
 import { fal } from "@fal-ai/client";
 import JSZip from "jszip";
-import { uploadBuffer, deleteObjects } from "@/lib/storage/scaleway";
-import { assertSafeFetchUrl } from "@/lib/storage/url-guard";
+import {
+  uploadPrivateBuffer,
+  getPresignedGetUrl,
+  deleteByPrefix,
+} from "@/lib/storage/scaleway";
 
 // Configure fal (idempotent — safe to call at import time).
 if (process.env.FAL_KEY) {
@@ -18,7 +21,11 @@ const TRAINING_ENDPOINT = "fal-ai/flux-lora-fast-training";
 export const MIN_PHOTOS = 5;
 export const MAX_PHOTOS = 15;
 
-/** Upload one photo to our Scaleway bucket and return its public URL. */
+/**
+ * Upload one child photo PRIVATELY and return its storage key. These are
+ * real photos of a real child — they must never sit on a public URL, so
+ * they go to a private object and are referenced by key only.
+ */
 export async function uploadChildPhoto(
   childId: string,
   index: number,
@@ -27,32 +34,38 @@ export async function uploadChildPhoto(
 ): Promise<string> {
   const ext = mimeTypeToExt(mimeType);
   const key = `lora-training/${childId}/photo-${index}.${ext}`;
-  return uploadBuffer(buffer, key, mimeType);
+  return uploadPrivateBuffer(buffer, key, mimeType);
 }
 
 /**
- * Fetch each photo URL, bundle into a ZIP, upload the ZIP to our bucket
- * and return its URL. fal.ai's training endpoint accepts a zip URL via
- * `images_data_url`.
+ * Bundle the already-in-memory photo buffers into a ZIP and upload it
+ * PRIVATELY, returning the zip's storage key. Building from the buffers we
+ * already hold (rather than re-fetching each uploaded object) avoids a
+ * round-trip AND means the individual photos never need to be publicly
+ * readable. fal.ai reads the zip via a short-lived presigned URL — see
+ * {@link presignTrainingZip}.
  */
 export async function buildTrainingZip(
   childId: string,
-  photoUrls: string[]
+  photos: { buffer: Buffer; mimeType: string }[]
 ): Promise<string> {
   const zip = new JSZip();
-  for (let i = 0; i < photoUrls.length; i++) {
-    const safe = assertSafeFetchUrl(photoUrls[i]);
-    const res = await fetch(safe);
-    if (!res.ok) throw new Error(`Kon foto ${i + 1} niet ophalen`);
-    const ab = await res.arrayBuffer();
-    const url = photoUrls[i];
-    const extMatch = url.match(/\.(jpe?g|png|webp)(?:\?|$)/i);
-    const ext = extMatch ? extMatch[1].toLowerCase() : "jpg";
-    zip.file(`photo-${String(i + 1).padStart(2, "0")}.${ext}`, ab);
-  }
+  photos.forEach((p, i) => {
+    const ext = mimeTypeToExt(p.mimeType);
+    zip.file(`photo-${String(i + 1).padStart(2, "0")}.${ext}`, p.buffer);
+  });
   const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
   const zipKey = `lora-training/${childId}/training-set.zip`;
-  return uploadBuffer(zipBuffer, zipKey, "application/zip");
+  return uploadPrivateBuffer(zipBuffer, zipKey, "application/zip");
+}
+
+/**
+ * Create a short-lived presigned GET URL for the private training zip so
+ * fal.ai can fetch it. TTL comfortably covers fal pulling the file at
+ * submit time; after that the link expires.
+ */
+export async function presignTrainingZip(zipKey: string): Promise<string> {
+  return getPresignedGetUrl(zipKey, 3600);
 }
 
 /**
@@ -169,24 +182,105 @@ export async function cancelInProgressLoraJobs(userId: string): Promise<void> {
 }
 
 /**
- * Delete all stored training inputs for a child (photos + zip). Returns
- * the keys that failed to delete. Does not throw.
+ * Delete ALL stored training inputs for a child — every photo AND the
+ * training-set zip — by wiping the whole `lora-training/<childId>/`
+ * prefix. Prefix-based so nothing is missed even if the reference URLs
+ * were already cleared from the DB. Does not throw.
  */
 export async function deleteTrainingAssets(
-  photoUrls: string[]
+  childId: string
 ): Promise<{ requested: number; failed: string[] }> {
-  const { keyFromUrl } = await import("@/lib/storage/scaleway");
-  const keys: string[] = [];
-  for (const u of photoUrls) {
-    const k = keyFromUrl(u);
-    if (k) keys.push(k);
+  return deleteByPrefix(`lora-training/${childId}/`);
+}
+
+/**
+ * Enforce the "photos are wiped within days" promise WITHOUT relying on
+ * the parent re-opening the status page. Walks every child stuck in
+ * `training`, polls fal, and on any terminal outcome (ready / failed, or
+ * stuck past maxAgeHours) persists the result AND sweeps the training
+ * inputs. Meant to run from the daily cron. Never throws.
+ */
+export async function finalizeStaleLoraTrainings(opts?: {
+  maxAgeHours?: number;
+}): Promise<{ checked: number; finalized: number; cleaned: number }> {
+  const { prisma } = await import("@/lib/db");
+  const maxAgeMs = (opts?.maxAgeHours ?? 48) * 3600 * 1000;
+  let finalized = 0;
+  let cleaned = 0;
+
+  const training = await prisma.childProfile.findMany({
+    where: { loraStatus: "training", loraTrainingRequestId: { not: null } },
+    select: {
+      id: true,
+      loraTrainingRequestId: true,
+      loraConsentAt: true,
+    },
+  });
+
+  for (const child of training) {
+    if (!child.loraTrainingRequestId) continue;
+
+    let poll: LoraTrainingResult;
+    try {
+      poll = await pollLoraTraining(child.loraTrainingRequestId);
+    } catch (err) {
+      console.error(`[lora-cleanup] poll failed for child ${child.id}:`, err);
+      continue;
+    }
+
+    const sweep = async () => {
+      await deleteTrainingAssets(child.id).catch((e) =>
+        console.error(`[lora-cleanup] asset sweep failed for ${child.id}:`, e)
+      );
+      cleaned++;
+    };
+
+    if (poll.state === "completed") {
+      await prisma.childProfile.update({
+        where: { id: child.id },
+        data: {
+          loraStatus: "ready",
+          loraUrl: poll.loraUrl,
+          loraTrainedAt: new Date(),
+          loraFailureReason: null,
+          referenceImages: [],
+        },
+      });
+      await sweep();
+      finalized++;
+    } else if (poll.state === "failed") {
+      await prisma.childProfile.update({
+        where: { id: child.id },
+        data: {
+          loraStatus: "failed",
+          loraFailureReason: poll.reason,
+          referenceImages: [],
+        },
+      });
+      await sweep();
+      finalized++;
+    } else {
+      // Still queued/in_progress: fal jobs finish in minutes, so anything
+      // older than maxAgeHours is dead — give up and wipe the photos so
+      // they don't linger indefinitely.
+      const startedAt = child.loraConsentAt?.getTime() ?? 0;
+      if (startedAt && Date.now() - startedAt > maxAgeMs) {
+        await prisma.childProfile.update({
+          where: { id: child.id },
+          data: {
+            loraStatus: "failed",
+            loraFailureReason:
+              "Training vastgelopen — automatisch opgeruimd door onderhoud.",
+            referenceImages: [],
+          },
+        });
+        await sweep();
+        finalized++;
+      }
+    }
   }
-  // The zip lives at a deterministic path even if we lost the URL.
-  // We could also attempt to delete `lora-training/<childId>/training-set.zip`
-  // via direct key, but the caller knows the childId so they can pass it.
-  if (keys.length === 0) return { requested: 0, failed: [] };
-  const failed = await deleteObjects(keys);
-  return { requested: keys.length, failed };
+
+  return { checked: training.length, finalized, cleaned };
 }
 
 /** Trigger word is baked into the LoRA during training — must also go

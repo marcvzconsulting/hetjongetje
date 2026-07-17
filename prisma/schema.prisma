@@ -318,6 +318,7 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([subscriptionId])
+  @@index([bookId])
   @@map("orders")
 }
 
@@ -454,6 +455,10 @@ model ChildProfile {
   stories Story[]
   books   StoryBook[]
 
+  // userId is the hottest lookup in the app: every ownership check
+  // (story open, audio, pdf, share, regenerate) and the dashboard filter
+  // on it. Postgres does not index FKs automatically.
+  @@index([userId])
   @@map("child_profiles")
 }
 
@@ -575,6 +580,7 @@ model StoryBook {
   bookStories  BookStory[]
   orders       Order[]
 
+  @@index([childProfileId])
   @@map("story_books")
 }
 
@@ -588,6 +594,7 @@ model BookStory {
   story Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([bookId, storyId])
+  @@index([storyId])
   @@map("book_stories")
 }
 
@@ -684,6 +691,8 @@ model GenerationJob {
 
   story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
+  @@index([storyId])
+  @@index([status])
   @@map("generation_jobs")
 }
 

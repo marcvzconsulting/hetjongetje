@@ -68,13 +68,27 @@ export async function saveBookDraft(
     // Replace selected stories in one shot to keep it simple.
     await tx.bookStory.deleteMany({ where: { bookId: book.id } });
     if (input.selectedStoryIds.length > 0) {
-      await tx.bookStory.createMany({
-        data: input.selectedStoryIds.map((storyId, i) => ({
-          bookId: book.id,
-          storyId,
-          sortOrder: i,
-        })),
+      // Only accept story ids the caller actually owns — never write an
+      // arbitrary storyId into the book (a future print/PDF that renders
+      // by stored id would otherwise leak another user's story).
+      const owned = await tx.story.findMany({
+        where: {
+          id: { in: input.selectedStoryIds },
+          childProfile: { userId: session.user.id },
+        },
+        select: { id: true },
       });
+      const ownedIds = new Set(owned.map((s) => s.id));
+      const selected = input.selectedStoryIds.filter((id) => ownedIds.has(id));
+      if (selected.length > 0) {
+        await tx.bookStory.createMany({
+          data: selected.map((storyId, i) => ({
+            bookId: book.id,
+            storyId,
+            sortOrder: i,
+          })),
+        });
+      }
     }
 
     return book.id;

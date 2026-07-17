@@ -97,6 +97,23 @@ export async function createSubscriptionCheckout(opts: {
     throw new Error("already_subscribed");
   }
 
+  // Close the two-tab window: the check above only trips once a Mollie
+  // subscription id exists, which isn't set until the first payment
+  // confirms. Two checkouts started in parallel would otherwise both pay
+  // and both spin up a recurring schedule. Refuse a second checkout while
+  // a recent subscription order for this user is still pending.
+  const pendingSubOrder = await prisma.order.findFirst({
+    where: {
+      userId: opts.userId,
+      kind: "subscription",
+      status: "pending",
+      createdAt: { gt: new Date(Date.now() - 30 * 60 * 1000) },
+    },
+  });
+  if (pendingSubOrder) {
+    throw new Error("subscription_checkout_in_progress");
+  }
+
   const customerId = await getOrCreateMollieCustomer(opts.userId);
 
   const order = await prisma.order.create({

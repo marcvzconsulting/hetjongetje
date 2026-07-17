@@ -88,27 +88,27 @@ export async function maybeGrantReferralBonus(inviteeUserId: string): Promise<vo
   if (!invitee.referredByUserId) return;
   if (invitee.referralBonusGrantedAt) return;
 
-  // Inviter kan inmiddels verwijderd zijn — silent skip.
+  // Claim the bonus atomically before granting anything. The payment flow
+  // can call this from the webhook and the redirect page at nearly the
+  // same time (both on the invitee's first paid order); the conditional
+  // updateMany lets exactly one of them win (count === 1) so the inviter
+  // is never credited twice.
+  const claim = await prisma.user.updateMany({
+    where: { id: inviteeUserId, referralBonusGrantedAt: null },
+    data: { referralBonusGrantedAt: new Date() },
+  });
+  if (claim.count !== 1) return;
+
+  // Inviter kan inmiddels verwijderd zijn — de bonus is dan al als
+  // "verwerkt" gemarkeerd (claim hierboven), dus gewoon stoppen.
   const inviter = await prisma.user.findUnique({
     where: { id: invitee.referredByUserId },
     select: { id: true },
   });
-  if (!inviter) {
-    await prisma.user.update({
-      where: { id: inviteeUserId },
-      data: { referralBonusGrantedAt: new Date() },
-    });
-    return;
-  }
+  if (!inviter) return;
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: inviter.id },
-      data: { storyCredits: { increment: REFERRAL_BONUS_CREDITS } },
-    }),
-    prisma.user.update({
-      where: { id: inviteeUserId },
-      data: { referralBonusGrantedAt: new Date() },
-    }),
-  ]);
+  await prisma.user.update({
+    where: { id: inviter.id },
+    data: { storyCredits: { increment: REFERRAL_BONUS_CREDITS } },
+  });
 }

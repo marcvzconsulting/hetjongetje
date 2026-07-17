@@ -3,7 +3,7 @@
  * Captures uncaught errors, unhandled promise rejections, and router events.
  */
 import * as Sentry from "@sentry/nextjs";
-import { scrubPII } from "./lib/monitoring/scrub-pii";
+import { scrubPII, scrubTransactionPII } from "./lib/monitoring/scrub-pii";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -20,6 +20,9 @@ Sentry.init({
   sendDefaultPii: false,
   beforeSend(event) {
     return scrubPII(event);
+  },
+  beforeSendTransaction(event) {
+    return scrubTransactionPII(event);
   },
 
   ignoreErrors: [

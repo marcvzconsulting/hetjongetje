@@ -110,6 +110,8 @@ export default async function VeelgesteldeVragenPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
+          // Escape "<" so admin-editable FAQ content can't break out of the
+          // script tag with a literal </script>.
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "FAQPage",
@@ -123,7 +125,7 @@ export default async function VeelgesteldeVragenPage() {
                 text: e.answer,
               },
             })),
-          }),
+          }).replace(/</g, "\\u003c"),
         }}
       />
     </ContentPage>

@@ -7,6 +7,8 @@ import {
   parseJsonBody,
 } from "@/lib/validation";
 import { normalizeChildName, normalizeNamesIn } from "@/lib/utils/name";
+import { deleteChildStorage } from "@/lib/storage/user-cleanup";
+import { cancelLoraTraining } from "@/lib/ai/lora-training";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -78,6 +80,26 @@ export async function DELETE(_request: NextRequest, { params }: Props) {
 
   if (!child) {
     return NextResponse.json({ error: "Profiel niet gevonden" }, { status: 404 });
+  }
+
+  // Stop any in-flight LoRA training so we don't keep paying fal for a job
+  // whose profile is about to disappear.
+  if (child.loraStatus === "training" && child.loraTrainingRequestId) {
+    await cancelLoraTraining(child.loraTrainingRequestId).catch((e) =>
+      console.error("[children] LoRA cancel on delete failed:", e)
+    );
+  }
+
+  // Wipe every bucket object for this child FIRST — its AI preview, LoRA
+  // photos + zip, and all story assets. The DB rows are the only place the
+  // URLs live, so once the row is gone the objects are unreachable; delete
+  // storage before the cascade or they leak forever on a public URL.
+  const cleanup = await deleteChildStorage(childId);
+  if (cleanup.failed.length > 0) {
+    console.error(
+      `[children] ${cleanup.failed.length} storage targets failed to delete for child ${childId}:`,
+      cleanup.failed
+    );
   }
 
   await prisma.childProfile.delete({ where: { id: childId } });

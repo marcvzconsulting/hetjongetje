@@ -6,19 +6,33 @@ export type UserGate = {
   storyCredits: number;
   isApproved: boolean;
   isAdmin: boolean;
+  /** User has requested account deletion and is in the 30-day grace period. */
+  isPendingDeletion: boolean;
   canGenerate: boolean;
 };
 
 export async function loadUserGate(userId: string): Promise<UserGate | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true, status: true, storyCredits: true },
+    select: {
+      role: true,
+      status: true,
+      storyCredits: true,
+      deletionRequestedAt: true,
+    },
   });
   if (!user) return null;
+  const { deletionRequestedAt, ...rest } = user;
   const isAdmin = user.role === "admin";
   const isApproved = isAdmin || user.status === "approved";
-  const canGenerate = isAdmin || (isApproved && user.storyCredits > 0);
-  return { ...user, isApproved, isAdmin, canGenerate };
+  const isPendingDeletion = deletionRequestedAt !== null;
+  // A user in the deletion grace period must not be able to generate,
+  // buy credits or subscribe — otherwise they spend money/AI that the
+  // hard-delete then wipes. The page-level redirect isn't enough because
+  // API routes and server actions never pass through that layout.
+  const canGenerate =
+    !isPendingDeletion && (isAdmin || (isApproved && user.storyCredits > 0));
+  return { ...rest, isApproved, isAdmin, isPendingDeletion, canGenerate };
 }
 
 /**
@@ -28,10 +42,11 @@ export async function loadUserGate(userId: string): Promise<UserGate | null> {
  */
 export async function reserveStoryCredit(userId: string): Promise<{
   ok: boolean;
-  reason?: "not_approved" | "no_credits" | "not_found";
+  reason?: "not_approved" | "no_credits" | "not_found" | "pending_deletion";
 }> {
   const gate = await loadUserGate(userId);
   if (!gate) return { ok: false, reason: "not_found" };
+  if (gate.isPendingDeletion) return { ok: false, reason: "pending_deletion" };
   if (gate.isAdmin) return { ok: true };
   if (!gate.isApproved) return { ok: false, reason: "not_approved" };
 
@@ -40,6 +55,7 @@ export async function reserveStoryCredit(userId: string): Promise<{
       id: userId,
       status: "approved",
       storyCredits: { gt: 0 },
+      deletionRequestedAt: null,
     },
     data: { storyCredits: { decrement: 1 } },
   });

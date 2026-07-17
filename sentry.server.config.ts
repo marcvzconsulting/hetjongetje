@@ -3,7 +3,7 @@
  * Loaded by src/instrumentation.ts via the Next.js `register()` hook.
  */
 import * as Sentry from "@sentry/nextjs";
-import { scrubPII } from "./src/lib/monitoring/scrub-pii";
+import { scrubPII, scrubTransactionPII } from "./src/lib/monitoring/scrub-pii";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -22,6 +22,12 @@ Sentry.init({
   // child names, story text, prompts, photo data must never leave our systems.
   beforeSend(event) {
     return scrubPII(event);
+  },
+
+  // Same scrubbing for performance/transaction events — URLs and route
+  // params (e.g. /s/<share-token>) leak just as badly there.
+  beforeSendTransaction(event) {
+    return scrubTransactionPII(event);
   },
 
   // Noisy expected errors we don't want to be paged about

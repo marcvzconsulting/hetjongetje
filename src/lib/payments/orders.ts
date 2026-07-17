@@ -13,6 +13,7 @@ import {
 } from "./subscriptions";
 import { buildSubscriptionStartedMail } from "@/lib/email/templates/subscription-started";
 import { maybeGrantReferralBonus } from "@/lib/referral";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
 import { assignInvoiceNumber } from "./invoices";
 
 /**
@@ -136,13 +137,16 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   const isRecurring =
     (payment.sequenceType as string | undefined) === "recurring";
 
-  const order = await prisma.order.findUnique({
-    where: { molliePaymentId: paymentId },
-  });
-
-  if (!order && isRecurring) {
-    // First-time we see this renewal. Hand off to subscriptions module
-    // which finds the right Subscription, creates an Order, applies status.
+  if (isRecurring) {
+    // Auto-charge (sequenceType="recurring"). Hand off to the
+    // subscriptions module, which finds the right Subscription, finds-or-
+    // creates the Order and applies status idempotently. Dispatch on
+    // isRecurring ALONE (not "!order && isRecurring"): if the renewal
+    // Order already exists — e.g. an earlier webhook delivery created it,
+    // or a crash landed between order.create and the paid transaction —
+    // the paid webhook must still reach applyRecurringPayment, otherwise
+    // it falls through to the first-payment branch and the customer pays
+    // without getting credits or an endsAt extension.
     await applyRecurringPayment({
       paymentId,
       customerId: payment.customerId ?? null,
@@ -154,10 +158,35 @@ export async function applyMolliePaymentStatus(paymentId: string) {
     return null;
   }
 
+  const order = await prisma.order.findUnique({
+    where: { molliePaymentId: paymentId },
+  });
+
   if (!order) {
     // Payment exists but no matching Order — could be a webhook for an
     // unrelated tenant, or a race we lost. Caller logs and moves on.
     return null;
+  }
+
+  // Refunded is a terminal state managed by the admin refund action
+  // (which reverses credits). A refund does NOT change the Mollie payment
+  // status — it stays "paid" — so without this guard the next webhook
+  // delivery would see status "refunded" ≠ "paid", treat it as a fresh
+  // pending→paid transition, and re-grant the credits we just clawed back.
+  if (order.status === "refunded") {
+    return { ...order };
+  }
+
+  // Chargeback / dispute: Mollie keeps the payment "paid" but reports a
+  // non-zero amountChargedBack. Reverse the benefit best-effort and alert
+  // an admin — otherwise the money is gone while credits/access remain.
+  const chargedBackValue = parseFloat(
+    (payment as { amountChargedBack?: { value?: string } }).amountChargedBack
+      ?.value ?? "0",
+  );
+  if (chargedBackValue > 0 && order.status !== "charged_back") {
+    await handleChargeback(order);
+    return { ...order, status: "charged_back" };
   }
 
   const wasPaid = order.status === "paid";
@@ -179,13 +208,15 @@ export async function applyMolliePaymentStatus(paymentId: string) {
   const orderWithUser = { ...order, userId: order.userId };
 
   // Dispatch on order kind — credits, subscription, book each need
-  // different handling on the pending → paid transition.
+  // different handling on the pending → paid transition. Both apply*Paid
+  // helpers claim the transition atomically and return whether THIS call
+  // is the one that granted it, so the referral bonus (and nothing else)
+  // fires exactly once even when webhook and redirect race.
+  let granted = false;
   if (becomesPaid && order.kind === "credits" && order.creditAmount) {
-    await applyCreditsPaid(orderWithUser);
-    await tryGrantReferralBonus(orderWithUser.userId);
+    granted = await applyCreditsPaid(orderWithUser);
   } else if (becomesPaid && order.kind === "subscription") {
-    await applySubscriptionFirstPaid(orderWithUser, payment);
-    await tryGrantReferralBonus(orderWithUser.userId);
+    granted = await applySubscriptionFirstPaid(orderWithUser, payment);
   } else if (newStatus !== order.status) {
     // Other transition (failed, expired, cancelled) — just update the
     // order row, no credit / subscription change.
@@ -193,6 +224,9 @@ export async function applyMolliePaymentStatus(paymentId: string) {
       where: { id: order.id },
       data: { status: newStatus },
     });
+  }
+  if (granted) {
+    await tryGrantReferralBonus(orderWithUser.userId);
   }
 
   // Factuurnummer voor elke betaalde order — idempotent, dus ook veilig
@@ -219,7 +253,15 @@ async function tryGrantReferralBonus(userId: string): Promise<void> {
 
 /**
  * Handle the credits-purchase pending → paid transition: grant credits
- * to the user in a transaction, then fire the confirmation mail.
+ * to the user, then fire the confirmation mail. Returns true only when
+ * THIS call performed the grant.
+ *
+ * The status flip and the credit increment happen together in one
+ * interactive transaction, guarded by `status NOT IN (paid, refunded)`.
+ * Two concurrent callers (Mollie webhook + the redirect page both calling
+ * applyMolliePaymentStatus at once) therefore grant credits exactly once:
+ * only the caller whose updateMany actually flips the row (count === 1)
+ * proceeds; the loser sees count 0 and returns false.
  */
 async function applyCreditsPaid(order: {
   id: string;
@@ -227,19 +269,24 @@ async function applyCreditsPaid(order: {
   creditAmount: number | null;
   amountCents: number;
   vatRate: number;
-}): Promise<void> {
-  if (!order.creditAmount) return;
+}): Promise<boolean> {
+  if (!order.creditAmount) return false;
+  const creditAmount = order.creditAmount;
 
-  await prisma.$transaction([
-    prisma.order.update({
-      where: { id: order.id },
+  const granted = await prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: { id: order.id, status: { notIn: ["paid", "refunded"] } },
       data: { status: "paid", paidAt: new Date() },
-    }),
-    prisma.user.update({
+    });
+    if (claim.count !== 1) return false;
+    await tx.user.update({
       where: { id: order.userId },
-      data: { storyCredits: { increment: order.creditAmount } },
-    }),
-  ]);
+      data: { storyCredits: { increment: creditAmount } },
+    });
+    return true;
+  });
+
+  if (!granted) return false;
 
   try {
     const user = await prisma.user.findUnique({
@@ -250,7 +297,7 @@ async function applyCreditsPaid(order: {
       const dashboardUrl = await buildAppUrl("/dashboard");
       const mail = await buildCreditsPurchasedMail({
         name: user.name,
-        creditAmount: order.creditAmount,
+        creditAmount: creditAmount,
         amountCents: order.amountCents,
         vatRate: order.vatRate,
         dashboardUrl,
@@ -271,12 +318,15 @@ async function applyCreditsPaid(order: {
       mailErr instanceof Error ? mailErr.message : mailErr,
     );
   }
+
+  return true;
 }
 
 /**
  * First subscription payment paid: capture the mandate id from the
  * payment, kick off Mollie's recurring schedule, link the Order to the
- * Subscription record, send the welcome-to-subscription mail.
+ * Subscription record, send the welcome-to-subscription mail. Returns
+ * true only when THIS call claimed the transition.
  */
 async function applySubscriptionFirstPaid(
   order: {
@@ -289,13 +339,18 @@ async function applySubscriptionFirstPaid(
     mandateId?: string | null;
     metadata?: unknown;
   },
-): Promise<void> {
-  // Mark order paid first so we have a stable record; the rest is best-
-  // effort and recoverable.
-  await prisma.order.update({
-    where: { id: order.id },
+): Promise<boolean> {
+  // Atomically claim the pending → paid transition. The webhook and the
+  // Mollie redirect page both call this for the SAME order id at almost
+  // the same moment; without the claim both would run
+  // startRecurringSubscription and create TWO Mollie subscriptions on one
+  // mandate (double monthly charge). Only the caller that flips the row
+  // (count === 1) proceeds.
+  const claim = await prisma.order.updateMany({
+    where: { id: order.id, status: { notIn: ["paid", "refunded"] } },
     data: { status: "paid", paidAt: new Date() },
   });
+  if (claim.count !== 1) return false;
 
   const mandateId = payment.mandateId ?? null;
   const meta = (payment.metadata ?? {}) as { planCode?: string };
@@ -306,7 +361,10 @@ async function applySubscriptionFirstPaid(
       `[orders] subscription first-payment ${order.id} missing mandate or planCode`,
       { mandateId, planCode },
     );
-    return;
+    // The transition was claimed (order is paid) but we can't start the
+    // recurring schedule. Still return true so the referral bonus fires
+    // once for this genuine first payment.
+    return true;
   }
 
   try {
@@ -368,6 +426,93 @@ async function applySubscriptionFirstPaid(
   } catch (err) {
     console.error(
       `[orders] startRecurringSubscription failed for order ${order.id}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  return true;
+}
+
+/**
+ * A paid order was (partly) charged back. Best-effort: mark the order,
+ * claw back the benefit without ever pushing a balance negative, and
+ * alert an admin so they can follow up (e.g. block the account). Never
+ * throws — a failure here must not 500 the webhook.
+ */
+async function handleChargeback(order: {
+  id: string;
+  userId: string | null;
+  kind: string;
+  creditAmount: number | null;
+  subscriptionId: string | null;
+  description: string;
+  amountCents: number;
+}): Promise<void> {
+  try {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "charged_back" },
+    });
+
+    if (order.userId && order.kind === "credits" && order.creditAmount) {
+      // Clamp at zero: only decrement when the user still has at least the
+      // credits this order granted, so a spent balance never goes negative.
+      await prisma.user.updateMany({
+        where: { id: order.userId, storyCredits: { gte: order.creditAmount } },
+        data: { storyCredits: { decrement: order.creditAmount } },
+      });
+    }
+
+    if (order.userId && order.kind === "subscription" && order.subscriptionId) {
+      // Stop granting access; leave the actual Mollie cancellation to the
+      // admin, who also decides whether to block the account.
+      await prisma.subscription.updateMany({
+        where: {
+          id: order.subscriptionId,
+          status: { in: ["active", "past_due"] },
+        },
+        data: { status: "cancelled", cancelledAt: new Date() },
+      });
+    }
+  } catch (err) {
+    console.error(
+      `[orders] chargeback bookkeeping failed for order ${order.id}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  try {
+    const adminUrl = order.userId
+      ? await buildAppUrl(`/admin/users/${order.userId}`)
+      : await buildAppUrl(`/admin`);
+    const subject = `⚠️ Chargeback op order ${order.id}`;
+    const body =
+      `Er is een chargeback/terugboeking gemeld voor order ${order.id} ` +
+      `(${order.description}, €${(order.amountCents / 100).toFixed(2)}).\n\n` +
+      `De order is op 'charged_back' gezet en toegekende credits/toegang ` +
+      `zijn best-effort teruggedraaid. Controleer het account en overweeg ` +
+      `verdere actie: ${adminUrl}`;
+    for (const to of getAdminNotifyEmails()) {
+      try {
+        await sendMail({
+          to,
+          subject,
+          html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
+          text: body,
+          tags: ["admin-chargeback"],
+        });
+      } catch (perAddressErr) {
+        console.error(
+          `[orders] chargeback admin mail to ${to} failed`,
+          perAddressErr instanceof Error
+            ? perAddressErr.message
+            : perAddressErr,
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      `[orders] chargeback admin notification failed for order ${order.id}`,
       err instanceof Error ? err.message : err,
     );
   }
