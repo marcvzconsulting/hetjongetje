@@ -215,6 +215,13 @@ export const EDITABLE_TEMPLATES = [
     vars: ["name", "planName", "endsAtFormatted", "accountUrl", "subscribeUrl"],
   },
   {
+    code: "subscription-payment-failed",
+    label: "Incasso mislukt",
+    description:
+      "Verstuurd wanneer een terugkerende abonnements-incasso mislukt en het abonnement op past_due gaat.",
+    vars: ["name", "planName", "endsAtFormatted", "accountUrl"],
+  },
+  {
     code: "newsletter-welcome",
     label: "Nieuwsbrief welkom",
     description: "Welkomstmail na nieuwsbrief-aanmelding.",

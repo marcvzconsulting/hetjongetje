@@ -282,6 +282,11 @@ model Order {
   /// Mollie payment id (tr_xxx). Null until we hand off to Mollie.
   molliePaymentId String?  @unique @map("mollie_payment_id")
 
+  /// Opeenvolgend factuurnummer ("OV-2026-00001"), toegekend zodra de
+  /// order paid wordt (webhook) of lazy bij de eerste factuur-download.
+  /// Null voor orders die nooit betaald zijn — die krijgen geen factuur.
+  invoiceNumber   String?  @unique @map("invoice_number")
+
   /// For credit packs: how many story credits to grant on payment.
   creditAmount    Int?     @map("credit_amount")
 
@@ -314,6 +319,19 @@ model Order {
   @@index([createdAt])
   @@index([subscriptionId])
   @@map("orders")
+}
+
+/// Singleton-teller voor opeenvolgende factuurnummers. Eén rij (id=1);
+/// `assignInvoiceNumber` verhoogt de counter atomair binnen een
+/// transactie en reset naar 1 bij een jaarwisseling. Los van Order zodat
+/// nummers gegarandeerd gatloos-oplopend per jaar zijn, ongeacht de
+/// volgorde waarin webhooks binnenkomen.
+model InvoiceCounter {
+  id      Int @id @default(1)
+  year    Int
+  counter Int
+
+  @@map("invoice_counter")
 }
 
 /// Catalog of credit-pack products. Admin-managed via /admin/pricing —

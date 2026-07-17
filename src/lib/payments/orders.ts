@@ -13,6 +13,22 @@ import {
 } from "./subscriptions";
 import { buildSubscriptionStartedMail } from "@/lib/email/templates/subscription-started";
 import { maybeGrantReferralBonus } from "@/lib/referral";
+import { assignInvoiceNumber } from "./invoices";
+
+/**
+ * Best-effort factuurnummer-toekenning: een factuurnummer mag een
+ * betaling nooit blokkeren, dus elke fout wordt gelogd en geslikt.
+ */
+export async function tryAssignInvoiceNumber(orderId: string): Promise<void> {
+  try {
+    await assignInvoiceNumber(orderId);
+  } catch (err) {
+    console.error(
+      `[orders] invoice number assignment failed for order ${orderId}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
 
 /**
  * Create a credits order + matching Mollie payment in one transaction-
@@ -157,6 +173,7 @@ export async function applyMolliePaymentStatus(paymentId: string) {
         data: { status: newStatus },
       });
     }
+    if (newStatus === "paid") await tryAssignInvoiceNumber(order.id);
     return { ...order, status: newStatus };
   }
   const orderWithUser = { ...order, userId: order.userId };
@@ -177,6 +194,10 @@ export async function applyMolliePaymentStatus(paymentId: string) {
       data: { status: newStatus },
     });
   }
+
+  // Factuurnummer voor elke betaalde order — idempotent, dus ook veilig
+  // bij webhook-retries van al-betaalde orders. Best-effort.
+  if (newStatus === "paid") await tryAssignInvoiceNumber(order.id);
 
   return { ...order, status: newStatus };
 }

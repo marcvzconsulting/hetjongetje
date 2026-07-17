@@ -75,6 +75,7 @@ function StatusBlock({
   order,
 }: {
   order: {
+    id: string;
     status: string;
     description: string;
     amountCents: number;
@@ -137,7 +138,7 @@ function StatusBlock({
         }
         ctas={
           <>
-            <EBtn kind="primary" size="md" href={`/credits/order/${order ? "" : ""}`}>
+            <EBtn kind="primary" size="md" href={`/credits/order/${order.id}`}>
               Vernieuwen
             </EBtn>
             <EBtn kind="ghost" size="md" href="/dashboard">

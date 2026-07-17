@@ -30,6 +30,10 @@ interface Props {
   initialFeedbackNote: string | null;
   /** Bestaande share-token uit DB; null = nog niet gedeeld. */
   initialShareToken: string | null;
+  /** Mag deze gebruiker nieuwe voorlees-audio genereren? False wanneer
+   *  de TTS-premium-schakelaar aan staat en er geen actief betaald
+   *  abonnement is — bestaande audio afspelen blijft wel werken. */
+  canGenerateAudio: boolean;
   /** Al gegenereerde voorlees-audio's (per stem één). */
   initialAudios: StoryAudioEntry[];
 }
@@ -46,6 +50,7 @@ export function StoryPageClient({
   initialFeedbackKind,
   initialFeedbackNote,
   initialShareToken,
+  canGenerateAudio,
   initialAudios,
 }: Props) {
   const router = useRouter();
@@ -251,7 +256,8 @@ export function StoryPageClient({
         <StoryAudioPlayer
           storyId={storyId}
           audios={audios}
-          canGenerate
+          canGenerate={canGenerateAudio}
+          premiumGated={!canGenerateAudio}
           currentPageNumber={currentPageNumber}
           pageNumbers={pageNumbers}
           endingPageNumber={endingPageNumber}
@@ -549,7 +555,7 @@ export function StoryPageClient({
                 }}
               >
                 Met een deellink kunnen opa, oma of vrienden het verhaal
-                lezen zonder account. De link blijft werken tot je 'm
+                lezen zonder account. De link blijft werken tot je &apos;m
                 hier uitschakelt.
               </p>
             </div>

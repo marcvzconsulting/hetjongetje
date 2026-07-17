@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isTtsVoiceKey } from "@/lib/ai/tts-voices";
+import { isTtsPremiumOnly } from "@/lib/ai/tts-config";
+import { hasActivePaidSubscription } from "@/lib/payments/subscriptions";
 import {
   ENDING_NARRATION,
   buildPageNarration,
@@ -158,6 +160,19 @@ export async function POST(request: NextRequest, { params }: Props) {
       wordTimings: existing.wordTimings ?? null,
       cached: true,
     });
+  }
+
+  // Premium-gate pas ná de cache-check: bestaande audio afspelen blijft
+  // altijd werken, alleen NIEUW genereren is (met de schakelaar aan)
+  // voorbehouden aan abonnees en admins.
+  if (isTtsPremiumOnly() && session.user.role !== "admin") {
+    const hasSub = await hasActivePaidSubscription(session.user.id);
+    if (!hasSub) {
+      return NextResponse.json(
+        { error: "Voorlezen is onderdeel van het abonnement." },
+        { status: 403 },
+      );
+    }
   }
 
   // Rate limit pas ná de cache-check: cache-hits zijn gratis en mogen

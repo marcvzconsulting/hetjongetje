@@ -28,6 +28,11 @@ type Props = {
   /** Eigenaar-pagina: mag nieuwe stemmen genereren. Deelpagina: alleen
    *  afspelen van stemmen waarvoor ALLE pagina's al audio hebben. */
   canGenerate: boolean;
+  /** True wanneer canGenerate false is dóór de TTS-premium-gate (geen
+   *  actief abonnement): stemmen zonder audio tonen dan een vriendelijke
+   *  verwijzing naar /subscribe i.p.v. "Genereer stem". De deelpagina
+   *  laat dit weg (default false) en houdt de neutrale teksten. */
+  premiumGated?: boolean;
   /** Voorlees-item van de zichtbare spread: 0 = titelspread, anders het
    *  DB-paginanummer (tekst- of eindpagina); null wanneer de spread geen
    *  audio heeft. */
@@ -87,6 +92,7 @@ export function StoryAudioPlayer({
   storyId,
   audios,
   canGenerate,
+  premiumGated = false,
   currentPageNumber,
   pageNumbers,
   endingPageNumber = null,
@@ -631,6 +637,7 @@ export function StoryAudioPlayer({
                   totalPages={pageNumbers.length}
                   isActive={active === key}
                   canGenerate={canGenerate}
+                  premiumGated={premiumGated}
                   generating={genVoice === key}
                   generatingLabel={genVoice === key ? genLabel : null}
                   generateLocked={genVoice !== null && genVoice !== key}
@@ -639,6 +646,31 @@ export function StoryAudioPlayer({
                 />
               ))}
             </div>
+
+            {premiumGated && (
+              <p
+                style={{
+                  fontFamily: V2.body,
+                  fontSize: 14,
+                  color: V2.inkSoft,
+                  margin: "18px 0 0",
+                  lineHeight: 1.55,
+                }}
+              >
+                Nieuwe stemmen laten voorlezen is onderdeel van het
+                abonnement. Al gemaakte stemmen blijven gewoon afspeelbaar.{" "}
+                <a
+                  href="/subscribe"
+                  style={{
+                    color: V2.goldDeep,
+                    textDecoration: "underline",
+                    textUnderlineOffset: 3,
+                  }}
+                >
+                  Bekijk abonnementen →
+                </a>
+              </p>
+            )}
           </div>
         </div>
       ) : (
@@ -863,6 +895,7 @@ function VoiceTile({
   totalPages,
   isActive,
   canGenerate,
+  premiumGated,
   generating,
   generatingLabel,
   generateLocked,
@@ -875,6 +908,8 @@ function VoiceTile({
   totalPages: number;
   isActive: boolean;
   canGenerate: boolean;
+  /** Genereren geblokkeerd door de premium-gate (geen abonnement). */
+  premiumGated: boolean;
   generating: boolean;
   generatingLabel: string | null;
   /** Er loopt al een generatie (voor een andere stem). */
@@ -897,7 +932,9 @@ function VoiceTile({
           ? `${voice.label} afspelen`
           : canGenerate
             ? `Stem ${voice.label} genereren`
-            : `${voice.label}, nog niet gegenereerd`
+            : premiumGated
+              ? `${voice.label}, onderdeel van het abonnement`
+              : `${voice.label}, nog niet gegenereerd`
       }
       style={{
         display: "grid",
@@ -1000,6 +1037,16 @@ function VoiceTile({
         ) : canGenerate ? (
           <span style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
             {presentCount > 0 ? "Maak stem af" : "Genereer stem (eenmalig)"}
+          </span>
+        ) : premiumGated ? (
+          <span
+            style={{
+              textTransform: "none",
+              letterSpacing: "0.04em",
+              color: V2.goldDeep,
+            }}
+          >
+            Onderdeel van het abonnement
           </span>
         ) : (
           <span>Nog niet gegenereerd</span>

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
 import type { WordTiming } from "@/lib/ai/tts";
+import { isTtsPremiumOnly } from "@/lib/ai/tts-config";
+import { hasActivePaidSubscription } from "@/lib/payments/subscriptions";
 import { StoryPageClient } from "./client";
 
 interface Props {
@@ -36,6 +38,15 @@ export default async function StoryPage({ params }: Props) {
 
   if (!story) notFound();
 
+  // TTS-premium-gate: nieuwe voorlees-audio genereren mag alleen door
+  // de eigenaar, en (wanneer de schakelaar aan staat) alleen met een
+  // actief betaald abonnement of als admin. Bestaande audio afspelen
+  // blijft altijd werken — dat regelt de speler zelf.
+  const canGenerateAudio =
+    !isTtsPremiumOnly() ||
+    session.user.role === "admin" ||
+    (await hasActivePaidSubscription(session.user.id));
+
   const spreads = storyToSpreads({
     title: story.title,
     subtitle: story.subtitle,
@@ -64,6 +75,7 @@ export default async function StoryPage({ params }: Props) {
       initialFeedbackKind={story.feedbackKind as "up" | "down" | null}
       initialFeedbackNote={story.feedbackNote}
       initialShareToken={story.shareToken}
+      canGenerateAudio={canGenerateAudio}
       initialAudios={story.audio.map((a) => ({
         voiceKey: a.voiceKey,
         pageNumber: a.pageNumber,

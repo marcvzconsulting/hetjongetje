@@ -7,6 +7,12 @@ import {
 import { buildAppUrl, buildWebhookUrl } from "@/lib/url";
 import { sendMail } from "@/lib/email/client";
 import { buildSubscriptionCancelledMail } from "@/lib/email/templates/subscription-cancelled";
+import {
+  buildSubscriptionPaymentFailedMail,
+  buildAdminSubscriptionPaymentFailedMail,
+} from "@/lib/email/templates/subscription-payment-failed";
+import { getAdminNotifyEmails } from "@/lib/admin/notify";
+import { assignInvoiceNumber } from "./invoices";
 
 /**
  * Mollie's recurring billing requires a `Customer` object that survives
@@ -389,17 +395,181 @@ export async function applyRecurringPayment(opts: {
             }),
           ]
         : []),
-      // Push the period end forward.
-      ...(newEndsAt
-        ? [
-            prisma.subscription.update({
-              where: { id: sub.id },
-              data: { endsAt: newEndsAt, status: "active" },
-            }),
-          ]
-        : []),
+      // Push the period end forward. Status altijd terug naar
+      // "active" — ook wanneer een eerder mislukte incasso het
+      // abonnement op "past_due" had gezet.
+      prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          status: "active",
+          ...(newEndsAt ? { endsAt: newEndsAt } : {}),
+        },
+      }),
     ]);
+
+    // Factuurnummer voor de verlenging — best-effort, mag de betaling
+    // nooit blokkeren.
+    try {
+      await assignInvoiceNumber(order.id);
+    } catch (err) {
+      console.error(
+        `[subscriptions] invoice number assignment failed for order ${order.id}`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  } else if (
+    FAILED_RECURRING_STATUSES.includes(opts.status) &&
+    order.status !== "paid" &&
+    order.status !== opts.status
+  ) {
+    // Mislukte incasso (failed / expired / cancelled): orderstatus
+    // bijwerken en het abonnement op past_due zetten (dunning). Mails
+    // gaan alleen de deur uit bij de échte overgang active → past_due,
+    // dus webhook-retries spammen niemand.
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: opts.status },
+    });
+    await markSubscriptionPastDue({
+      subscriptionId: sub.id,
+      paymentStatus: opts.status,
+    });
   }
+}
+
+/** Order-statussen die een mislukte terugkerende incasso aangeven. */
+const FAILED_RECURRING_STATUSES = ["failed", "expired", "cancelled"];
+
+/**
+ * Zet een abonnement op "past_due" (alleen wanneer het nu "active" is —
+ * atomair via updateMany) en stuur klant + admin een notificatie.
+ * Retourneert true wanneer de overgang daadwerkelijk plaatsvond; false
+ * betekent dat het abonnement al past_due / cancelled was en er dus ook
+ * geen mails verstuurd zijn.
+ *
+ * `skipMails` laat de cron de statusovergang doen terwijl het
+ * e-maillogboek-dedupe daar de mails al heeft tegengehouden.
+ */
+export async function markSubscriptionPastDue(opts: {
+  subscriptionId: string;
+  /** De betaalstatus die de aanleiding was ("failed", "expired",
+   *  "cancelled" of "overdue" voor het cron-vangnet). */
+  paymentStatus: string;
+  skipMails?: boolean;
+}): Promise<boolean> {
+  const res = await prisma.subscription.updateMany({
+    where: { id: opts.subscriptionId, status: "active" },
+    data: { status: "past_due" },
+  });
+  if (res.count === 0) return false;
+
+  if (!opts.skipMails) {
+    await sendPaymentFailedMails(opts.subscriptionId, opts.paymentStatus);
+  }
+  return true;
+}
+
+/**
+ * Klant- en admin-mail voor een mislukte incasso. Volledig best-effort:
+ * elke fout wordt gelogd en geslikt, de statusovergang is dan al gedaan.
+ */
+export async function sendPaymentFailedMails(
+  subscriptionId: string,
+  paymentStatus: string,
+): Promise<void> {
+  try {
+    const sub = await prisma.subscription.findUnique({
+      where: { id: subscriptionId },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+      },
+    });
+    if (!sub?.user) return;
+    const plan = await prisma.subscriptionPlan.findUnique({
+      where: { code: sub.plan },
+    });
+    const planName = plan?.name ?? "abonnement";
+
+    // Klantmail.
+    try {
+      const accountUrl = await buildAppUrl("/account");
+      const mail = await buildSubscriptionPaymentFailedMail({
+        name: sub.user.name,
+        planName,
+        endsAt: sub.endsAt,
+        accountUrl,
+      });
+      await sendMail({
+        to: sub.user.email,
+        toName: sub.user.name,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        tags: ["subscription-payment-failed"],
+      });
+    } catch (err) {
+      console.error(
+        `[subscriptions] payment-failed mail to user ${sub.user.id} failed`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+
+    // Admin-notificatie — per adres apart zodat één bounce de rest
+    // niet blokkeert (zelfde patroon als andere admin-notificaties).
+    try {
+      const adminUrl = await buildAppUrl(`/admin/users/${sub.user.id}`);
+      const adminMail = buildAdminSubscriptionPaymentFailedMail({
+        userName: sub.user.name,
+        userEmail: sub.user.email,
+        planName,
+        paymentStatus,
+        endsAt: sub.endsAt,
+        adminUrl,
+      });
+      for (const to of getAdminNotifyEmails()) {
+        try {
+          await sendMail({
+            to,
+            subject: adminMail.subject,
+            html: adminMail.html,
+            text: adminMail.text,
+            tags: ["admin-subscription-payment-failed"],
+          });
+        } catch (perAddressErr) {
+          console.error(
+            `[subscriptions] admin payment-failed mail to ${to} failed`,
+            perAddressErr instanceof Error
+              ? perAddressErr.message
+              : perAddressErr,
+          );
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[subscriptions] admin payment-failed notification failed for subscription ${subscriptionId}`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  } catch (err) {
+    console.error(
+      `[subscriptions] sendPaymentFailedMails failed for subscription ${subscriptionId}`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+}
+
+/**
+ * Heeft deze gebruiker een actief betaald abonnement? Gebruikt door de
+ * TTS-premium-gate: past_due of cancelled telt niet als actief.
+ */
+export async function hasActivePaidSubscription(
+  userId: string,
+): Promise<boolean> {
+  const sub = await prisma.subscription.findUnique({
+    where: { userId },
+    select: { status: true, plan: true },
+  });
+  return !!sub && sub.status === "active" && sub.plan !== "free";
 }
 
 /**

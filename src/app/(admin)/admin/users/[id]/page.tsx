@@ -1574,19 +1574,44 @@ export default async function AdminUserDetailPage({
                           textAlign: "right",
                         }}
                       >
-                        {refundable && (
-                          <form action={refundOrderAction}>
-                            <input type="hidden" name="userId" value={user.id} />
-                            <input type="hidden" name="orderId" value={o.id} />
-                            <EBtnSubmit
-                              kind="ghost"
-                              size="sm"
-                              pendingLabel="Bezig…"
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 14,
+                          }}
+                        >
+                          {(o.status === "paid" ||
+                            o.status === "refunded") && (
+                            <a
+                              href={`/api/orders/${o.id}/factuur`}
+                              download
+                              style={{
+                                fontFamily: V2.ui,
+                                fontSize: 13,
+                                color: V2.goldDeep,
+                                textDecoration: "underline",
+                                textUnderlineOffset: 3,
+                                whiteSpace: "nowrap",
+                              }}
                             >
-                              Refund
-                            </EBtnSubmit>
-                          </form>
-                        )}
+                              Factuur
+                            </a>
+                          )}
+                          {refundable && (
+                            <form action={refundOrderAction}>
+                              <input type="hidden" name="userId" value={user.id} />
+                              <input type="hidden" name="orderId" value={o.id} />
+                              <EBtnSubmit
+                                kind="ghost"
+                                size="sm"
+                                pendingLabel="Bezig…"
+                              >
+                                Refund
+                              </EBtnSubmit>
+                            </form>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

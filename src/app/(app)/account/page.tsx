@@ -603,6 +603,7 @@ const STATUS_COPY: Record<string, { label: string; color: string }> = {
   failed: { label: "Mislukt", color: V2.heart },
   cancelled: { label: "Geannuleerd", color: V2.inkMute },
   expired: { label: "Verlopen", color: V2.inkMute },
+  refunded: { label: "Terugbetaald", color: V2.inkMute },
 };
 
 const KIND_COPY: Record<string, string> = {
@@ -669,6 +670,7 @@ function OrdersPanel({ orders }: { orders: OrderRow[] }) {
                 <Th>Omschrijving</Th>
                 <Th align="right">Bedrag</Th>
                 <Th>Status</Th>
+                <Th />
               </tr>
             </thead>
             <tbody>
@@ -724,6 +726,24 @@ function OrdersPanel({ orders }: { orders: OrderRow[] }) {
                       >
                         {status.label}
                       </span>
+                    </Td>
+                    <Td>
+                      {(o.status === "paid" || o.status === "refunded") && (
+                        <a
+                          href={`/api/orders/${o.id}/factuur`}
+                          download
+                          style={{
+                            fontFamily: V2.ui,
+                            fontSize: 13,
+                            color: V2.goldDeep,
+                            textDecoration: "underline",
+                            textUnderlineOffset: 3,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Factuur
+                        </a>
+                      )}
                     </Td>
                   </tr>
                 );
@@ -838,6 +858,9 @@ function SubscriptionPanel({
   }
 
   const isCancelled = subscription.status === "cancelled";
+  // Laatste incasso mislukt — Mollie probeert het opnieuw; tot endsAt
+  // blijft de toegang gewoon werken.
+  const isPastDue = subscription.status === "past_due";
   // "Managed" = admin-comped, no recurring billing through Mollie.
   const isManaged = !subscription.mollieSubscriptionId;
   const planName = plan?.name ?? subscription.plan;
@@ -868,6 +891,28 @@ function SubscriptionPanel({
           : `${planName} — ${intervalNl}`
       }
     >
+      {isPastDue && (
+        <div
+          style={{
+            marginBottom: 18,
+            padding: "12px 16px",
+            background: "rgba(196,165,168,0.18)",
+            borderLeft: `2px solid ${V2.heart}`,
+            fontFamily: V2.body,
+            fontSize: 14,
+            color: V2.ink,
+            lineHeight: 1.5,
+            maxWidth: "62ch",
+          }}
+        >
+          Je laatste incasso is mislukt. We proberen het binnenkort
+          opnieuw, controleer voor de zekerheid je rekening of
+          betaalmethode.
+          {endsAtStr
+            ? ` Je toegang blijft werken tot ${endsAtStr}, daarna worden er geen nieuwe verhalen-credits meer toegevoegd.`
+            : " Zolang de incasso niet lukt, worden er geen nieuwe verhalen-credits meer toegevoegd."}
+        </div>
+      )}
       <div
         style={{
           padding: 20,
@@ -916,7 +961,7 @@ function SubscriptionPanel({
               fontFamily: V2.body,
               fontStyle: "italic",
               fontSize: 13,
-              color: isCancelled ? V2.heart : V2.goldDeep,
+              color: isCancelled || isPastDue ? V2.heart : V2.goldDeep,
               textAlign: "right",
             }}
           >
@@ -924,13 +969,15 @@ function SubscriptionPanel({
               ? endsAtStr
                 ? `Actief tot ${endsAtStr}`
                 : "Opgezegd"
-              : isManaged
-                ? endsAtStr
-                  ? `Actief tot ${endsAtStr}`
-                  : "Actief (handmatig)"
-                : endsAtStr
-                  ? `Volgende incasso ${endsAtStr}`
-                  : "Actief"}
+              : isPastDue
+                ? "Incasso mislukt"
+                : isManaged
+                  ? endsAtStr
+                    ? `Actief tot ${endsAtStr}`
+                    : "Actief (handmatig)"
+                  : endsAtStr
+                    ? `Volgende incasso ${endsAtStr}`
+                    : "Actief"}
           </div>
         </div>
         {isManaged && !isCancelled && (
@@ -1519,10 +1566,12 @@ function SubscriptionHero({
   credits: number | null;
   isAdmin: boolean;
 }) {
+  // Plan-codes komen uit de SubscriptionPlan-catalogus ("monthly" /
+  // "annual"); de oude "premium"/"basic"-labels bestonden nooit als code.
   const planLabel =
-    plan === "premium"
+    plan === "annual"
       ? "Jaarabonnement"
-      : plan === "basic"
+      : plan === "monthly"
         ? "Maandabonnement"
         : "Proefperiode";
   const subMeta =
