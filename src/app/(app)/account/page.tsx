@@ -604,6 +604,9 @@ const STATUS_COPY: Record<string, { label: string; color: string }> = {
   cancelled: { label: "Geannuleerd", color: V2.inkMute },
   expired: { label: "Verlopen", color: V2.inkMute },
   refunded: { label: "Terugbetaald", color: V2.inkMute },
+  // Betalingen uit de Mollie-testomgeving (mei 2026), handmatig
+  // gemarkeerd zodat ze buiten omzet en facturen blijven.
+  test_paid: { label: "Testbetaling", color: V2.inkMute },
 };
 
 const KIND_COPY: Record<string, string> = {
