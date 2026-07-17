@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Spread } from "@/lib/story/spread-types";
-import { BookViewerV3 } from "@/components/v2/story/BookViewerV3";
+import { spreadsToPageNumbers } from "@/lib/story/spread-audio";
+import {
+  BookViewerV3,
+  type WordHighlight,
+} from "@/components/v2/story/BookViewerV3";
 import {
   StoryAudioPlayer,
   type StoryAudioEntry,
@@ -62,6 +66,29 @@ export function StoryPageClient({
   const [copyConfirmed, setCopyConfirmed] = useState(false);
   const [listenOpen, setListenOpen] = useState(false);
   const [audios, setAudios] = useState<StoryAudioEntry[]>(initialAudios);
+
+  // ── Voorlezen: spread ↔ pagina-koppeling + woord-markering ──────
+  const [currentSpreadIdx, setCurrentSpreadIdx] = useState(0);
+  const [wordHighlight, setWordHighlight] = useState<WordHighlight | null>(
+    null,
+  );
+  // Per spread het voorleesbare DB-paginanummer (null = titel/einde).
+  const spreadPageNumbers = useMemo(
+    () => spreadsToPageNumbers(spreads),
+    [spreads],
+  );
+  const pageNumbers = useMemo(
+    () => spreadPageNumbers.filter((p): p is number => p !== null),
+    [spreadPageNumbers],
+  );
+  const currentPageNumber = spreadPageNumbers[currentSpreadIdx] ?? null;
+  // Zit de zichtbare spread ná de laatste tekstpagina? (eindspread)
+  const afterLastPage =
+    currentPageNumber === null &&
+    spreadPageNumbers
+      .slice(currentSpreadIdx + 1)
+      .every((p) => p === null) &&
+    pageNumbers.length > 0;
 
   const shareUrl = shareToken
     ? typeof window !== "undefined"
@@ -206,22 +233,35 @@ export function StoryPageClient({
         hasFeedback={hasFeedback}
         onListenClick={() => setListenOpen(true)}
         hasAudio={audios.length > 0}
+        onSpreadChange={setCurrentSpreadIdx}
+        wordHighlight={listenOpen ? wordHighlight : null}
       />
 
-      {/* Voorlezen — stemkeuze + spelerbalk. */}
+      {/* Voorlezen — stemkeuze + paginagestuurde spelerbalk. */}
       {listenOpen && (
         <StoryAudioPlayer
           storyId={storyId}
           audios={audios}
           canGenerate
-          onClose={() => setListenOpen(false)}
+          currentPageNumber={currentPageNumber}
+          pageNumbers={pageNumbers}
+          afterLastPage={afterLastPage}
+          onClose={() => {
+            setListenOpen(false);
+            setWordHighlight(null);
+          }}
           onGenerated={(entry) =>
             setAudios((prev) =>
-              prev.some((a) => a.voiceKey === entry.voiceKey)
+              prev.some(
+                (a) =>
+                  a.voiceKey === entry.voiceKey &&
+                  a.pageNumber === entry.pageNumber,
+              )
                 ? prev
                 : [...prev, entry],
             )
           }
+          onHighlightChange={setWordHighlight}
         />
       )}
 

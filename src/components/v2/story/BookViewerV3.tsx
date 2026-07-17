@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -14,6 +15,10 @@ import { V2 } from "@/components/v2/tokens";
 import { Logo, IconV2 } from "@/components/v2";
 import { SignOutButtonV2 } from "@/components/v2/app/SignOutButton";
 import type { Spread, PageType } from "@/lib/story/spread-types";
+import { splitWords } from "@/lib/story/word-split";
+
+/** Actief voorgelezen woord: DB-paginanummer + woordindex in splitWords. */
+export type WordHighlight = { pageNumber: number; wordIndex: number };
 
 type Props = {
   spreads: Spread[];
@@ -40,6 +45,13 @@ type Props = {
    *  nooit genereren. */
   onListenClick?: () => void;
   hasAudio?: boolean;
+  /** Gemeld bij elke navigatie (én bij init/herstel uit localStorage):
+   *  de index van de zichtbare spread. Op mobiel (losse pagina's) is dat
+   *  de spread waar de zichtbare pagina bij hoort. */
+  onSpreadChange?: (spreadIdx: number) => void;
+  /** Actief voorgelezen woord. De tekstpagina met dit DB-paginanummer
+   *  markeert het woord met een zachte gouden achtergrond. */
+  wordHighlight?: WordHighlight | null;
 };
 
 // SVG fractal-noise texture, inlined as data URL. Subtle paper grain,
@@ -77,6 +89,8 @@ export function BookViewerV3({
   hasFeedback = false,
   onListenClick,
   hasAudio = false,
+  onSpreadChange,
+  wordHighlight = null,
 }: Props) {
   // ── Viewport ─────────────────────────────────────────────────
   // `isMobile` here = "use compact single-page mode". A phone in landscape
@@ -116,6 +130,29 @@ export function BookViewerV3({
   // ── Pages: on mobile we flatten spreads to single pages ──────
   const pages = useMemo(() => flattenSpreads(spreads), [spreads]);
   const totalUnits = isMobile ? pages.length : spreads.length;
+
+  // Mobiel unit-idx → spread-idx (zelfde volgorde als flattenSpreads:
+  // fullSpread = 1 unit, anders links + rechts = 2 units).
+  const unitToSpreadIdx = useMemo(() => {
+    const arr: number[] = [];
+    spreads.forEach((s, i) => {
+      arr.push(i);
+      if (!s.fullSpread) arr.push(i);
+    });
+    return arr;
+  }, [spreads]);
+
+  // prefers-reduced-motion: woord-markering zonder transition tonen.
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    // queueMicrotask: zelfde truc als bij de leespositie-restore
+    // hieronder — geen synchrone setState in de effect-body.
+    queueMicrotask(() => setReducedMotion(mq.matches));
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // ── Position (saved per story) ───────────────────────────────
   const [idx, setIdx] = useState(0);
@@ -178,6 +215,15 @@ export function BookViewerV3({
     const key = `ov_reader_v3_${storyId}_${isMobile ? "m" : "d"}`;
     if (typeof window !== "undefined") localStorage.setItem(key, String(idx));
   }, [idx, storyId, isMobile]);
+
+  // Meld de zichtbare spread aan de parent (voorleesfunctie) — ook bij
+  // init en bij herstel van de leespositie uit localStorage.
+  const currentSpreadIdx = isMobile
+    ? (unitToSpreadIdx[idx] ?? 0)
+    : Math.min(idx, Math.max(0, spreads.length - 1));
+  useEffect(() => {
+    onSpreadChange?.(currentSpreadIdx);
+  }, [currentSpreadIdx, onSpreadChange]);
 
   const go = useCallback(
     (d: 1 | -1) => {
@@ -548,6 +594,8 @@ export function BookViewerV3({
             direction={direction}
             idx={idx}
             onSwipe={(d) => go(d)}
+            wordHighlight={wordHighlight}
+            reducedMotion={reducedMotion}
           />
         ) : (
           <DesktopBookFrame
@@ -555,6 +603,8 @@ export function BookViewerV3({
             childName={childName}
             direction={direction}
             idx={idx}
+            wordHighlight={wordHighlight}
+            reducedMotion={reducedMotion}
           />
         )}
       </div>
@@ -699,12 +749,16 @@ function MobilePager({
   direction,
   idx,
   onSwipe,
+  wordHighlight,
+  reducedMotion,
 }: {
   page: PageType;
   childName: string;
   direction: 1 | -1;
   idx: number;
   onSwipe: (d: 1 | -1) => void;
+  wordHighlight: WordHighlight | null;
+  reducedMotion: boolean;
 }) {
   const SWIPE_THRESHOLD = 60;
 
@@ -766,7 +820,13 @@ function MobilePager({
             borderRadius: 2,
           }}
         >
-          <PageContent page={page} side="full" childName={childName} />
+          <PageContent
+            page={page}
+            side="full"
+            childName={childName}
+            wordHighlight={wordHighlight}
+            reducedMotion={reducedMotion}
+          />
           {/* Inner page edge highlight */}
           <div
             aria-hidden
@@ -814,11 +874,15 @@ function DesktopBookFrame({
   childName,
   direction,
   idx,
+  wordHighlight,
+  reducedMotion,
 }: {
   spread: Spread;
   childName: string;
   direction: 1 | -1;
   idx: number;
+  wordHighlight: WordHighlight | null;
+  reducedMotion: boolean;
 }) {
   return (
     <div
@@ -883,11 +947,28 @@ function DesktopBookFrame({
             }}
           >
             {spread.fullSpread ? (
-              <FullBleedPage page={spread.left} childName={childName} />
+              <FullBleedPage
+                page={spread.left}
+                childName={childName}
+                wordHighlight={wordHighlight}
+                reducedMotion={reducedMotion}
+              />
             ) : (
               <>
-                <Page side="left" page={spread.left} childName={childName} />
-                <Page side="right" page={spread.right} childName={childName} />
+                <Page
+                  side="left"
+                  page={spread.left}
+                  childName={childName}
+                  wordHighlight={wordHighlight}
+                  reducedMotion={reducedMotion}
+                />
+                <Page
+                  side="right"
+                  page={spread.right}
+                  childName={childName}
+                  wordHighlight={wordHighlight}
+                  reducedMotion={reducedMotion}
+                />
               </>
             )}
           </motion.div>
@@ -935,10 +1016,14 @@ function Page({
   side,
   page,
   childName,
+  wordHighlight,
+  reducedMotion,
 }: {
   side: "left" | "right";
   page: PageType;
   childName: string;
+  wordHighlight: WordHighlight | null;
+  reducedMotion: boolean;
 }) {
   return (
     <div
@@ -950,7 +1035,13 @@ function Page({
         overflow: "hidden",
       }}
     >
-      <PageContent page={page} side={side} childName={childName} />
+      <PageContent
+        page={page}
+        side={side}
+        childName={childName}
+        wordHighlight={wordHighlight}
+        reducedMotion={reducedMotion}
+      />
     </div>
   );
 }
@@ -958,9 +1049,13 @@ function Page({
 function FullBleedPage({
   page,
   childName,
+  wordHighlight,
+  reducedMotion,
 }: {
   page: PageType;
   childName: string;
+  wordHighlight: WordHighlight | null;
+  reducedMotion: boolean;
 }) {
   return (
     <div
@@ -971,7 +1066,13 @@ function FullBleedPage({
         overflow: "hidden",
       }}
     >
-      <PageContent page={page} side="full" childName={childName} />
+      <PageContent
+        page={page}
+        side="full"
+        childName={childName}
+        wordHighlight={wordHighlight}
+        reducedMotion={reducedMotion}
+      />
     </div>
   );
 }
@@ -980,16 +1081,27 @@ function PageContent({
   page,
   side,
   childName,
+  wordHighlight = null,
+  reducedMotion = false,
 }: {
   page: PageType;
   side: "left" | "right" | "full";
   childName: string;
+  wordHighlight?: WordHighlight | null;
+  reducedMotion?: boolean;
 }) {
   if (page.type === "title") return <TitlePage page={page} />;
   if (page.type === "ending") return <EndingPage page={page} childName={childName} />;
   if (page.type === "illustration")
     return <IllustrationPage page={page} childName={childName} full={side === "full"} />;
-  return <TextPage page={page} side={side === "right" ? "right" : "left"} />;
+  return (
+    <TextPage
+      page={page}
+      side={side === "right" ? "right" : "left"}
+      wordHighlight={wordHighlight}
+      reducedMotion={reducedMotion}
+    />
+  );
 }
 
 // ── Title ──────────────────────────────────────────────────────
@@ -1065,14 +1177,29 @@ function TitlePage({ page }: { page: Extract<PageType, { type: "title" }> }) {
 function TextPage({
   page,
   side,
+  wordHighlight,
+  reducedMotion,
 }: {
   page: Extract<PageType, { type: "text" }>;
   side: "left" | "right";
+  wordHighlight: WordHighlight | null;
+  reducedMotion: boolean;
 }) {
   const isDropcap = page.layout === "dropcap";
   const text = page.content.trim();
   const first = text.charAt(0);
-  const rest = text.slice(1);
+
+  // Zelfde splitsing als server-side (word-split.ts) zodat de
+  // woordindex uit de wordTimings 1-op-1 op deze spans mapt.
+  const words = useMemo(() => splitWords(page.content), [page.content]);
+
+  // Alleen markeren wanneer de highlight bij déze pagina hoort.
+  const activeWordIndex =
+    wordHighlight !== null &&
+    typeof page.pageNumber === "number" &&
+    wordHighlight.pageNumber === page.pageNumber
+      ? wordHighlight.wordIndex
+      : null;
 
   return (
     <div
@@ -1118,13 +1245,64 @@ function TextPage({
             >
               {first}
             </span>
-            {rest}
+            {/* Woord 0 zonder z'n eerste letter (die is de dropcap);
+                de woordindexen blijven gelijk aan de volledige tekst. */}
+            <WordSpans
+              words={
+                words.length > 0 ? [words[0].slice(1), ...words.slice(1)] : []
+              }
+              activeIndex={activeWordIndex}
+              reducedMotion={reducedMotion}
+            />
           </>
         ) : (
-          text
+          <WordSpans
+            words={words}
+            activeIndex={activeWordIndex}
+            reducedMotion={reducedMotion}
+          />
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Paginatekst als losse woord-spans, zodat het actief voorgelezen woord
+ * een zachte gouden markering kan krijgen. De spans staan er altijd
+ * (ook zonder voorlezen) zodat de DOM niet verspringt wanneer de
+ * markering aan gaat.
+ */
+function WordSpans({
+  words,
+  activeIndex,
+  reducedMotion,
+}: {
+  words: string[];
+  activeIndex: number | null;
+  reducedMotion: boolean;
+}) {
+  return (
+    <>
+      {words.map((w, i) => (
+        <Fragment key={i}>
+          <span
+            style={{
+              borderRadius: 3,
+              background:
+                i === activeIndex ? "rgba(201,169,97,0.35)" : "transparent",
+              // Beetje lucht om het woord zonder de layout te verschuiven.
+              padding: "0 2px",
+              margin: "0 -2px",
+              transition: reducedMotion ? "none" : "background 0.12s ease",
+            }}
+          >
+            {w}
+          </span>
+          {i < words.length - 1 ? " " : null}
+        </Fragment>
+      ))}
+    </>
   );
 }
 

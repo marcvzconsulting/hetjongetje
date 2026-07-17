@@ -74,6 +74,8 @@ export function storyToSpreads(story: StoryForSpreads): Spread[] {
         type: "text",
         content: page.text,
         layout: i === 0 ? "dropcap" : "default",
+        // DB-paginanummer voor de voorleesfunctie (audio + markering).
+        pageNumber: page.pageNumber,
       },
       right: {
         type: "illustration",

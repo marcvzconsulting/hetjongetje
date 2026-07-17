@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { V2 } from "@/components/v2/tokens";
 import { IconV2 } from "@/components/v2";
 import {
@@ -8,35 +8,84 @@ import {
   isTtsVoiceKey,
   type TtsVoiceKey,
 } from "@/lib/ai/tts-voices";
+import type { WordTiming } from "@/lib/ai/tts";
+import type { WordHighlight } from "@/components/v2/story/BookViewerV3";
 
-export type StoryAudioEntry = { voiceKey: string; url: string };
+/** Eén gegenereerde audio: stem + DB-paginanummer + url + timings. */
+export type StoryAudioEntry = {
+  voiceKey: string;
+  pageNumber: number;
+  url: string;
+  /** Null = geen bruikbare alignment; afspelen werkt dan zonder markering. */
+  wordTimings: WordTiming[] | null;
+};
 
 type Props = {
   storyId: string;
-  /** Al gegenereerde audio's (uit de DB). */
+  /** Al gegenereerde audio's (uit de DB), per stem per pagina. */
   audios: StoryAudioEntry[];
   /** Eigenaar-pagina: mag nieuwe stemmen genereren. Deelpagina: alleen
-   *  afspelen van wat er al is. */
+   *  afspelen van stemmen waarvoor ALLE pagina's al audio hebben. */
   canGenerate: boolean;
+  /** DB-paginanummer van de tekst op de zichtbare spread; null wanneer de
+   *  spread geen voorleesbare tekst heeft (titel- of eindspread). */
+  currentPageNumber: number | null;
+  /** Alle voorleesbare DB-paginanummers, op leesvolgorde. */
+  pageNumbers: number[];
+  /** True wanneer de zichtbare spread ná de laatste tekstpagina ligt —
+   *  dan tonen we "Het verhaaltje is uit" i.p.v. "Blader naar het
+   *  verhaal". */
+  afterLastPage?: boolean;
   onClose: () => void;
   /** Meld een vers gegenereerde audio aan de parent zodat die z'n
    *  `audios`-state kan bijwerken (chrome-knop actief, hergebruik). */
   onGenerated?: (entry: StoryAudioEntry) => void;
+  /** De speler is de bron van waarheid voor de woord-markering; de parent
+   *  geeft dit door aan BookViewerV3. Null = geen markering. */
+  onHighlightChange?: (highlight: WordHighlight | null) => void;
 };
 
 const MOBILE_BP = 768;
 
+function entryKey(voiceKey: string, pageNumber: number): string {
+  return `${voiceKey}:${pageNumber}`;
+}
+
+/** Grootste index i met timings[i].s <= t (binary search), of null. */
+function findActiveWord(timings: WordTiming[], t: number): number | null {
+  let lo = 0;
+  let hi = timings.length - 1;
+  let ans: number | null = null;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (timings[mid].s <= t) {
+      ans = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return ans;
+}
+
 /**
- * Voorlees-flow: keuzepaneel met de zes stemmen (bottom sheet) → na keuze
- * een minimalistische spelerbalk vast onderin, boven de bladerknoppen van
- * de viewer. Eén verborgen <audio>-element doet het echte werk.
+ * Voorlees-flow, paginagestuurd: keuzepaneel met de stemmen (bottom
+ * sheet) → na keuze een spelerbalk vast onderin. De speler speelt alléén
+ * de audio van de zichtbare pagina; bladert de lezer, dan wisselt de
+ * audio automatisch mee. Word-timings sturen de markering in de viewer
+ * via onHighlightChange. Eén verborgen <audio>-element doet het echte
+ * werk.
  */
 export function StoryAudioPlayer({
   storyId,
   audios,
   canGenerate,
+  currentPageNumber,
+  pageNumbers,
+  afterLastPage = false,
   onClose,
   onGenerated,
+  onHighlightChange,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -45,21 +94,257 @@ export function StoryAudioPlayer({
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [generatingKey, setGeneratingKey] = useState<TtsVoiceKey | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Audio van de huidige pagina is uitgespeeld → "Sla de bladzijde om". */
+  const [pageEnded, setPageEnded] = useState(false);
+  /** Browser blokkeerde autoplay → vraag om een tik op de afspeelknop. */
+  const [needsTap, setNeedsTap] = useState(false);
 
-  // Vers gegenereerde url's (nog niet per se terug in de props) + props
-  // samengevoegd tot één lookup per stem.
-  const [freshUrls, setFreshUrls] = useState<
-    Partial<Record<TtsVoiceKey, string>>
-  >({});
-  const audioByKey = useMemo(() => {
-    const map: Partial<Record<TtsVoiceKey, string>> = {};
+  // Generatie-voortgang ("Stem voorbereiden, pagina 2 van 4…").
+  const [genVoice, setGenVoice] = useState<TtsVoiceKey | null>(null);
+  const [genLabel, setGenLabel] = useState<string | null>(null);
+  const generatingRef = useRef(false);
+
+  // Vers gegenereerde entries (nog niet per se terug in de props) + props
+  // samengevoegd tot één lookup per (stem, pagina).
+  const [freshEntries, setFreshEntries] = useState<StoryAudioEntry[]>([]);
+  const entryMap = useMemo(() => {
+    const map = new Map<string, StoryAudioEntry>();
     for (const a of audios) {
-      if (isTtsVoiceKey(a.voiceKey)) map[a.voiceKey] = a.url;
+      if (isTtsVoiceKey(a.voiceKey)) {
+        map.set(entryKey(a.voiceKey, a.pageNumber), a);
+      }
     }
-    return { ...map, ...freshUrls };
-  }, [audios, freshUrls]);
+    for (const a of freshEntries) {
+      map.set(entryKey(a.voiceKey, a.pageNumber), a);
+    }
+    return map;
+  }, [audios, freshEntries]);
+
+  /** Aantal pagina's met audio per stem (voor tile-status). */
+  const presentCount = useCallback(
+    (voice: TtsVoiceKey): number =>
+      pageNumbers.filter((p) => entryMap.has(entryKey(voice, p))).length,
+    [pageNumbers, entryMap],
+  );
+
+  const activeEntry = useMemo(() => {
+    if (!active || currentPageNumber === null) return null;
+    return entryMap.get(entryKey(active, currentPageNumber)) ?? null;
+  }, [active, currentPageNumber, entryMap]);
+  const activeUrl = activeEntry?.url ?? null;
+
+  // Callbacks in refs zodat effects niet op elke parent-render herstarten.
+  const highlightCbRef = useRef(onHighlightChange);
+  const onGeneratedRef = useRef(onGenerated);
+  useEffect(() => {
+    highlightCbRef.current = onHighlightChange;
+    onGeneratedRef.current = onGenerated;
+  });
+
+  const activeEntryRef = useRef(activeEntry);
+  useEffect(() => {
+    activeEntryRef.current = activeEntry;
+  }, [activeEntry]);
+
+  // ── Woord-markering: rAF-loop tijdens afspelen + timeupdate-check ──
+  const lastEmittedRef = useRef<WordHighlight | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const emitHighlight = useCallback((h: WordHighlight | null) => {
+    const prev = lastEmittedRef.current;
+    const same =
+      prev === h ||
+      (prev !== null &&
+        h !== null &&
+        prev.pageNumber === h.pageNumber &&
+        prev.wordIndex === h.wordIndex);
+    if (same) return;
+    lastEmittedRef.current = h;
+    highlightCbRef.current?.(h);
+  }, []);
+
+  const checkHighlight = useCallback(() => {
+    const el = audioRef.current;
+    const entry = activeEntryRef.current;
+    if (
+      !el ||
+      !entry ||
+      !Array.isArray(entry.wordTimings) ||
+      entry.wordTimings.length === 0
+    ) {
+      emitHighlight(null);
+      return;
+    }
+    const idx = findActiveWord(entry.wordTimings, el.currentTime);
+    emitHighlight(
+      idx === null ? null : { pageNumber: entry.pageNumber, wordIndex: idx },
+    );
+  }, [emitHighlight]);
+
+  const stopHighlightLoop = useCallback(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  const startHighlightLoop = useCallback(() => {
+    stopHighlightLoop();
+    const tick = () => {
+      checkHighlight();
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, [checkHighlight, stopHighlightLoop]);
+
+  // Opruimen bij unmount: loop stoppen en markering uitzetten.
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      highlightCbRef.current?.(null);
+    };
+  }, []);
+
+  // startedRef voorkomt herstarts wanneer alleen de entryMap-identiteit
+  // wijzigt (vers gegenereerde entries) terwijl stem + pagina gelijk
+  // blijven. Key: `${voiceKey}:${pageNumber}` van de gestarte audio.
+  const startedRef = useRef<string | null>(null);
+
+  // ── Genereren (sequentieel, met voortgang) ──────────────────────
+  const generatePages = useCallback(
+    async (voice: TtsVoiceKey, targets: number[]): Promise<boolean> => {
+      if (generatingRef.current) return false;
+      generatingRef.current = true;
+      setGenVoice(voice);
+      setError(null);
+      try {
+        for (const p of targets) {
+          const pos = pageNumbers.indexOf(p) + 1;
+          setGenLabel(
+            `Stem voorbereiden, pagina ${pos} van ${pageNumbers.length}…`,
+          );
+          const res = await fetch(`/api/stories/${storyId}/audio`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ voiceKey: voice, pageNumber: p }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            url?: string;
+            wordTimings?: unknown;
+            error?: string;
+          };
+          if (!res.ok || !data.url) {
+            setError(
+              data.error ?? "Genereren mislukt, probeer het zo opnieuw.",
+            );
+            return false;
+          }
+          const entry: StoryAudioEntry = {
+            voiceKey: voice,
+            pageNumber: p,
+            url: data.url,
+            wordTimings: Array.isArray(data.wordTimings)
+              ? (data.wordTimings as WordTiming[])
+              : null,
+          };
+          setFreshEntries((prev) => [...prev, entry]);
+          onGeneratedRef.current?.(entry);
+        }
+        return true;
+      } catch {
+        setError("Verbindingsfout, probeer het zo opnieuw.");
+        return false;
+      } finally {
+        generatingRef.current = false;
+        setGenVoice(null);
+        setGenLabel(null);
+      }
+    },
+    [storyId, pageNumbers],
+  );
+
+  function activate(voice: TtsVoiceKey) {
+    setError(null);
+    setPageEnded(false);
+    setNeedsTap(false);
+    startedRef.current = null;
+    setActive(voice);
+    setView("player");
+  }
+
+  async function chooseVoice(voice: TtsVoiceKey) {
+    const missing = pageNumbers.filter(
+      (p) => !entryMap.has(entryKey(voice, p)),
+    );
+    if (missing.length > 0) {
+      if (!canGenerate) return; // tile is dan disabled, dit is defensief
+      const ok = await generatePages(voice, missing);
+      if (!ok) return;
+    }
+    activate(voice);
+  }
+
+  // ── Afspeellogica: volg de zichtbare pagina ─────────────────────
+  useEffect(() => {
+    if (view !== "player" || !active) {
+      startedRef.current = null;
+      return;
+    }
+    const el = audioRef.current;
+    if (!el) return;
+
+    if (currentPageNumber === null) {
+      // Titel- of eindspread: geen audio, hint in de balk.
+      startedRef.current = null;
+      el.pause();
+      setPageEnded(false);
+      emitHighlight(null);
+      return;
+    }
+
+    if (!activeUrl) {
+      // Pagina zonder audio (bv. na een half gelukte generatie): de
+      // eigenaar genereert 'm on-the-fly bij; de deelpagina toont de
+      // afspeelknop gedimd.
+      startedRef.current = null;
+      el.pause();
+      emitHighlight(null);
+      if (canGenerate) void generatePages(active, [currentPageNumber]);
+      return;
+    }
+
+    const startKey = `${active}:${currentPageNumber}`;
+    if (startedRef.current === startKey) return; // deze pagina speelt al
+    startedRef.current = startKey;
+
+    setPageEnded(false);
+    emitHighlight(null);
+    if (el.dataset.src !== activeUrl) {
+      el.src = activeUrl;
+      el.dataset.src = activeUrl;
+      setDuration(0);
+    }
+    // Bladeren (ook terug) = altijd opnieuw vanaf het begin.
+    el.currentTime = 0;
+    setCurrentTime(0);
+    void el
+      .play()
+      .then(() => setNeedsTap(false))
+      .catch(() => {
+        // Autoplay geweigerd (kan op de deelpagina bij de allereerste
+        // start): toon de hint, de afspeelknop staat al prominent.
+        setNeedsTap(true);
+      });
+  }, [
+    view,
+    active,
+    currentPageNumber,
+    activeUrl,
+    canGenerate,
+    generatePages,
+    emitHighlight,
+  ]);
 
   // prefers-reduced-motion: geen slide-in/spinner-animaties.
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -89,59 +374,20 @@ export function StoryAudioPlayer({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function startPlayback(key: TtsVoiceKey, url: string) {
-    setError(null);
-    setActive(key);
-    setView("player");
-    const el = audioRef.current;
-    if (!el) return;
-    if (el.dataset.voice !== key) {
-      el.src = url;
-      el.dataset.voice = key;
-      setCurrentTime(0);
-      setDuration(0);
-    }
-    void el.play().catch(() => {
-      // Autoplay kan door de browser geweigerd worden; de gebruiker kan
-      // dan gewoon op de play-knop drukken.
-    });
-  }
-
-  async function generateVoice(key: TtsVoiceKey) {
-    if (generatingKey) return;
-    setGeneratingKey(key);
-    setError(null);
-    try {
-      const res = await fetch(`/api/stories/${storyId}/audio`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ voiceKey: key }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.url) {
-        setError(
-          data.error ?? "Genereren mislukt, probeer het zo opnieuw.",
-        );
-        return;
-      }
-      setFreshUrls((prev) => ({ ...prev, [key]: data.url }));
-      onGenerated?.({ voiceKey: key, url: data.url });
-      startPlayback(key, data.url);
-    } catch {
-      setError("Verbindingsfout, probeer het zo opnieuw.");
-    } finally {
-      setGeneratingKey(null);
-    }
-  }
-
   function togglePlay() {
     const el = audioRef.current;
-    if (!el) return;
-    if (el.paused) void el.play().catch(() => {});
-    else el.pause();
+    if (!el || !el.dataset.src) return;
+    if (el.paused) {
+      // Na "ended" begint play() anders op het eind: expliciet terug.
+      if (el.ended) el.currentTime = 0;
+      setPageEnded(false);
+      void el
+        .play()
+        .then(() => setNeedsTap(false))
+        .catch(() => {});
+    } else {
+      el.pause();
+    }
   }
 
   function seekTo(clientX: number, target: HTMLElement) {
@@ -151,10 +397,44 @@ export function StoryAudioPlayer({
     const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
     el.currentTime = ratio * duration;
     setCurrentTime(el.currentTime);
+    setPageEnded(false);
+    checkHighlight();
   }
 
   const progress = duration > 0 ? currentTime / duration : 0;
   const activeVoice = active ? TTS_VOICES[active] : null;
+
+  // Statusregel in de spelerbalk: hint of "leest pagina X van N".
+  const pagePos =
+    currentPageNumber !== null ? pageNumbers.indexOf(currentPageNumber) + 1 : 0;
+  let statusText: string;
+  let statusTone: "gold" | "mute" = "mute";
+  if (genVoice && genLabel) {
+    statusText = genLabel;
+  } else if (currentPageNumber === null) {
+    statusText = afterLastPage
+      ? "Het verhaaltje is uit"
+      : "Blader naar het verhaal →";
+    statusTone = "gold";
+  } else if (!activeUrl) {
+    // Bijgenereren mislukt (bv. rate limit) → toon de fout in de balk;
+    // terug- en weer vooruitbladeren probeert het opnieuw.
+    statusText =
+      error ??
+      (canGenerate
+        ? "Audio voorbereiden…"
+        : "Deze pagina heeft nog geen audio");
+    statusTone = "gold";
+  } else if (pageEnded) {
+    statusText = "Sla de bladzijde om →";
+    statusTone = "gold";
+  } else if (needsTap) {
+    statusText = "Druk op de afspeelknop om te luisteren";
+    statusTone = "gold";
+  } else {
+    statusText =
+      pagePos > 0 ? `leest pagina ${pagePos} van ${pageNumbers.length}` : "";
+  }
 
   return (
     <>
@@ -169,12 +449,31 @@ export function StoryAudioPlayer({
         ref={audioRef}
         preload="metadata"
         style={{ display: "none" }}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
-        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onPlay={() => {
+          setPlaying(true);
+          startHighlightLoop();
+        }}
+        onPause={() => {
+          setPlaying(false);
+          stopHighlightLoop();
+        }}
+        onEnded={() => {
+          setPlaying(false);
+          stopHighlightLoop();
+          setPageEnded(true);
+          emitHighlight(null);
+        }}
+        onTimeUpdate={(e) => {
+          setCurrentTime(e.currentTarget.currentTime);
+          // Vangnet voor seeks terwijl de audio gepauzeerd is (dan draait
+          // de rAF-loop niet).
+          if (e.currentTarget.paused) checkHighlight();
+        }}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-        onError={() => {
+        onError={(e) => {
+          // dataset.src wissen zodat een volgende start de bron opnieuw
+          // toewijst in plaats van de kapotte lading te hergebruiken.
+          delete e.currentTarget.dataset.src;
           if (view === "player") {
             setError("Audio laden mislukt, probeer het zo opnieuw.");
             setView("picker");
@@ -260,8 +559,8 @@ export function StoryAudioPlayer({
               }}
             >
               {canGenerate
-                ? "Kies een stem die het verhaal voorleest. Elke stem wordt één keer gemaakt en is daarna direct af te spelen."
-                : "Kies een stem die het verhaal voorleest."}
+                ? "Kies een stem die het verhaal per bladzijde voorleest. Elke stem wordt één keer gemaakt en is daarna direct af te spelen."
+                : "Kies een stem die het verhaal per bladzijde voorleest."}
             </p>
 
             {error && (
@@ -294,14 +593,15 @@ export function StoryAudioPlayer({
                 <VoiceTile
                   key={key}
                   voiceKey={key}
-                  url={audioByKey[key]}
+                  presentCount={presentCount(key)}
+                  totalPages={pageNumbers.length}
                   isActive={active === key}
                   canGenerate={canGenerate}
-                  generating={generatingKey === key}
-                  generateLocked={generatingKey !== null}
+                  generating={genVoice === key}
+                  generatingLabel={genVoice === key ? genLabel : null}
+                  generateLocked={genVoice !== null && genVoice !== key}
                   reducedMotion={reducedMotion}
-                  onPlay={(url) => startPlayback(key, url)}
-                  onGenerate={() => void generateVoice(key)}
+                  onSelect={() => void chooseVoice(key)}
                 />
               ))}
             </div>
@@ -339,6 +639,7 @@ export function StoryAudioPlayer({
               type="button"
               onClick={togglePlay}
               aria-label={playing ? "Pauzeer" : "Speel af"}
+              disabled={!activeUrl}
               style={{
                 flexShrink: 0,
                 width: 44,
@@ -346,7 +647,8 @@ export function StoryAudioPlayer({
                 borderRadius: 999,
                 background: V2.ink,
                 border: "none",
-                cursor: "pointer",
+                cursor: activeUrl ? "pointer" : "default",
+                opacity: activeUrl ? 1 : 0.4,
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -378,7 +680,7 @@ export function StoryAudioPlayer({
               )}
             </button>
 
-            {/* Naam + voortgang + tijd */}
+            {/* Naam + status + voortgang + tijd */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
                 style={{
@@ -403,12 +705,12 @@ export function StoryAudioPlayer({
                   {activeVoice.label}
                   <span
                     style={{
-                      color: V2.inkMute,
-                      fontWeight: 400,
+                      color: statusTone === "gold" ? V2.goldDeep : V2.inkMute,
+                      fontWeight: statusTone === "gold" ? 500 : 400,
                       marginLeft: 8,
                     }}
                   >
-                    leest voor
+                    {statusText}
                   </span>
                 </span>
                 <span
@@ -423,10 +725,10 @@ export function StoryAudioPlayer({
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
               </div>
-              {/* Voortgangsbalk — klikbaar zoeken */}
+              {/* Voortgangsbalk (per pagina) — klikbaar zoeken */}
               <div
                 role="slider"
-                aria-label="Positie in de audio"
+                aria-label="Positie in de audio van deze pagina"
                 aria-valuemin={0}
                 aria-valuemax={Math.round(duration)}
                 aria-valuenow={Math.round(currentTime)}
@@ -523,45 +825,45 @@ export function StoryAudioPlayer({
 
 function VoiceTile({
   voiceKey,
-  url,
+  presentCount,
+  totalPages,
   isActive,
   canGenerate,
   generating,
+  generatingLabel,
   generateLocked,
   reducedMotion,
-  onPlay,
-  onGenerate,
+  onSelect,
 }: {
   voiceKey: TtsVoiceKey;
-  url: string | undefined;
+  /** Aantal pagina's dat voor deze stem al audio heeft. */
+  presentCount: number;
+  totalPages: number;
   isActive: boolean;
   canGenerate: boolean;
   generating: boolean;
+  generatingLabel: string | null;
   /** Er loopt al een generatie (voor een andere stem). */
   generateLocked: boolean;
   reducedMotion: boolean;
-  onPlay: (url: string) => void;
-  onGenerate: () => void;
+  onSelect: () => void;
 }) {
   const voice = TTS_VOICES[voiceKey];
-  const hasAudio = !!url;
-  const dimmed = !hasAudio && !canGenerate;
-  const disabled = dimmed || (generateLocked && !hasAudio && !generating);
+  const complete = totalPages > 0 && presentCount >= totalPages;
+  const dimmed = !complete && !canGenerate;
+  const disabled = dimmed || generateLocked || (generating && !complete);
 
   return (
     <button
       type="button"
       disabled={disabled}
-      onClick={() => {
-        if (hasAudio && url) onPlay(url);
-        else if (canGenerate) onGenerate();
-      }}
+      onClick={onSelect}
       aria-label={
-        hasAudio
+        complete
           ? `${voice.label} afspelen`
           : canGenerate
             ? `Stem ${voice.label} genereren`
-            : `${voice.label} — nog niet gegenereerd`
+            : `${voice.label}, nog niet gegenereerd`
       }
       style={{
         display: "grid",
@@ -637,16 +939,18 @@ function VoiceTile({
           fontSize: 10,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: hasAudio ? V2.goldDeep : V2.inkMute,
+          color: complete ? V2.goldDeep : V2.inkMute,
           marginTop: 2,
         }}
       >
         {generating ? (
           <>
             <Spinner reducedMotion={reducedMotion} />
-            <span>Bezig met genereren…</span>
+            <span style={{ textTransform: "none", letterSpacing: "0.04em" }}>
+              {generatingLabel ?? "Bezig met genereren…"}
+            </span>
           </>
-        ) : hasAudio ? (
+        ) : complete ? (
           <>
             <svg
               width="10"
@@ -661,7 +965,7 @@ function VoiceTile({
           </>
         ) : canGenerate ? (
           <span style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
-            Genereer stem (eenmalig)
+            {presentCount > 0 ? "Maak stem af" : "Genereer stem (eenmalig)"}
           </span>
         ) : (
           <span>Nog niet gegenereerd</span>

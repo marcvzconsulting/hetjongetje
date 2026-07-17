@@ -147,9 +147,23 @@ export function storyEndingKey(storyId: string): string {
   return `stories/${storyId}/ending.jpg`;
 }
 
-/** Voorlees-audio (ElevenLabs mp3) — één object per verhaal per stem. */
+/**
+ * LEGACY voorlees-audio (ElevenLabs mp3) — één object per verhaal per
+ * stem, uit het oude hele-verhaal-model. Alleen nog gebruikt door
+ * scripts/wipe-legacy-story-audio.ts; nieuwe audio gaat per pagina via
+ * storyAudioPageKey.
+ */
 export function storyAudioKey(storyId: string, voiceKey: string): string {
   return `stories/${storyId}/audio-${voiceKey}.mp3`;
+}
+
+/** Voorlees-audio (ElevenLabs mp3) — één object per verhaal per stem per pagina. */
+export function storyAudioPageKey(
+  storyId: string,
+  voiceKey: string,
+  pageNumber: number,
+): string {
+  return `stories/${storyId}/audio-${voiceKey}-p${pageNumber}.mp3`;
 }
 
 export function approvedPreviewKey(childId: string): string {

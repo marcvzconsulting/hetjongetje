@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
+import type { WordTiming } from "@/lib/ai/tts";
 import { PublicStoryReader } from "./client";
 
 interface Props {
@@ -26,7 +27,14 @@ async function loadSharedStory(token: string) {
     include: {
       pages: { orderBy: { pageNumber: "asc" } },
       childProfile: { select: { name: true } },
-      audio: { select: { voiceKey: true, url: true } },
+      audio: {
+        select: {
+          voiceKey: true,
+          url: true,
+          pageNumber: true,
+          wordTimings: true,
+        },
+      },
     },
   });
 }
@@ -107,7 +115,9 @@ export default async function SharedStoryPage({ params }: Props) {
       spreads={spreads}
       audios={story.audio.map((a) => ({
         voiceKey: a.voiceKey,
+        pageNumber: a.pageNumber,
         url: a.url,
+        wordTimings: (a.wordTimings as unknown as WordTiming[] | null) ?? null,
       }))}
     />
   );

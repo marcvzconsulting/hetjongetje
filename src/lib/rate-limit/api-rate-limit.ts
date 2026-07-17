@@ -26,10 +26,12 @@ export const RATE_LIMITS = {
   loginAttemptByEmail: { limit: 10, windowSeconds: 15 * 60 }, // 10 per 15 min
   // Same defence at the IP layer in case an attacker rotates targets.
   loginAttemptByIp: { limit: 30, windowSeconds: 15 * 60 }, // 30 per 15 min
-  // Voorlees-audio via ElevenLabs (~duizenden tekens per verhaal). Cache
-  // vangt herhaald afspelen af; dit begrenst alleen het aantal nieuwe
-  // generaties (verhaal × stem-combinaties) per gebruiker.
-  storyAudio: { limit: 10, windowSeconds: 60 * 60 }, // 10 per hour
+  // Voorlees-audio via ElevenLabs. Sinds het per-pagina-model telt elke
+  // pagina als één generatie (een verhaal met 6 pagina's kost dus 6 tikken
+  // per stem), vandaar 40/uur i.p.v. de oude 10/uur per heel verhaal.
+  // Cache vangt herhaald afspelen af; dit begrenst alleen nieuwe
+  // (verhaal × stem × pagina)-generaties per gebruiker.
+  storyAudio: { limit: 40, windowSeconds: 60 * 60 }, // 40 per hour
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;

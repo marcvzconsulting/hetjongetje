@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
+import type { WordTiming } from "@/lib/ai/tts";
 import { StoryPageClient } from "./client";
 
 interface Props {
@@ -22,7 +23,14 @@ export default async function StoryPage({ params }: Props) {
     include: {
       pages: { orderBy: { pageNumber: "asc" } },
       childProfile: { select: { name: true, id: true } },
-      audio: { select: { voiceKey: true, url: true } },
+      audio: {
+        select: {
+          voiceKey: true,
+          url: true,
+          pageNumber: true,
+          wordTimings: true,
+        },
+      },
     },
   });
 
@@ -58,7 +66,9 @@ export default async function StoryPage({ params }: Props) {
       initialShareToken={story.shareToken}
       initialAudios={story.audio.map((a) => ({
         voiceKey: a.voiceKey,
+        pageNumber: a.pageNumber,
         url: a.url,
+        wordTimings: (a.wordTimings as unknown as WordTiming[] | null) ?? null,
       }))}
     />
   );

@@ -495,23 +495,30 @@ model Story {
   @@map("stories")
 }
 
-/// Gecachte voorlees-audio per verhaal per stem. Eén keer gegenereerd via
-/// ElevenLabs, daarna altijd uit Scaleway geserveerd — genereren kost geld,
-/// afspelen niet. Rijen worden gewist (incl. bucket-object) wanneer de
-/// verhaaltekst wijzigt via regenerate, en verdwijnen mee met het verhaal
-/// via de cascade.
+/// Gecachte voorlees-audio per verhaal per stem PER PAGINA. Eén keer
+/// gegenereerd via ElevenLabs, daarna altijd uit Scaleway geserveerd —
+/// genereren kost geld, afspelen niet. Rijen worden gewist (incl.
+/// bucket-object) wanneer de verhaaltekst wijzigt via regenerate, en
+/// verdwijnen mee met het verhaal via de cascade.
 model StoryAudio {
-  id        String   @id @default(uuid())
-  storyId   String   @map("story_id")
-  voiceKey  String   @map("voice_key")
-  url       String
+  id         String   @id @default(uuid())
+  storyId    String   @map("story_id")
+  voiceKey   String   @map("voice_key")
+  /// DB-paginanummer (StoryPage.pageNumber) waar deze audio bij hoort.
+  pageNumber Int      @map("page_number")
+  url        String
   /// Aantal tekens dat naar ElevenLabs ging (kostenbewaking).
-  chars     Int
-  createdAt DateTime @default(now()) @map("created_at")
+  chars      Int
+  /// Woordtimings uit de ElevenLabs-alignment: array van
+  /// { w: woord, s: starttijd, e: eindtijd } (seconden, 2 decimalen).
+  /// Null wanneer de alignment onbruikbaar was — speler werkt dan
+  /// gewoon zonder woord-markering.
+  wordTimings Json?   @map("word_timings")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
-  @@unique([storyId, voiceKey])
+  @@unique([storyId, voiceKey, pageNumber])
   @@map("story_audio")
 }
 

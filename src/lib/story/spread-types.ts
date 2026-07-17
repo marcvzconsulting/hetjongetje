@@ -22,7 +22,18 @@ export type PageType =
       /** Editorial footer on the title page, e.g. "ONS VERHAALTJE · 3 MEI 2026" */
       dateLabel?: string;
     }
-  | { type: "text"; content: string; layout?: "default" | "dropcap" }
+  | {
+      type: "text";
+      content: string;
+      layout?: "default" | "dropcap";
+      /**
+       * DB-paginanummer (StoryPage.pageNumber) van deze tekst. Gebruikt
+       * door de voorleesfunctie om audio en woord-markering aan de
+       * zichtbare spread te koppelen. Los van Spread.pageNumbers, dat de
+       * doorlopende boek-nummering is.
+       */
+      pageNumber?: number;
+    }
   | {
       type: "illustration";
       description: string;
