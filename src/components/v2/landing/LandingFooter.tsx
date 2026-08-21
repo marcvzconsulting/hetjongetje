@@ -113,6 +113,19 @@ export function LandingFooter() {
           </a>
         </div>
       </div>
+      {/* AI Act art. 50: transparantie op de plek waar bezoekers het
+          product leren kennen — op elke pagina met deze footer. */}
+      <p
+        style={{
+          maxWidth: 1200,
+          margin: "28px auto 0",
+          color: V2.inkMute,
+          fontSize: 12,
+        }}
+      >
+        Verhalen, illustraties en voorleesstemmen worden gemaakt met AI —
+        persoonlijk voor jouw kind, en altijd door jou zelf eerst te lezen.
+      </p>
     </footer>
   );
 }

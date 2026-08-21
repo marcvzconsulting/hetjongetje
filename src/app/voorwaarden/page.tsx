@@ -193,6 +193,16 @@ export default function VoorwaardenPage() {
         AI-modellen op te trainen, niet voor reclame en niet voor
         marktonderzoek.
       </P>
+      <P>
+        <strong>AI-transparantie.</strong> Alle verhalen, illustraties en
+        voorleesstemmen worden gemaakt met generatieve AI. Conform de
+        Europese AI-verordening (artikel 50) vermelden we dat zichtbaar
+        bij elk verhaal, en voorzien we illustraties, audio en
+        PDF-downloads van een machineleesbare markering (metadata volgens
+        de IPTC-standaard) die aangeeft dat de content AI-gegenereerd is.
+        Die markering zit in het bestand zelf en verandert niets aan hoe
+        het verhaal eruitziet of klinkt.
+      </P>
 
       <H2>Beschikbaarheid</H2>
       <P>
@@ -245,7 +255,7 @@ export default function VoorwaardenPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: juli 2026.
+        Laatst bijgewerkt: augustus 2026.
       </p>
     </ContentPage>
   );

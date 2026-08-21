@@ -1171,6 +1171,18 @@ function TitlePage({ page }: { page: Extract<PageType, { type: "title" }> }) {
         }}
       >
         {page.dateLabel ?? "ONS VERHAALTJE · 2026"}
+        {/* AI Act art. 50: zichtbare AI-vermelding, als boek-colofon
+            zodat 'm niets afdoet aan het verhaal zelf. */}
+        <span
+          style={{
+            display: "block",
+            marginTop: 4,
+            fontSize: 9,
+            letterSpacing: "0.18em",
+          }}
+        >
+          VERHAAL &amp; ILLUSTRATIES MET AI GEMAAKT
+        </span>
       </span>
     </div>
   );

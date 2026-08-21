@@ -599,8 +599,8 @@ export function StoryAudioPlayer({
               }}
             >
               {canGenerate
-                ? "Kies een stem die het verhaal per bladzijde voorleest. Elke stem wordt één keer gemaakt en is daarna direct af te spelen."
-                : "Kies een stem die het verhaal per bladzijde voorleest."}
+                ? "Kies een AI-stem die het verhaal per bladzijde voorleest. Elke stem wordt één keer gemaakt en is daarna direct af te spelen."
+                : "Kies een AI-stem die het verhaal per bladzijde voorleest."}
             </p>
 
             {error && (

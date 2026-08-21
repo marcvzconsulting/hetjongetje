@@ -189,7 +189,7 @@ export default async function Image({
               textTransform: "uppercase",
             }}
           >
-            onsverhaaltje.nl
+            onsverhaaltje.nl · met ai gemaakt
           </div>
         </div>
 

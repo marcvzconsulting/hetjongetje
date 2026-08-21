@@ -13,6 +13,7 @@ import {
 import { TITLE_PAGE_NUMBER } from "@/lib/story/spread-audio";
 import { maybeAlertElevenLabsQuotaExhausted } from "@/lib/ai/elevenlabs-quota";
 import { uploadBuffer, storyAudioPageKey } from "@/lib/storage/scaleway";
+import { markAudioAsAiGenerated } from "@/lib/ai/ai-marking";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 
 interface Props {
@@ -189,8 +190,10 @@ export async function POST(request: NextRequest, { params }: Props) {
       text,
       voiceKey,
     );
+    // AI Act art. 50(2): ID3-tag met AI-herkomst vóór de MPEG-frames.
+    // Metadata-only — de audio-timeline (en de woordtimings) blijft gelijk.
     const url = await uploadBuffer(
-      audio,
+      markAudioAsAiGenerated(audio),
       storyAudioPageKey(storyId, voiceKey, pageNumber),
       "audio/mpeg",
     );

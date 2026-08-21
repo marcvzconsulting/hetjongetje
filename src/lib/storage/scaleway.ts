@@ -8,6 +8,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { assertSafeFetchUrl } from "./url-guard";
+import { markImageAsAiGenerated } from "@/lib/ai/ai-marking";
 
 const REGION = process.env.SCALEWAY_REGION || "nl-ams";
 const ENDPOINT = `https://s3.${REGION}.scw.cloud`;
@@ -52,6 +53,12 @@ function getClient(): S3Client {
  * The URL is validated against an allowlist before fetching to prevent
  * SSRF — an attacker (or a corrupted upstream response) cannot make this
  * function fetch arbitrary hosts.
+ *
+ * Alle aanroepers van deze functie halen AI-gegenereerde illustraties op
+ * (verhaalpagina's, ending, AI-portret); we schuiven er daarom hier — op
+ * het ene funnelpunt — de machineleesbare AI-markering in (art. 50(2)
+ * AI Act, zie src/lib/ai/ai-marking.ts). Gebruik voor niet-AI-content
+ * uploadBuffer/uploadPrivateBuffer.
  */
 export async function uploadFromUrl(
   sourceUrl: string,
@@ -65,7 +72,9 @@ export async function uploadFromUrl(
       `Download van bronafbeelding mislukt (${response.status}): ${sourceUrl}`
     );
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
+  const buffer = markImageAsAiGenerated(
+    Buffer.from(await response.arrayBuffer())
+  );
   const detectedType =
     contentType ?? response.headers.get("content-type") ?? "image/jpeg";
 
@@ -214,6 +223,12 @@ export async function deleteByPrefix(
   } catch {
     return { requested: 0, failed: [prefix] };
   }
+}
+
+/** Publieke URL voor een key in onze bucket (alleen public-read objecten). */
+export function publicUrlForKey(key: string): string {
+  if (!PUBLIC_BASE_URL) throw new Error("SCALEWAY_BUCKET niet ingesteld");
+  return `${PUBLIC_BASE_URL}/${key}`;
 }
 
 /** Extract the storage key from a URL we produced, or null if it's not ours. */

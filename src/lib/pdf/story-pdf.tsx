@@ -205,6 +205,9 @@ export function StoryPdfDocument({ story }: { story: StoryPdfInput }) {
       title={story.title}
       author={`Ons Verhaaltje — voor ${story.childName}`}
       subject="Persoonlijk verhaal"
+      // AI Act art. 50(2): machineleesbare AI-herkomst in de PDF-metadata.
+      creator="Ons Verhaaltje (onsverhaaltje.nl) — AI-gegenereerd"
+      keywords="AI-gegenereerd, trainedAlgorithmicMedia"
     >
       {/* ── Titelpagina ────────────────────────────────── */}
       <Page size={[PAGE_WIDTH, PAGE_HEIGHT]} style={styles.titlePage}>
@@ -253,7 +256,9 @@ export function StoryPdfDocument({ story }: { story: StoryPdfInput }) {
           </Text>
           <Text
             style={styles.colofon}
-            render={() => `Persoonlijk gemaakt door Ons Verhaaltje · onsverhaaltje.nl`}
+            render={() =>
+              `Persoonlijk gemaakt door Ons Verhaaltje · onsverhaaltje.nl · verhaal & illustraties met AI gemaakt`
+            }
           />
         </Page>
       ) : null}
