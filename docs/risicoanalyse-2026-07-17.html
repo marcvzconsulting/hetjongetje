@@ -1,0 +1,519 @@
+<title>Ons Verhaaltje — Risicoanalyse</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ground: #f5f6f9;
+    --surface: #ffffff;
+    --surface-2: #eef0f5;
+    --ink: #191d28;
+    --ink-2: #495066;
+    --ink-3: #6b7285;
+    --border: #e0e3ec;
+    --border-strong: #cdd2df;
+    --accent: #3a45b0;
+    --accent-soft: #eceeffb0;
+
+    --crit: #cc2f45;
+    --crit-bg: #fcebee;
+    --high: #d9741a;
+    --high-bg: #fbefdf00;
+    --high-bg2: #fbf0e2;
+    --med: #b1890c;
+    --med-bg: #f8f2dd;
+    --low: #5c6475;
+    --low-bg: #eef0f4;
+    --good: #1c8f62;
+    --good-bg: #e4f4ec;
+
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0e1117;
+      --surface: #161b24;
+      --surface-2: #1d2431;
+      --ink: #e7eaf1;
+      --ink-2: #a9b1c3;
+      --ink-3: #7e879b;
+      --border: #262d3b;
+      --border-strong: #333c4d;
+      --accent: #8b97ff;
+      --accent-soft: #1a2038;
+
+      --crit: #ff6072; --crit-bg: #2a1620;
+      --high: #f0932f; --high-bg2: #29200f;
+      --med: #e0b93a; --med-bg: #262009;
+      --low: #96a0b5; --low-bg: #1c222e;
+      --good: #45c78d; --good-bg: #10231a;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f5f6f9; --surface: #ffffff; --surface-2: #eef0f5;
+    --ink: #191d28; --ink-2: #495066; --ink-3: #6b7285;
+    --border: #e0e3ec; --border-strong: #cdd2df;
+    --accent: #3a45b0; --accent-soft: #eceeff;
+    --crit: #cc2f45; --crit-bg: #fcebee;
+    --high: #d9741a; --high-bg2: #fbf0e2;
+    --med: #b1890c; --med-bg: #f8f2dd;
+    --low: #5c6475; --low-bg: #eef0f4;
+    --good: #1c8f62; --good-bg: #e4f4ec;
+  }
+  :root[data-theme="dark"] {
+    --ground: #0e1117; --surface: #161b24; --surface-2: #1d2431;
+    --ink: #e7eaf1; --ink-2: #a9b1c3; --ink-3: #7e879b;
+    --border: #262d3b; --border-strong: #333c4d;
+    --accent: #8b97ff; --accent-soft: #1a2038;
+    --crit: #ff6072; --crit-bg: #2a1620;
+    --high: #f0932f; --high-bg2: #29200f;
+    --med: #e0b93a; --med-bg: #262009;
+    --low: #96a0b5; --low-bg: #1c222e;
+    --good: #45c78d; --good-bg: #10231a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    font-size: 16px;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px 96px; }
+
+  /* ---- Masthead ---- */
+  header.mast {
+    padding: 56px 0 28px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 8px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  h1 {
+    font-size: clamp(30px, 5.2vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    margin: 0 0 12px;
+    font-weight: 800;
+    text-wrap: balance;
+  }
+  .sub { color: var(--ink-2); font-size: 17px; margin: 0; max-width: 62ch; }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px 22px;
+    margin-top: 22px; font-family: var(--mono); font-size: 12.5px; color: var(--ink-3);
+  }
+  .meta-row b { color: var(--ink-2); font-weight: 600; }
+
+  /* ---- Test scorecard ---- */
+  .scorecard {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px; margin: 26px 0 6px;
+  }
+  .chk {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 13px 15px; display: flex; flex-direction: column; gap: 3px;
+  }
+  .chk .k { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); }
+  .chk .v { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .dot.ok { background: var(--good); }
+  .dot.warn { background: var(--high); }
+  .dot.bad { background: var(--crit); }
+
+  /* ---- Severity tally ---- */
+  .tally { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 40px; }
+  .tally .pill {
+    display: inline-flex; align-items: baseline; gap: 8px;
+    border-radius: 999px; padding: 7px 15px 7px 12px; font-size: 13.5px; font-weight: 600;
+    border: 1px solid var(--border-strong);
+  }
+  .tally .pill .n { font-family: var(--mono); font-size: 16px; font-weight: 700; }
+  .pill.c-crit { color: var(--crit); background: var(--crit-bg); border-color: color-mix(in srgb, var(--crit) 30%, transparent); }
+  .pill.c-high { color: var(--high); background: var(--high-bg2); border-color: color-mix(in srgb, var(--high) 30%, transparent); }
+  .pill.c-med  { color: var(--med);  background: var(--med-bg);  border-color: color-mix(in srgb, var(--med) 32%, transparent); }
+  .pill.c-low  { color: var(--low);  background: var(--low-bg); }
+  .pill.c-good { color: var(--good); background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 30%, transparent); }
+
+  /* ---- Section ---- */
+  section { margin-top: 52px; }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  .sec-head h2 { font-size: 24px; letter-spacing: -0.01em; margin: 0; font-weight: 800; }
+  .sec-head .num { font-family: var(--mono); font-size: 13px; color: var(--ink-3); font-weight: 600; }
+  .sec-intro { color: var(--ink-2); margin: 12px 0 22px; max-width: 68ch; font-size: 15.5px; }
+
+  /* ---- Finding card ---- */
+  .find {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 4px solid var(--low);
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 12px;
+  }
+  .find.sev-crit { border-left-color: var(--crit); }
+  .find.sev-high { border-left-color: var(--high); }
+  .find.sev-med  { border-left-color: var(--med); }
+  .find.sev-low  { border-left-color: var(--low); }
+  .find-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .badge {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 5px; flex: none;
+  }
+  .badge.sev-crit { color: #fff; background: var(--crit); }
+  .badge.sev-high { color: #fff; background: var(--high); }
+  .badge.sev-med  { color: #241d00; background: var(--med); }
+  .badge.sev-low  { color: #fff; background: var(--low); }
+  :root[data-theme="dark"] .badge.sev-crit, :root[data-theme="dark"] .badge.sev-high { color: #14100a; }
+  @media (prefers-color-scheme: dark) { .badge.sev-crit, .badge.sev-high { color: #14100a; } }
+  .find-top h3 { font-size: 16.5px; margin: 0; font-weight: 700; letter-spacing: -0.005em; flex: 1 1 auto; min-width: 200px; }
+  .verified { font-family: var(--mono); font-size: 10.5px; color: var(--good); font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+  .loc { font-family: var(--mono); font-size: 12.5px; color: var(--ink-3); background: var(--surface-2); padding: 2px 7px; border-radius: 5px; display: inline-block; margin-bottom: 8px; word-break: break-all; }
+  .find p { margin: 7px 0; font-size: 14.5px; color: var(--ink-2); }
+  .find .lbl { font-weight: 700; color: var(--ink); }
+  .find .fix { color: var(--ink); }
+  .find .fix .lbl { color: var(--accent); }
+
+  /* ---- Compact list ---- */
+  table.compact { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  table.compact th, table.compact td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.compact th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 600; }
+  table.compact td.sev { white-space: nowrap; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+  td.sev.s-med { color: var(--med); }
+  td.sev.s-low { color: var(--low); }
+  table.compact td code { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+  .scroll { overflow-x: auto; }
+
+  /* ---- Callout ---- */
+  .callout {
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    border-radius: 12px; padding: 20px 22px; margin-top: 22px;
+  }
+  .callout h3 { margin: 0 0 6px; font-size: 17px; }
+  .callout p { margin: 8px 0 0; color: var(--ink-2); font-size: 14.5px; }
+  .callout ul { margin: 12px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 14.5px; }
+  .callout li { margin: 6px 0; }
+  .callout li b { color: var(--ink); }
+
+  /* ---- Good list ---- */
+  .good-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-top: 8px; }
+  .good-item {
+    background: var(--good-bg); border: 1px solid color-mix(in srgb, var(--good) 26%, transparent);
+    border-radius: 9px; padding: 12px 14px; font-size: 14px; color: var(--ink);
+  }
+  .good-item .g-h { font-weight: 700; display: block; margin-bottom: 2px; }
+  .good-item .g-d { color: var(--ink-2); font-size: 13.5px; }
+  .check { color: var(--good); font-weight: 800; }
+
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--ink-3); font-size: 13px; font-family: var(--mono); }
+
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+</style>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Risicoanalyse · Codebase-audit</p>
+    <h1>Ons Verhaaltje — technische doorlichting</h1>
+    <p class="sub">Volledige controle van de live productie-app: veiligheid, privacy, snelheid en betrouwbaarheid. Vier parallelle audits over alle API-routes, betaalstromen, opslag en crons, plus geautomatiseerde tests. De zwaarste bevindingen zijn handmatig in de code geverifieerd.</p>
+    <div class="meta-row">
+      <span><b>Datum</b> 17 jul 2026</span>
+      <span><b>Commit</b> 7d3409e (master)</span>
+      <span><b>Stack</b> Next.js 16 · Prisma 7 · Neon · Mollie</span>
+      <span><b>Scope</b> read-only, geen wijzigingen</span>
+    </div>
+  </header>
+
+  <div class="callout" style="margin:24px 0 4px">
+    <h3>Status na de audit — bijgewerkt 26 aug 2026</h3>
+    <p>Dit rapport is de momentopname van 17 jul 2026 (commit 7d3409e, vóór de fixes). Alle KRITIEK/HOOG- en de meeste MIDDEL/LAAG-bevindingen hieronder zijn dezelfde dag opgelost in commit <code>38469a3</code> (branch <code>hardening-audit-2026-07</code>), gemerged naar master via PR #1 (<code>0df63f2</code>) en live geverifieerd. Bewust uitgesteld (puur performance): reader-payload afslanken, landing <code>next/image</code>, admin-gebruikerslijst raw-SQL, async job+polling voor generatie. Later afgerond: DPIA (21 aug 2026, <code>docs/dpia-ons-verhaaltje.md</code>) en AI Act-markering (<code>docs/ai-act-transparantie.md</code>). Nog open (geen code): DPA/SCC-check Anthropic/fal.ai/ElevenLabs, <code>.env*</code> uit de OneDrive-map, Vercel-dashboardchecks.</p>
+  </div>
+
+  <div class="scorecard">
+    <div class="chk"><span class="k">TypeScript</span><span class="v"><span class="dot ok"></span>Schoon</span></div>
+    <div class="chk"><span class="k">Prod build</span><span class="v"><span class="dot ok"></span>Geslaagd</span></div>
+    <div class="chk"><span class="k">Rate-limit test</span><span class="v"><span class="dot ok"></span>Geslaagd</span></div>
+    <div class="chk"><span class="k">ESLint</span><span class="v"><span class="dot warn"></span>4 cosmetisch</span></div>
+    <div class="chk"><span class="k">Dependency-audit</span><span class="v"><span class="dot bad"></span>14 hoog</span></div>
+  </div>
+
+  <div class="tally">
+    <span class="pill c-crit"><span class="n">4</span> Kritiek</span>
+    <span class="pill c-high"><span class="n">12</span> Hoog</span>
+    <span class="pill c-med"><span class="n">18</span> Middel</span>
+    <span class="pill c-low"><span class="n">15+</span> Laag</span>
+    <span class="pill c-good"><span class="n">30+</span> Goed geregeld</span>
+  </div>
+
+  <!-- ============ PRIORITEITEN ============ -->
+  <section id="prioriteit">
+    <div class="sec-head"><span class="num">00</span><h2>Direct aanpakken</h2></div>
+    <p class="sec-intro">Deze vier zijn kritiek: ze raken echt geld of persoonsgegevens van kinderen, en ik heb ze stuk voor stuk in de code bevestigd. Begin hier voordat je nieuwe features bouwt.</p>
+
+    <div class="find sev-crit">
+      <div class="find-top"><span class="badge sev-crit">Kritiek</span><h3>Refund draait zichzelf terug — klant houdt geld én credits</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/lib/payments/orders.ts:163-200</div>
+      <p>Na een admin-refund staat de order op <span class="lbl">refunded</span> en zijn de credits teruggeboekt. Mollie stuurt bij een refund echter opnieuw een webhook, en de betaling zelf blijft <span class="lbl">paid</span>. De code doet dan <code>wasPaid = order.status === "paid"</code> → onwaar (status is "refunded") → <code>becomesPaid = true</code> → credits worden <em>opnieuw</em> bijgeschreven en de order springt terug naar "paid". Elke webhook-retry triggert dit.</p>
+      <p class="fix"><span class="lbl">Fix</span> "refunded" als eindstatus behandelen (vroeg <code>return</code>) en de paid-transitie claimen met een status-guard (zie hieronder).</p>
+    </div>
+
+    <div class="find sev-crit">
+      <div class="find-top"><span class="badge sev-crit">Kritiek</span><h3>Betaling niet atomair verwerkt — dubbele credits &amp; dubbel incasso-schema</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/lib/payments/orders.ts · applyCreditsPaid / applySubscriptionFirstPaid</div>
+      <p>De webhook én de terugkeerpagina van Mollie roepen allebei <code>applyMolliePaymentStatus</code> aan op precies hetzelfde moment. Beide lezen status "pending", beide zien <code>becomesPaid</code>, beide draaien de transactie — die géén <code>where status = 'pending'</code>-conditie heeft. Resultaat bij credits: dubbele credits. Bij abonnementen erger: beide roepen <code>customerSubscriptions.create</code> bij Mollie aan → <span class="lbl">twee actieve incasso's op één mandaat</span>, waarvan er één onzichtbaar blijft doorlopen.</p>
+      <p class="fix"><span class="lbl">Fix</span> transitie claimen met <code>order.updateMany({ where: { id, status: { notIn: ["paid","refunded"] } }, data: { status: "paid" } })</code> en alleen bij <code>count === 1</code> credits/abonnement toekennen. Claim óók vóór de Mollie-subscription-create.</p>
+    </div>
+
+    <div class="find sev-crit">
+      <div class="find-top"><span class="badge sev-crit">Kritiek</span><h3>Profiel of verhaal verwijderen laat kindfoto's &amp; illustraties permanent staan</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/app/api/children/[childId]/route.ts:83 · src/app/api/stories/[storyId]/route.ts:68</div>
+      <p>Beide DELETE-routes doen uitsluitend <code>prisma.…​.delete()</code>. Geen enkele storage-cleanup. Alle Scaleway-objecten blijven staan — illustraties (mogelijk met het gezicht van het kind), voorleesaudio, de goedgekeurde profielfoto. Omdat de database-rij (de enige plek met de URL's) weg is, kan latere accountverwijdering ze nóóit meer terugvinden: permanent én publiek leesbaar. Dit is in strijd met je eigen privacyverklaring en met art. 17 AVG (wissingsrecht).</p>
+      <p class="fix"><span class="lbl">Fix</span> vóór de DB-delete de storage-keys verzamelen en <code>deleteObjects</code> draaien — het patroon staat al in de regenerate-route. Plus een eenmalige opruimactie voor de reeds verweesde objecten.</p>
+    </div>
+
+    <div class="find sev-crit">
+      <div class="find-top"><span class="badge sev-crit">Kritiek</span><h3>LoRA-trainingsset (5-15 kinderfoto's) wordt nooit verwijderd</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/lib/ai/lora-training.ts:175-190</div>
+      <p><code>deleteTrainingAssets</code> wist alleen de losse foto-URL's; de ZIP op <code>lora-training/&lt;childId&gt;/training-set.zip</code> blijft staan — een commentaar in de code erkent dit letterlijk. De zip verdwijnt niet bij training-succes, niet bij consent-intrekking, niet bij accountverwijdering, en staat public-read op een voorspelbaar pad. Dit is data die je eigen privacyverklaring als biometrisch (art. 9 AVG) bestempelt.</p>
+      <p class="fix"><span class="lbl">Fix</span> in <code>deleteTrainingAssets</code> altijd ook de deterministische zip-key meewissen; eenmalige opruimactie voor bestaande zips.</p>
+    </div>
+
+    <div class="callout">
+      <h3>De drie geldstroom-fixes horen bij elkaar</h3>
+      <p>Refund-hercreditering, dubbele credits en dubbele abonnementen los je met één ingreep op: een <b>conditionele status-claim via <code>updateMany</code></b> die de betaal-transitie precies één keer laat plaatsvinden, plus een guard op "refunded". Dat is de belangrijkste code-wijziging van deze hele analyse.</p>
+    </div>
+  </section>
+
+  <!-- ============ VEILIGHEID ============ -->
+  <section id="veiligheid">
+    <div class="sec-head"><span class="num">01</span><h2>Veiligheid</h2></div>
+    <p class="sec-intro">De autorisatie is opvallend degelijk: elke route scoopt eigendom via <code>childProfile: { userId }</code> en geeft 404 bij mismatch. Geen IDOR's, geen gecommitte secrets, webhooks vertrouwen client-input niet. De aandachtspunten zitten in verouderde dependencies, registratie-misbruik en hardening.</p>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>Next.js 16.2.1 heeft 14 bekende hoog-ernstige lekken</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">package.json · "next": "16.2.1" → advisories t/m 16.2.6</div>
+      <p>De <code>pnpm audit</code> meldt o.a. meerdere <span class="lbl">proxy/middleware-bypasses</span> (relevant want je auth leunt op <code>proxy.ts</code>), SSRF via WebSocket-upgrades, DoS in de Image Optimization API en XSS via CSP-nonces. Allemaal gepatcht in recente 16.2.x.</p>
+      <p class="fix"><span class="lbl">Fix</span> <code>pnpm up next@^16.2.6</code> (of hoger) + opnieuw builden/deployen. Grootste beveiligingswinst voor de minste moeite. Overige advisories zitten in dev-only transitieve deps (prisma→hono, sentry-webpack) en zijn niet in de runtime bereikbaar.</p>
+    </div>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>Registratie heeft geen rate-limiting of bot-bescherming</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/app/api/auth/register/route.ts:19-76</div>
+      <p>Elk nieuw account krijgt direct 5 story-credits (echte Claude/fal.ai-kosten) en stuurt een admin-notificatiemail. Zonder limiet kan een script massaal accounts aanmaken: gratis credits farmen, je admin-inbox floodden, en welkomstmails als spam naar willekeurige adressen sturen. De nieuwsbrief-signup is wél beveiligd met rate-limit + honeypot; registratie niet.</p>
+      <p class="fix"><span class="lbl">Fix</span> hergebruik de bestaande per-IP rate-limiter + honeypot, net als bij nieuwsbrief/contact.</p>
+    </div>
+
+    <div class="find sev-med">
+      <div class="find-top"><span class="badge sev-med">Middel</span><h3>E-maillinks worden uit de request-host gebouwd (reset-poisoning)</h3></div>
+      <div class="loc">src/lib/url.ts:15-28 · getAppBaseUrl</div>
+      <p>Reset-, magic-link- en unsubscribe-URL's gebruiken <code>x-forwarded-host ?? host</code> in plaats van een vaste env-URL. In theorie kan een gespoofte host een geldig reset-token naar een aanvaller-domein sturen (account-overname). Op Vercel wordt die header normaal door de edge overschreven en geeft een onbekende host 404 vóór de functie draait — praktische exploiteerbaarheid is dus <em>laag</em>, maar de code is fragiel (breekt bij self-host/preview-aliassen).</p>
+      <p class="fix"><span class="lbl">Fix</span> e-maillinks pinnen op <code>NEXT_PUBLIC_APP_URL</code>, niet op de request-header.</p>
+    </div>
+
+    <div class="find sev-med">
+      <div class="find-top"><span class="badge sev-med">Middel</span><h3>CSP staat <code>unsafe-inline</code> én <code>unsafe-eval</code> toe</h3></div>
+      <div class="loc">next.config.ts:100</div>
+      <p>De rest van de header-hardening is uitstekend (HSTS+preload, frame-ancestors none, object-src none, strak Permissions-Policy), maar <code>script-src</code> biedt zo nauwelijks XSS-vangnet. Er is nu geen gebruikersdata in een gevaarlijke sink gevonden, dus rest-risico is laag; de mitigatie ontbreekt alleen.</p>
+      <p class="fix"><span class="lbl">Fix</span> nonce-based CSP (staat al als geparkeerde follow-up in een comment); minimaal <code>unsafe-eval</code> eruit.</p>
+    </div>
+
+    <p class="sec-intro" style="margin-top:22px">Lager-ernstige hardening (bevestigd, maar beperkte impact):</p>
+    <div class="scroll"><table class="compact">
+      <thead><tr><th>Ernst</th><th>Bevinding</th><th>Locatie</th></tr></thead>
+      <tbody>
+        <tr><td class="sev s-low">Laag</td><td>CSV-formule-injectie in admin user-export (naam/e-mail met <code>=</code>/<code>@</code> voert uit in Excel)</td><td><code>admin/users/export/route.ts</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>Reminders-opt-out is onauthenticated op rauwe <code>user_id</code> (impact: alleen minder mail)</td><td><code>api/reminders/opt-out/route.ts</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>Story-generatie vertrouwt client-<code>characterBible</code> incl. <code>loraUrl</code> (<code>.passthrough()</code>) → minor SSRF-via-fal</td><td><code>api/stories/route.ts:62,139</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td><code>saveBookDraft</code> checkt eigendom van <code>selectedStoryIds</code> niet (nu geen lek, wél zwak voor toekomstige print-PDF)</td><td><code>book/[childId]/actions.ts</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>Prod-secrets liggen in een OneDrive-gesynct map — gitignored, maar synct naar Microsoft-cloud</td><td><code>.env* (projectpad)</code></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ============ PRIVACY ============ -->
+  <section id="privacy">
+    <div class="sec-head"><span class="num">02</span><h2>Privacy &amp; AVG</h2></div>
+    <p class="sec-intro">Dit is de zwaarste categorie, want de app verwerkt persoonsgegevens van kinderen. De accountverwijdering en fotomoderatie zijn doordacht gebouwd, maar de <em>losse</em> verwijderpaden en de publieke opslag laten kinddata achter die je hebt beloofd te wissen. De twee kritieke punten staan bij "Direct aanpakken"; hieronder de rest.</p>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>Alle kind-assets staan public-read met een jaar immutable cache</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/lib/storage/scaleway.ts:83-84</div>
+      <p>Elke upload krijgt <code>ACL: "public-read"</code>. Wie een URL heeft, haalt zonder sessie of expiry referentiefoto's, illustraties en audio op. De UUID's maken raden onhaalbaar (goed), maar URL's lekken via cache, browsergeschiedenis en gedeelde apparaten — en een deellink intrekken maakt de onderliggende beeld-/audio-URL's niet ontoegankelijk. Voor échte kinderfoto's (LoRA) is dat onder art. 25/32 AVG lastig te verdedigen.</p>
+      <p class="fix"><span class="lbl">Fix</span> minimaal de <code>lora-training/</code>-prefix privé maken met kortlevende presigned URL's; op termijn illustraties/audio achter een geauthenticeerde proxy of presigned URL's.</p>
+    </div>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>"Foto's binnen 7 dagen gewist" heeft geen afdwingend mechanisme</h3></div>
+      <div class="loc">src/app/api/children/[childId]/lora/route.ts:63-89</div>
+      <p>De foto-opruiming na training draait alléén wanneer de ingelogde ouder de statusroute toevallig pollt op het moment dat de training net klaar is. Er is geen cron voor. Sluit de ouder de browser tijdens de training, dan blijft de status "training" hangen en blijven foto's + zip onbeperkt staan — feitelijke bewaartermijn ∞ tegenover de beloofde 7 dagen.</p>
+      <p class="fix"><span class="lbl">Fix</span> dagelijkse cron die trainingen afrondt en na afloop (of na X dagen) <code>deleteTrainingAssets</code> + zip-delete draait.</p>
+    </div>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>Getraind LoRA-model blijft na verwijdering bij fal.ai staan</h3></div>
+      <div class="loc">src/lib/account/deletion.ts:32-35 · lora-training.ts:145-149</div>
+      <p>De code erkent dat fal.ai geen delete-API biedt; er verdwijnt dus niets bij die verwerker. Het model — een statistische afgeleide van het gezicht van het kind — blijft na verwijdering bij een Amerikaanse partij, terwijl je privacyverklaring "binnen 7 dagen van beide locaties" belooft (art. 17 + 28(3)(g)).</p>
+      <p class="fix"><span class="lbl">Fix</span> DPA met wis-clausule regelen of een support-flow navragen; tot die tijd de privacytekst eerlijk maken over wat wel/niet actief verwijderd kan worden.</p>
+    </div>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>ElevenLabs, Mollie en Sentry ontbreken in de verwerkerslijst</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/app/privacy/page.tsx:123-148</div>
+      <p>De volledige verhaaltekst inclusief de kindnaam ("Een verhaal voor {naam}") gaat naar <span class="lbl">ElevenLabs</span> voor de voorlees-audio; betaal- en adresgegevens naar <span class="lbl">Mollie</span>; error-metadata naar <span class="lbl">Sentry</span>. Geen van drie staat in de verwerkerslijst (art. 13(1)(e) AVG). Kleine tekstuele ingreep, grote compliance-winst.</p>
+      <p class="fix"><span class="lbl">Fix</span> verwerkerslijst aanvullen met deze drie + het doorgiftemechanisme per partij.</p>
+    </div>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>fal.ai safety-checker staat uit op het LoRA-pad</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/lib/ai/illustration-generator.ts:59-64</div>
+      <p><code>enable_safety_checker: false</code> op het pad dat met het gezicht van een echt kind genereert (en <code>safety_tolerance: "6"</code> — meest permissief — op het pro-pad). De bestaande NSFW-flag-check werkt alleen als de checker aanstaat. Primair een kindveiligheids-/art. 25-risico: een ontspoorde generatie met de gelijkenis van het kind belandt public-read in de bucket.</p>
+      <p class="fix"><span class="lbl">Fix</span> safety-checker aanzetten op het LoRA-pad en NSFW als harde fail; output-moderatie (Claude Vision) op LoRA-beelden overwegen.</p>
+    </div>
+
+    <p class="sec-intro" style="margin-top:22px">Middel &amp; laag (bevestigd in code):</p>
+    <div class="scroll"><table class="compact">
+      <thead><tr><th>Ernst</th><th>Bevinding</th><th>Locatie</th></tr></thead>
+      <tbody>
+        <tr><td class="sev s-med">Middel</td><td>Reminder-mails (dag 1/3/7) gaan zonder opt-in naar iedereen — twijfelachtig onder ePrivacy voor dag 3/7</td><td><code>cron/retention/*</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Data-export mist EmailLog, StoryAudio en enkele User-velden ondanks "ALLE gegevens"-claim (art. 15/20)</td><td><code>api/account/export/route.ts</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Sentry-scrubber: geen <code>beforeSendTransaction</code>, URL-path niet geredact, kindvelden ontbreken in keyset</td><td><code>lib/monitoring/scrub-pii.ts</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>AdminAuditLog bewaart e-mail+naam van verwijderde users onbeperkt; geen pruning</td><td><code>admin/users/[id]/page.tsx:455</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>EmailLog zonder retentiebeleid; kindnaam in het subject wordt gelogd</td><td><code>lib/email/client.ts:30</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Nachtelijke DB-dumps (30d) in dezelfde bucket als publieke assets; niet in privacyverklaring</td><td><code>.github/workflows/db-backup.yml</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Volledige geboortedatum verplicht terwijl alleen leeftijd wordt gebruikt; vriendjesnamen → Anthropic (minimalisatie)</td><td><code>schema.prisma:421</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Deel-OG-image zet kindnaam + illustratie op WhatsApp/Facebook-CDN's; overleeft intrekking</td><td><code>s/[token]/opengraph-image.tsx</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>E-mailadressen in operationele cron-/register-logs (userId volstaat)</td><td>diverse crons</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout">
+      <h3>Niet uit code te controleren — jouw actie</h3>
+      <ul>
+        <li><b>DPA's / doorgiftemechanisme (SCC's of DPF)</b> met Anthropic, fal.ai en ElevenLabs (alle drie VS). Voor fal.ai extra belangrijk: daar gaan art. 9-kinderfoto's heen.</li>
+        <li><b>DPIA (art. 35)</b> — bij grootschalige verwerking van kinddata + biometrie vrijwel zeker verplicht; niet in de repo aangetroffen.</li>
+        <li><b>Scaleway bucket-policy</b> — de per-object ACL is zichtbaar in code; of de bucket zelf een ruimere policy heeft, vergt een infra-check.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ SNELHEID ============ -->
+  <section id="snelheid">
+    <div class="sec-head"><span class="num">03</span><h2>Snelheid &amp; schaalbaarheid</h2></div>
+    <p class="sec-intro">De indexdekking is verder volwassen, de rate-limiter is serverless-proof en het admin-dashboard bundelt z'n queries netjes met caching. De grootste risico's zijn een synchrone generatie-request en een paar infra-instellingen die je alleen in het Vercel-dashboard kunt zien.</p>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>Verhaalgeneratie is één synchrone request tot 120s — credit kwijt bij timeout</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">src/app/api/stories/route.ts:29</div>
+      <p>De hele pipeline (Claude → 7× FLUX + retry → 7 uploads → DB-write) draait binnen één POST die de browser-fetch openhoudt. Wordt de functie op de <code>maxDuration</code> gekild of hapert het netwerk, dan draait de <code>catch</code> níet — de gereserveerde credit wordt niet teruggeboekt en er is geen verhaal. Het <code>GenerationJob</code>-model bestaat al in het schema maar wordt nergens weggeschreven.</p>
+      <p class="fix"><span class="lbl">Fix</span> naar "start job → 202 + jobId → client pollt", precies het patroon dat LoRA-training al gebruikt. Minimaal: een story-rij met status "generating" vóór de AI-calls, zodat een timeout achteraf detecteerbaar en terug te boeken is.</p>
+    </div>
+
+    <div class="find sev-med">
+      <div class="find-top"><span class="badge sev-med">Middel</span><h3><code>ChildProfile.userId</code> heeft geen index — zit in het heetste pad</h3><span class="verified">✓ geverifieerd</span></div>
+      <div class="loc">prisma/schema.prisma:417-458</div>
+      <p>Postgres indexeert FK's niet automatisch. Dit veld wordt gebruikt bij élke ownership-check (story openen, audio, pdf, share) en in de dashboard-/funnel-stats. Onmerkbaar nu, lineair pijnlijker bij groei.</p>
+      <p class="fix"><span class="lbl">Fix</span> <code>@@index([userId])</code> — één regel migratie, structurele winst.</p>
+    </div>
+
+    <div class="find sev-med">
+      <div class="find-top"><span class="badge sev-med">Middel</span><h3>Health-check pingt elke minuut de database — Neon slaapt nooit</h3></div>
+      <div class="loc">src/app/api/health/route.ts</div>
+      <p>De per-minuut <code>SELECT 1</code> houdt de Neon free tier permanent wakker: ~730 compute-uur/maand tegen een gratis quotum van ~190. Een stille quotum-brander.</p>
+      <p class="fix"><span class="lbl">Fix</span> monitor-frequentie omlaag, of pingen zonder DB-hit, of het quotum bewust bewaken.</p>
+    </div>
+
+    <p class="sec-intro" style="margin-top:22px">Verdere optimalisaties (bevestigd; worden merkbaar bij groei):</p>
+    <div class="scroll"><table class="compact">
+      <thead><tr><th>Ernst</th><th>Bevinding</th><th>Locatie</th></tr></thead>
+      <tbody>
+        <tr><td class="sev s-med">Middel</td><td>Story-reader verscheept alle karaoke-timings van alle stemmen mee, ook als niemand voorleest (~50-150KB/pagina)</td><td><code>story/[storyId]/page.tsx</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Publieke deelpagina laadt het verhaal 2× per view (metadata + body) — wrap in <code>React.cache()</code></td><td><code>s/[token]/page.tsx</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Fire-and-forget mails na de response gaan op serverless verloren — gebruik <code>after()</code>/<code>waitUntil()</code></td><td><code>api/stories/route.ts:247,309</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td><code>previousAdventures</code> groeit onbegrensd → steeds duurdere prompt per verhaal; cap op laatste ~10</td><td><code>api/stories/route.ts:286</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>pg-Pool zonder tuning; controleer of de Neon <code>-pooler</code>-URL wordt gebruikt</td><td><code>lib/db.ts:9</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Landing toont FLUX-previews via kale <code>&lt;img&gt;</code> (~1MB+ mobiel) — <code>next/image</code></td><td><code>landing/StoryPreviewReader.tsx</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Admin-gebruikerslijst scant 2 volledige tabellen voor tellingen; traag bij 50k+ stories</td><td><code>admin/users/page.tsx:244</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>Eerste "voorlezen" genereert alle pagina's sequentieel (30-60s) vóór er iets speelt</td><td><code>StoryAudioPlayer.tsx:238</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td><code>rate_limits</code>-tabel groeit onbegrensd; periodieke opruim-DELETE</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="callout">
+      <h3>Verifieer in het Vercel-dashboard (kan ik niet uit de code zien)</h3>
+      <ul>
+        <li><b>Fluid Compute aan?</b> Zo niet, wordt <code>maxDuration: 120</code> op klassieke Hobby afgekapt op 60s → trage verhalen falen structureel.</li>
+        <li><b>Draaien alle 8 cron-jobs?</b> Hobby staat er mogelijk maar 2 toe. Als er stil uitvallen, is de <em>account-deletion-cron</em> (wettelijk relevant) een risico.</li>
+        <li><b>Function-region = Frankfurt/Amsterdam?</b> Default is de VS; met de DB in Frankfurt kost dat ~500ms extra op elke app-pagina.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ BETROUWBAARHEID ============ -->
+  <section id="betrouwbaarheid">
+    <div class="sec-head"><span class="num">04</span><h2>Betrouwbaarheid <span style="font-weight:500;font-size:14px;color:var(--ink-3)">— extra dimensie</span></h2></div>
+    <p class="sec-intro">Dit heb ik toegevoegd omdat er echte betalingen doorheen gaan en er geen testsuite is. Naast de twee kritieke geldstroom-bugs bovenaan zitten hier vooral race-condities en randgevallen.</p>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>Verlengings-webhook kan in de "eerste betaling"-branch vallen</h3></div>
+      <div class="loc">src/lib/payments/orders.ts:143-155</div>
+      <p>De recurring-afhandeling geldt alleen bij <code>!order &amp;&amp; isRecurring</code>. Bestaat de renewal-order al (door een eerdere delivery of een crash halverwege), dan valt de latere paid-webhook in de generieke branch, ziet het abonnement al bestaan en returnt vroeg — <span class="lbl">zonder credits en zonder endsAt te verlengen</span>. De klant betaalt, krijgt niets, en wordt 5 dagen later door de health-cron onterecht op "past_due" gezet met een "incasso mislukt"-mail.</p>
+      <p class="fix"><span class="lbl">Fix</span> dispatchen op <code>isRecurring</code> ongeacht of de order al bestaat.</p>
+    </div>
+
+    <div class="find sev-high">
+      <div class="find-top"><span class="badge sev-high">Hoog</span><h3>30-dagen bedenktijd blokkeert alleen pagina's, niet de API's</h3></div>
+      <div class="loc">src/app/(app)/layout.tsx · lib/user-gate.ts</div>
+      <p>Het verwijder-slot is een layout-redirect. Server-actions en API-routes passeren die layout niet, dus een openstaande tab (of directe POST) kan tijdens de bedenktijd gewoon credits kopen, abonneren en verhalen genereren. Erger: nieuw abonneren tijdens bedenktijd start een verse Mollie-incasso die de deletion-cron nooit meer opzegt — <code>hardDeleteUser</code> cancelt geen abonnement.</p>
+      <p class="fix"><span class="lbl">Fix</span> <code>deletionRequestedAt</code> meenemen in de user-gate en de checkout-actions; in <code>hardDeleteUser</code> een actieve Mollie-subscription als vangnet cancellen.</p>
+    </div>
+
+    <p class="sec-intro" style="margin-top:22px">Race-condities &amp; randgevallen (bevestigd):</p>
+    <div class="scroll"><table class="compact">
+      <thead><tr><th>Ernst</th><th>Bevinding</th><th>Locatie</th></tr></thead>
+      <tbody>
+        <tr><td class="sev s-med">Middel</td><td>Stale voorlees-audio na regenerate: deterministische immutable key + client-state reset niet → oud verhaal speelt bij nieuwe tekst</td><td><code>stories/[storyId]/regenerate</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Referral-bonus niet race-vrij (check-then-act) — dubbele bonus bij de webhook×redirect-race</td><td><code>lib/referral.ts:79</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Regenerate-limiet niet atomair — 2 tabs = 2× AI-kosten</td><td><code>regenerate/route.ts:92</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Retention dag 1/3/7: <code>take:50</code> + 24u-venster → stille uitval bij &gt;50 kandidaten/dag</td><td><code>cron/retention/*</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Claude-JSON zonder <code>stop_reason</code>-check of retry — truncatie op max_tokens laat de hele request falen (credit wél gerefund)</td><td><code>lib/ai/story-generator.ts:511</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td>Chargebacks worden nergens verwerkt — SEPA-storno (8 weken recht) laat credits/abo staan</td><td><code>payments/mollie.ts:66</code></td></tr>
+        <tr><td class="sev s-med">Middel</td><td><code>hardDeleteUser</code>: storage vóór DB, storage-fouten geslikt → weesobjecten met kinderfoto's</td><td><code>lib/account/deletion.ts:44</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>Partial-flow kan dubbel refunden als een latere stap alsnog gooit</td><td><code>api/stories/route.ts:241</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>InvoiceCounter jaarwisseling-race (vangnet: lazy backfill bij download)</td><td><code>lib/payments/invoices.ts:38</code></td></tr>
+        <tr><td class="sev s-low">Laag</td><td>Optimistic updates zonder <code>res.ok</code>-check (favoriet, feedback, delete)</td><td><code>story/[storyId]/client.tsx</code></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ============ GOED ============ -->
+  <section id="goed">
+    <div class="sec-head"><span class="num">05</span><h2>Wat al goed zit</h2></div>
+    <p class="sec-intro">Belangrijk voor het perspectief: er is veel degelijk gebouwd. Dit is geen brandje maar een volwassen app met een paar scherpe randjes. Een greep uit wat ik expliciet geverifieerd heb.</p>
+
+    <div class="good-grid">
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Autorisatie consequent</span><span class="g-d">Elke route scoopt eigendom via <code>childProfile: { userId }</code> en geeft 404 bij mismatch. Geen IDOR's gevonden — ook niet op factuur, share of order.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Credit-afschrijving atomair</span><span class="g-d">Conditionele <code>updateMany</code> met <code>decrement</code> — twee verhalen met 1 credit: de tweede krijgt netjes 402. Geen double-spend.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Webhook vertrouwt client niet</span><span class="g-d">Leest alleen het payment-id, haalt de echte status server-to-server bij Mollie op, eist <code>tr_</code>-prefix.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Rate-limiter serverless-proof</span><span class="g-d">Postgres fixed-window met atomaire UPSERT + rijlock — geen in-memory valkuil. Vóór elke betaalde AI-call.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Fotomoderatie fail-closed</span><span class="g-d">Claude Vision vóór opslag; API-fout → 503 en niets bewaard; bij twijfel afgekeurd; foto's nooit gelogd.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Sterke tokens</span><span class="g-d">Reset/magic-link 256-bit, alleen SHA-256-hash opgeslagen, single-use met expiry. Share-token 128-bit met 404-cloaking.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Accountverwijdering doordacht</span><span class="g-d">Vaste volgorde, best-effort per stap, wist ook contact/nieuwsbrief/EmailLog; Orders blijven fiscaal via SetNull.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> SSRF-guard op storage</span><span class="g-d">Scheme-check, IP-blok, private-host-blok en host-allowlist op alle fetches van variabele URL's.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Karaoke-sync defensief</span><span class="g-d">Eén gedeelde word-splitter server+client; bij élke mismatch → geen markering i.p.v. een verschoven markering.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Dunning atomair</span><span class="g-d"><code>markSubscriptionPastDue</code> via <code>updateMany where status:"active"</code>; mails alleen bij echte transitie, met 7d dedupe.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Cookie-verhaal klopt</span><span class="g-d">Alleen functionele cookies; Vercel Analytics is echt cookieless; CSP bevestigt geen andere third-party scripts.</span></div>
+      <div class="good-item"><span class="g-h"><span class="check">✓</span> Bedragen kloppen</span><span class="g-d">Alles in integer-centen, BTW gesnapshot op de order, refund exact op <code>amountCents</code>.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    Read-only audit · TypeScript ✓ · build ✓ · rate-limit-test ✓ · 4 parallelle audits (veiligheid/privacy/snelheid/betrouwbaarheid) · kritieke bevindingen handmatig in code geverifieerd · commit 7d3409e
+  </footer>
+
+</div>
