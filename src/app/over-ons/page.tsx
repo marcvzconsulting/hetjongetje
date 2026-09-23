@@ -167,8 +167,8 @@ export default function OverOnsPage() {
             lineHeight: 1.5,
           }}
         >
-          Maak zelf zo&rsquo;n herinnering voor je kind &mdash; het eerste
-          verhaal is gratis.
+          Maak zelf zo&rsquo;n herinnering voor je kind &mdash; de eerste
+          vijf verhalen zijn gratis.
         </p>
         <EBtn kind="primary" size="lg" href="/register">
           Probeer het

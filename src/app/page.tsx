@@ -278,7 +278,7 @@ function Hero() {
             </p>
             <div style={{ marginTop: 36 }}>
               <EBtn kind="primary" size="lg" href="/register">
-                Begin met een gratis verhaal{" "}
+                Begin met vijf gratis verhalen{" "}
                 <IconV2 name="arrow" size={16} color={V2.paper} />
               </EBtn>
               <div
@@ -1101,7 +1101,7 @@ async function Pricing() {
             marginTop: 24,
           }}
         >
-          Altijd één gratis proefverhaal voor je iets afsluit.
+          Altijd vijf gratis proefverhalen voor je iets afsluit.
         </p>
       </div>
     </section>
@@ -1328,7 +1328,7 @@ function SlotCTA() {
             opacity: 0.8,
           }}
         >
-          Eén gratis verhaal om te proberen. Klaar in drie minuten.
+          Vijf gratis verhalen om te proberen. Klaar in drie minuten.
         </p>
         <div style={{ marginTop: 44 }}>
           <EBtn kind="on-dark" size="lg" href="/register">

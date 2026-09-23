@@ -99,8 +99,8 @@ export default async function VeelgesteldeVragenPage() {
             lineHeight: 1.5,
           }}
         >
-          Vraag beantwoord? Het eerste verhaal is gratis, dus je kunt het
-          gewoon proberen.
+          Vraag beantwoord? De eerste vijf verhalen zijn gratis, dus je kunt
+          het gewoon proberen.
         </p>
         <EBtn kind="primary" size="lg" href="/register">
           Probeer het
