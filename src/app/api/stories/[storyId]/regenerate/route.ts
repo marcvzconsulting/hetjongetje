@@ -135,6 +135,8 @@ export async function POST(
     previousAdventures: characterBibleJson.previousAdventures as CharacterBible["previousAdventures"],
     loraUrl: child.loraUrl ?? undefined,
     loraTriggerWord: child.loraTriggerWord ?? undefined,
+    approvedPreviewUrl: child.approvedPreviewUrl ?? undefined,
+    referenceSheetUrls: child.referenceSheetUrls,
   };
   const baseRequest = story.generationParams as unknown as StoryRequest;
 

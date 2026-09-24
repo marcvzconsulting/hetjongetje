@@ -71,7 +71,10 @@ export async function moderateChildPhoto(
   }
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
+    model: "claude-sonnet-5",
+    // Classificatie met een klein JSON-antwoord: denken uit, anders gaan
+    // de 200 tokens op aan redeneren voor het oordeel.
+    thinking: { type: "disabled" },
     max_tokens: 200,
     system: MODERATION_SYSTEM,
     messages: [
@@ -92,8 +95,13 @@ export async function moderateChildPhoto(
     ],
   });
 
-  const text =
-    message.content[0]?.type === "text" ? message.content[0].text : "";
+  // Alle tekstblokken samenvoegen i.p.v. content[0]: mocht er ooit een
+  // denkblok vóór de tekst staan, dan leidt dat niet tot een onterechte
+  // parse_error (= afkeuring).
+  const text = message.content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("");
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return {

@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { STORY_SETTINGS, ADVENTURE_TYPES, STORY_MOODS, OCCASIONS, type StorySetting, type AdventureType, type StoryMood, type Occasion } from "./prompts/story-request";
 import { loadAiPromptSnippets, type AiPromptValues } from "./prompts/store";
+import type { IllustrationModel } from "./pricing";
 import { calculateAge } from "@/lib/utils/age";
 import {
   sanitizePromptShort,
@@ -34,6 +35,16 @@ export interface CharacterBible {
   loraUrl?: string;
   /** Unique trigger word baked into the LoRA; must appear in every prompt */
   loraTriggerWord?: string;
+  /**
+   * Goedgekeurd AI-portret van het kind (Scaleway-URL). Gaat als
+   * referentiebeeld mee naar de illustratie-engine, zodat het kind op
+   * elke pagina hetzelfde blijft. Wordt server-side uit het kindprofiel
+   * gezet (stories/route.ts, regenerate/route.ts), nooit van de client
+   * overnemen.
+   */
+  approvedPreviewUrl?: string;
+  /** Karakterblad bij het portret (close-up, driekwart); ook server-side gezet. */
+  referenceSheetUrls?: string[];
 }
 
 export interface StoryRequest {
@@ -88,7 +99,7 @@ export interface GeneratedStory {
   /** Aantal succesvolle illustraties + welk fal.ai-pad gebruikt is.
    *  Wordt door generateIllustrations gevuld; bij 0 = generatie sloeg
    *  over of mislukte. */
-  imageUsage?: { imageCount: number; model: "lora" | "pro" };
+  imageUsage?: { imageCount: number; model: IllustrationModel };
 }
 
 // —— Leeftijdsgroep → schrijfinstructies ——————————————————————————————
@@ -509,8 +520,13 @@ Regels:
 `.trim();
 
   const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 5000,
+    // Sonnet 5 (sept 2026; Sonnet 4.5 loopt richting retirement). Denkt
+    // standaard adaptief mee; "medium" houdt de extra tokens beperkt, een
+    // kinderverhaal vraagt geen diep redeneerwerk. max_tokens ruimer,
+    // want denk-tokens tellen hierin mee.
+    model: "claude-sonnet-5",
+    max_tokens: 8000,
+    output_config: { effort: "medium" },
     system: "Je bent een Nederlandse kinderboekenauteur. Schrijf warm, persoonlijk en leeftijdsgeschikt. Geef altijd JSON terug.",
     messages: [{ role: "user", content: prompt }],
   });
