@@ -89,6 +89,11 @@ export async function POST(request: NextRequest) {
     characterBible.loraTriggerWord = characterBible.loraUrl
       ? child.loraTriggerWord ?? undefined
       : undefined;
+    // Idem voor het referentieportret: altijd uit het geverifieerde
+    // profiel, nooit uit de request-body (anders kan een client een
+    // willekeurige URL als "portret" naar fal.ai sturen).
+    characterBible.approvedPreviewUrl = child.approvedPreviewUrl ?? undefined;
+    characterBible.referenceSheetUrls = child.referenceSheetUrls;
 
     // Vervolg-verhaal: haal het vorige verhaal op en verifieer dat het
     // bij dit kind hoort (het kind is hierboven al aan de ingelogde user

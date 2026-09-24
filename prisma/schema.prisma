@@ -436,6 +436,7 @@ model ChildProfile {
   mainCharacterDescription String?  @map("main_character_description")
   approvedCharacterPrompt  String?  @map("approved_character_prompt") // locked prompt after parent approval
   approvedPreviewUrl       String?  @map("approved_preview_url")      // the approved preview image URL
+  referenceSheetUrls       String[] @default([]) @map("reference_sheet_urls") // karakterblad: close-up + driekwart van het goedgekeurde portret, als illustratie-referenties
   characterBible           Json?    @map("character_bible") // grows over time with story summaries
   referenceImages          String[] @map("reference_images") // S3/R2 URLs — raw uploads
   // ── Character LoRA (fal.ai flux-lora-fast-training) ──

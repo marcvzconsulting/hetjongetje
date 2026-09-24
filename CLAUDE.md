@@ -10,9 +10,9 @@ A personalized children's story generator web app. Parents fill in a profile abo
 - **Styling**: Tailwind CSS v4 + Google Fonts (Fraunces display, Lora body, Inter UI) via V2 design tokens
 - **State**: TanStack Query (server) + Zustand (client)
 - **Database**: PostgreSQL + Prisma ORM
-- **AI Stories**: Claude API (Sonnet 4.5) via @anthropic-ai/sdk
-- **AI Images**: Flux 2 Pro (via fal.ai) - TBD
-- **Storage**: Cloudflare R2 (S3-compatible) - TBD
+- **AI Stories**: Claude API (Sonnet 5, adaptive thinking op effort "medium") via @anthropic-ai/sdk
+- **AI Images**: fal.ai. Portret via FLUX.2 Pro; bij goedkeuring wordt een karakterblad (close-up + driekwart) afgeleid (`src/lib/ai/character-sheet.ts`, `Child.referenceSheetUrls`). Verhaalillustraties: FLUX.2 Pro edit met portret + karakterblad als referenties (env `ILLUSTRATION_ENGINE`: `flux2` default | `nano-banana-2` | `flux1` = kill-switch). Zonder portret: FLUX Pro 1.1 tekst+seed. Getrainde LoRA gaat voor. Backfill oude profielen: `scripts/backfill-reference-sheets.ts`.
+- **Storage**: Scaleway Object Storage (S3-compatible, nl-ams)
 - **i18n**: next-intl (Dutch primary, English for AI generation)
 
 ## Key Architecture Decisions

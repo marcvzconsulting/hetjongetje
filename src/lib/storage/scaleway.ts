@@ -275,3 +275,15 @@ export function storyAudioPageKey(
 export function approvedPreviewKey(childId: string): string {
   return `previews/${childId}/approved.jpg`;
 }
+
+/**
+ * Karakterblad: extra aanzichten van het goedgekeurde portret die als
+ * illustratie-referenties meegaan. Zelfde prefix als het portret, dus
+ * dezelfde cleanup (user-cleanup.ts wist `previews/<childId>/`).
+ */
+export function referenceFaceKey(childId: string): string {
+  return `previews/${childId}/reference-face.jpg`;
+}
+export function referenceBodyKey(childId: string): string {
+  return `previews/${childId}/reference-body.jpg`;
+}

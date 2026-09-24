@@ -266,7 +266,7 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
                 }}
               >
                 <IconV2 name="check" size={16} color={V2.paper} />
-                {saving ? "Opslaan..." : "Dit klopt, goedkeuren"}
+                {saving ? "Portret vastleggen, dit duurt even..." : "Dit klopt, goedkeuren"}
               </button>
             )}
           </>
