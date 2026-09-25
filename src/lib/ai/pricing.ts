@@ -29,11 +29,30 @@
 
 const USD_TO_EUR = 0.92;
 
-// Anthropic — cents per token (sub-cent precision, totaal floors op cent).
-const CENTS_PER_INPUT_TOKEN_CLAUDE_SONNET_5 =
-  (2 / 1_000_000) * USD_TO_EUR * 100;
-const CENTS_PER_OUTPUT_TOKEN_CLAUDE_SONNET_5 =
-  (10 / 1_000_000) * USD_TO_EUR * 100;
+// Anthropic — USD per miljoen tokens (input, output), per tekstmodel.
+// Onbekend model (bv. nieuw via STORY_MODEL) → Sonnet 5-tarief + waarschuwing.
+const CLAUDE_USD_PER_MTOK: Record<string, [number, number]> = {
+  "claude-sonnet-5": [2, 10],
+  "claude-opus-5": [5, 25],
+  "claude-fable-5-1": [10, 50],
+  // mogelijke server-side fallback-modellen
+  "claude-opus-4-8": [5, 25],
+  "claude-fable-5": [10, 50],
+  "claude-sonnet-4-5-20250929": [3, 15],
+};
+
+export function claudeCentsPerToken(model: string | undefined): {
+  input: number;
+  output: number;
+} {
+  const rates = CLAUDE_USD_PER_MTOK[model ?? "claude-sonnet-5"];
+  if (!rates) console.warn(`[pricing] Geen tarief voor ${model}; Sonnet 5-tarief gebruikt`);
+  const [inUsd, outUsd] = rates ?? CLAUDE_USD_PER_MTOK["claude-sonnet-5"];
+  return {
+    input: (inUsd / 1_000_000) * USD_TO_EUR * 100,
+    output: (outUsd / 1_000_000) * USD_TO_EUR * 100,
+  };
+}
 
 /** Welk fal.ai-pad de illustraties maakte (zie illustration-generator.ts). */
 export type IllustrationModel =
@@ -55,6 +74,8 @@ export type StoryAiUsage = {
   inputTokens: number;
   /** Anthropic output tokens uit `message.usage.output_tokens`. */
   outputTokens: number;
+  /** Gebruikt tekstmodel (message.model); bepaalt het tarief. */
+  model?: string;
 };
 
 export type StoryImageUsage = {
@@ -74,8 +95,8 @@ export function computeStoryAiCostCents(
   images: StoryImageUsage,
 ): number {
   const textCents =
-    text.inputTokens * CENTS_PER_INPUT_TOKEN_CLAUDE_SONNET_5 +
-    text.outputTokens * CENTS_PER_OUTPUT_TOKEN_CLAUDE_SONNET_5;
+    text.inputTokens * claudeCentsPerToken(text.model).input +
+    text.outputTokens * claudeCentsPerToken(text.model).output;
   const imageCents = images.imageCount * CENTS_PER_IMAGE[images.model];
   return Math.round(textCents + imageCents);
 }

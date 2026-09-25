@@ -12,6 +12,7 @@ import {
   STORY_MOODS,
   OCCASIONS,
 } from "@/lib/ai/prompts/story-request";
+import { dutchPronouns } from "@/lib/text/dutch";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -368,6 +369,7 @@ export function GenerateWizardV2({
           params={params}
           update={update}
           childName={child.name}
+          childGender={child.gender}
         />
       )}
       {step === 2 && <Step2 params={params} update={update} />}
@@ -414,10 +416,12 @@ function Step1({
   params,
   update,
   childName,
+  childGender,
 }: {
   params: Params;
   update: (u: Partial<Params>) => void;
   childName: string;
+  childGender: string;
 }) {
   const charCount = params.specialDetail.length;
   const needsDescription = params.mainCharacterType !== "self";
@@ -463,7 +467,7 @@ function Step1({
           value={params.specialDetail}
           onChange={(e) => update({ specialDetail: e.target.value })}
           maxLength={500}
-          placeholder={`Bijv. "${childName} heeft vandaag voor het eerst haar naam zelf geschreven."`}
+          placeholder={specialDetailExample(childName, childGender)}
           style={{
             width: "100%",
             padding: "20px 24px",
@@ -950,7 +954,7 @@ function GeneratingState({ childName }: { childName: string }) {
           }}
         >
           De verhalenverteller en de illustrator zijn aan het werk. Dit
-          duurt meestal 30 tot 60 seconden.
+          duurt meestal één tot twee minuten.
         </p>
         <Link
           href="/dashboard"
@@ -975,4 +979,12 @@ function GeneratingState({ childName }: { childName: string }) {
 
 function roman(n: number): string {
   return ["", "I", "II", "III", "IV", "V", "VI", "VII"][n] ?? String(n);
+}
+
+// Voorbeeldzin met het juiste voornaamwoord (zie src/lib/text/dutch.ts).
+function specialDetailExample(childName: string, gender: string): string {
+  const p = dutchPronouns(gender);
+  return p
+    ? `Bijv. "${childName} heeft vandaag voor het eerst ${p.possessive} naam zelf geschreven."`
+    : `Bijv. "${childName} heeft vandaag voor het eerst zelf een boterham gesmeerd."`;
 }

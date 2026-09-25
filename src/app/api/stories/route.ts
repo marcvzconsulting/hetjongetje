@@ -26,7 +26,9 @@ import { buildAppUrl } from "@/lib/url";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 // Allow extra time: story gen + illustrations + uploads
-export const maxDuration = 120;
+// 300: Fable 5.1 schrijft een verhaal in ~40-60 s, daarna nog ~30 s
+// illustraties + uploads. 120 was te krap.
+export const maxDuration = 300;
 
 /**
  * Upload a fal.ai (or any) image URL to our Scaleway bucket.
@@ -93,6 +95,11 @@ export async function POST(request: NextRequest) {
     // profiel, nooit uit de request-body (anders kan een client een
     // willekeurige URL als "portret" naar fal.ai sturen).
     characterBible.approvedPreviewUrl = child.approvedPreviewUrl ?? undefined;
+    // Naam en geslacht altijd uit het profiel: daar hangen de voornaamwoorden
+    // in het verhaal aan (hij/zij), en een verouderde of gemanipuleerde
+    // client-body mag dat niet kunnen omdraaien.
+    characterBible.childName = child.name;
+    characterBible.gender = child.gender;
     characterBible.referenceSheetUrls = child.referenceSheetUrls;
 
     // Vervolg-verhaal: haal het vorige verhaal op en verifieer dat het
@@ -396,7 +403,10 @@ export async function POST(request: NextRequest) {
       });
     }
     return NextResponse.json(
-      { error: "Er ging iets mis bij het genereren van het verhaal" },
+      {
+        error:
+          "Het verhaal kon deze keer niet gemaakt worden. Je credit is teruggezet, probeer het nog een keer.",
+      },
       { status: 500 }
     );
   }

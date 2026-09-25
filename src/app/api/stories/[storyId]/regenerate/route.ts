@@ -48,7 +48,9 @@ const QUICK_ADJUSTMENTS = {
 } as const;
 type QuickAdjustment = keyof typeof QUICK_ADJUSTMENTS;
 
-export const maxDuration = 120;
+// 300: Fable 5.1 schrijft een verhaal in ~40-60 s, daarna nog ~30 s
+// illustraties + uploads. 120 was te krap.
+export const maxDuration = 300;
 
 async function persistImage(
   sourceUrl: string | null | undefined,

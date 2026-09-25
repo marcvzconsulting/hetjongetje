@@ -23,13 +23,13 @@ export function buildLoraReadyMail(opts: LoraReadyMail): {
     body:
       bodyParagraph(`Hallo ${userName},`) +
       bodyParagraph(
-        `We hebben ${childName} getraind in onze illustrator. Vanaf het volgende verhaaltje zie je echt <em>hen</em> terug op de plaatjes — zelfde gezicht, zelfde ogen, zelfde haar.`
+        `We hebben ${childName} getraind in onze illustrator. Vanaf het volgende verhaaltje zie je ${childName} echt terug op de plaatjes — zelfde gezicht, zelfde ogen, zelfde haar.`
       ) +
       bodyParagraph(
         "Eén detail: elke illustratie blijft met de hand opnieuw gemaakt, dus een klein verschil tussen verhalen is normaal. Denk aan dezelfde persoon op een andere bladzijde van een boek."
       ) +
       bodyParagraph(
-        `De originele foto&rsquo;s van ${childName} zijn inmiddels weggegooid (binnen 7 dagen, zoals beloofd). Alleen het model met hun uiterlijk blijft, zolang ${childName}&rsquo;s profiel bestaat.`
+        `De originele foto&rsquo;s van ${childName} zijn inmiddels weggegooid (binnen 7 dagen, zoals beloofd). Alleen het model van het uiterlijk blijft, zolang het profiel van ${childName} bestaat.`
       ),
     cta: { label: "Maak een verhaal", url: opts.generateUrl },
     footerNote:
@@ -39,11 +39,11 @@ export function buildLoraReadyMail(opts: LoraReadyMail): {
   const text = [
     `Hallo ${opts.userName},`,
     "",
-    `We hebben ${opts.childName} getraind in onze illustrator. Vanaf het volgende verhaaltje zie je echt hen terug op de plaatjes — zelfde gezicht, zelfde ogen, zelfde haar.`,
+    `We hebben ${opts.childName} getraind in onze illustrator. Vanaf het volgende verhaaltje zie je ${opts.childName} echt terug op de plaatjes — zelfde gezicht, zelfde ogen, zelfde haar.`,
     "",
     "Eén detail: elke illustratie blijft met de hand opnieuw gemaakt, dus een klein verschil tussen verhalen is normaal. Denk aan dezelfde persoon op een andere bladzijde van een boek.",
     "",
-    `De originele foto's van ${opts.childName} zijn inmiddels weggegooid (binnen 7 dagen, zoals beloofd). Alleen het model met hun uiterlijk blijft, zolang ${opts.childName}'s profiel bestaat.`,
+    `De originele foto's van ${opts.childName} zijn inmiddels weggegooid (binnen 7 dagen, zoals beloofd). Alleen het model van het uiterlijk blijft, zolang het profiel van ${opts.childName} bestaat.`,
     "",
     "Maak een verhaal:",
     opts.generateUrl,
