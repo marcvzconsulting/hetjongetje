@@ -431,6 +431,17 @@ const STORY_SCHEMA = {
 // gevraagde woorden, Opus 5 zat er iets onder, Fable 5.1 binnen het bereik.
 export const DEFAULT_STORY_MODEL = "claude-fable-5-1";
 
+/** Vangnet als het primaire model faalt (weigering of technische fout). */
+export const FALLBACK_STORY_MODEL = "claude-opus-5";
+
+/** Primair model én fallback weigerden: niet nogmaals proberen. */
+export class StoryRefusedError extends Error {
+  constructor(public servedBy: string) {
+    super(`Verhaal geweigerd door ${servedBy} (ook na fallback)`);
+    this.name = "StoryRefusedError";
+  }
+}
+
 export async function generateStory(
   rawBible: CharacterBible,
   rawRequest: StoryRequest,
@@ -596,54 +607,92 @@ Regels:
 - Totaal ${wordCountRange(age, storyLength)} woorden${age <= 2 ? " — bereik dat aantal met MÉÉR korte zinnen, niet met langere zinnen" : ""}
 `.trim();
 
-  const model = opts.model ?? process.env.STORY_MODEL ?? DEFAULT_STORY_MODEL;
-  // Server-side fallback (Fable 5.1 / Opus 5): weigert het model om
-  // beleidsredenen, dan schrijft de API het verhaal in dezelfde call met
-  // een vervangend model, i.p.v. een mislukte generatie. message.model is
-  // dan het model dat het werk deed (pricing rekent daarop).
-  const withFallback = model.startsWith("claude-fable-") || model === "claude-opus-5";
-  const message = await anthropic.beta.messages.create({
-    model,
-    ...(withFallback
-      ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
-      : {}),
-    // Denkt adaptief mee (bij Fable altijd aan); "medium" houdt de extra
-    // tokens beperkt. max_tokens ruim, want denk-tokens tellen hierin mee
-    // en lange verhalen voor 8+ zijn tot ~900 woorden.
-    max_tokens: 16000,
-    // Gestructureerde output: de API garandeert JSON volgens STORY_SCHEMA.
-    // Zonder dit gaf Sonnet 5 in de test van 25-09-2026 1 op 3 keer
-    // ongeldige JSON (= mislukte generatie).
-    output_config: {
-      effort: "medium",
-      format: { type: "json_schema", schema: STORY_SCHEMA },
-    },
-    system: "Je bent een Nederlandse kinderboekenauteur. Schrijf warm, persoonlijk en leeftijdsgeschikt. Geef altijd JSON terug.",
-    messages: [{ role: "user", content: prompt }],
-  });
+  const primaryModel = opts.model ?? process.env.STORY_MODEL ?? DEFAULT_STORY_MODEL;
 
-  const raw = message.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b as { type: "text"; text: string }).text)
-    .join("");
+  // Eén poging met een bepaald model: aanroep + controle + parse.
+  const attempt = async (
+    model: string,
+    serverFallback: boolean,
+    timeoutMs: number,
+    maxRetries: number,
+  ) => {
+    const message = await anthropic.beta.messages.create(
+      {
+        model,
+        // Weigering om beleidsredenen → de API schrijft het verhaal in
+        // dezelfde call met Opus 5 (array-vorm, zie de SDK/API-docs).
+        // message.model is dan het model dat het werk deed.
+        ...(serverFallback
+          ? {
+              betas: ["server-side-fallback-2026-06-01"],
+              fallbacks: [{ model: FALLBACK_STORY_MODEL }],
+            }
+          : {}),
+        // Denkt adaptief mee (bij Fable altijd aan); "medium" houdt de extra
+        // tokens beperkt. max_tokens ruim, want denk-tokens tellen hierin
+        // mee en lange verhalen voor 8+ zijn tot ~900 woorden.
+        max_tokens: 16000,
+        // Gestructureerde output: de API garandeert JSON volgens
+        // STORY_SCHEMA. Zonder dit gaf Sonnet 5 in de test van 25-09-2026
+        // 1 op 3 keer ongeldige JSON (= mislukte generatie).
+        output_config: {
+          effort: "medium",
+          format: { type: "json_schema", schema: STORY_SCHEMA },
+        },
+        system: "Je bent een Nederlandse kinderboekenauteur. Schrijf warm, persoonlijk en leeftijdsgeschikt. Geef altijd JSON terug.",
+        messages: [{ role: "user", content: prompt }],
+      },
+      { timeout: timeoutMs, maxRetries },
+    );
 
-  if (message.stop_reason === "max_tokens") {
-    throw new Error("Verhaal afgebroken: max_tokens bereikt");
-  }
-  if (message.stop_reason === "refusal") {
-    throw new Error("Model weigerde het verhaal te schrijven");
-  }
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Geen geldige JSON in API-response");
-
-  const parsed = JSON.parse(jsonMatch[0]) as {
-    title: string;
-    endingText: string;
-    endingSign: string;
-    endingIllustrationPrompt: string;
-    characterBibleUpdate?: string;
-    pages: { text: string; illustrationPrompt: string }[];
+    if (message.stop_reason === "refusal") {
+      // Ook de server-side fallback weigerde: niet nog eens proberen.
+      throw new StoryRefusedError(message.model);
+    }
+    if (message.stop_reason === "max_tokens") {
+      throw new Error(`Verhaal afgebroken: max_tokens bereikt (${message.model})`);
+    }
+    const raw = message.content
+      .filter((b) => b.type === "text")
+      .map((b) => (b as { type: "text"; text: string }).text)
+      .join("");
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error(`Geen geldige JSON in API-response (${message.model})`);
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      title: string;
+      endingText: string;
+      endingSign: string;
+      endingIllustrationPrompt: string;
+      characterBibleUpdate?: string;
+      pages: { text: string; illustrationPrompt: string }[];
+    };
+    return { message, parsed };
   };
+
+  // Keten: Fable → Opus 5 → fout (de route zet dan het credit terug en de
+  // klant probeert opnieuw).
+  //  - Weigering: server-side fallback binnen dezelfde call (hierboven).
+  //  - Technische fout (overbelast, time-out, netwerk, afgekapt, kapotte
+  //    JSON): hier opnieuw met Opus 5.
+  // Tijdsbudget (route maxDuration 300 s, illustraties ~30 s erna): primair
+  // max 140 s zonder SDK-retries (de Opus-poging ís de retry), Opus max
+  // 100 s met één SDK-retry voor korte storingen.
+  let result: Awaited<ReturnType<typeof attempt>>;
+  if (primaryModel === FALLBACK_STORY_MODEL) {
+    result = await attempt(primaryModel, false, 140_000, 1);
+  } else {
+    try {
+      result = await attempt(primaryModel, true, 140_000, 0);
+    } catch (err) {
+      if (err instanceof StoryRefusedError) throw err;
+      console.warn(
+        `[story] ${primaryModel} mislukt, opnieuw met ${FALLBACK_STORY_MODEL}:`,
+        err instanceof Error ? err.message : err,
+      );
+      result = await attempt(FALLBACK_STORY_MODEL, false, 100_000, 1);
+    }
+  }
+  const { message, parsed } = result;
 
   return {
     title: parsed.title,

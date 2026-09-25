@@ -403,7 +403,10 @@ export async function POST(request: NextRequest) {
       });
     }
     return NextResponse.json(
-      { error: "Er ging iets mis bij het genereren van het verhaal" },
+      {
+        error:
+          "Het verhaal kon deze keer niet gemaakt worden. Je credit is teruggezet, probeer het nog een keer.",
+      },
       { status: 500 }
     );
   }
