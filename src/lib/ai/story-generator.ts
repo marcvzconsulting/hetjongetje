@@ -2,6 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { STORY_SETTINGS, ADVENTURE_TYPES, STORY_MOODS, OCCASIONS, type StorySetting, type AdventureType, type StoryMood, type Occasion } from "./prompts/story-request";
 import { loadAiPromptSnippets, type AiPromptValues } from "./prompts/store";
 import type { IllustrationModel } from "./pricing";
+import {
+  dutchChildNoun,
+  dutchFriendNoun,
+  dutchGenitive,
+  dutchPronouns,
+} from "@/lib/text/dutch";
 import { calculateAge } from "@/lib/utils/age";
 import {
   sanitizePromptShort,
@@ -363,6 +369,18 @@ function sanitizeRequest(request: StoryRequest): StoryRequest {
   };
 }
 
+/**
+ * Harde voornaamwoord-regel voor de hoofdpersoon. Sonnet leidt het geslacht
+ * anders af uit de naam, wat bij minder bekende namen misgaat.
+ */
+function pronounRule(childName: string, gender: string): string {
+  const p = dutchPronouns(gender);
+  if (p) {
+    return `VOORNAAMWOORDEN: ${childName} is een ${gender === "boy" ? "jongen" : "meisje"}. Gebruik voor ${childName} altijd "${p.subject}", "${p.object}" en "${p.possessive}", nooit de andere vormen.`;
+  }
+  return `VOORNAAMWOORDEN: gebruik voor ${childName} geen hij/zij of zijn/haar; noem steeds de naam of formuleer zonder voornaamwoord.`;
+}
+
 export async function generateStory(
   rawBible: CharacterBible,
   rawRequest: StoryRequest
@@ -389,11 +407,11 @@ export async function generateStory(
   // Character description
   let characterSection = "";
   if (characterBible.mainCharacterType === "self") {
-    characterSection = `De held is ${characterBible.childName} zelf — een ${characterBible.gender === "boy" ? "jongetje" : characterBible.gender === "girl" ? "meisje" : "kind"} van ${age} jaar.`;
+    characterSection = `De held is ${characterBible.childName} zelf — een ${dutchChildNoun(characterBible.gender)} van ${age} jaar.`;
   } else if (characterBible.mainCharacterType === "stuffed_animal") {
-    characterSection = `De held is ${characterBible.childName}'s knuffeldier: ${characterBible.mainCharacterDescription || "een lief knuffeldier"}. ${characterBible.childName} verschijnt als beste vriend(in).`;
+    characterSection = `De held is ${dutchGenitive(characterBible.childName)} knuffeldier: ${characterBible.mainCharacterDescription || "een lief knuffeldier"}. ${characterBible.childName} verschijnt als beste ${dutchFriendNoun(characterBible.gender)}.`;
   } else if (characterBible.mainCharacterType === "action_hero") {
-    characterSection = `De held is: ${characterBible.mainCharacterDescription || "een dappere held"}. ${characterBible.childName} verschijnt als vriend(in) of hulpje.`;
+    characterSection = `De held is: ${characterBible.mainCharacterDescription || "een dappere held"}. ${characterBible.childName} verschijnt als ${dutchFriendNoun(characterBible.gender)} of hulpje.`;
   } else {
     characterSection = `De held is: ${characterBible.mainCharacterDescription || characterBible.childName}`;
   }
@@ -512,6 +530,9 @@ De illustratie moet exact weergeven wat er in de tekst op DEZELFDE pagina gebeur
 Regels:
 - BELANGRIJK: huisdieren en vriendjes mogen ALLEEN in het verhaal voorkomen als ze expliciet als metgezel zijn gekozen bij "Metgezel op het avontuur". Als er geen metgezel is gekozen, komen ze NIET voor in het verhaal.
 - Schrijf warm en verhalend Nederlands — gebruik ${characterBible.childName} regelmatig bij de naam
+- ${pronounRule(characterBible.childName, characterBible.gender)}
+- Bijpersonages (vriendjes, familie, huisdieren): leid hun geslacht ALLEEN af uit hun relatie of omschrijving (broer, zus, vriendin, opa, oma, kater, poes). Weet je het niet zeker, gebruik dan steeds hun naam in plaats van hij of zij.
+- Controleer na het schrijven ELK voornaamwoord (hij/zij, hem/haar, zijn/haar) in de tekst, titel, endingText en endingSign: het moet kloppen met het personage waar het naar verwijst.
 - Precies 4 pagina's, elke pagina heeft tekst EN een bijpassende illustratiebeschrijving
 - De illustratiebeschrijving op elke pagina toont PRECIES wat er in de tekst van DIE pagina gebeurt
 - Elke illustratiebeschrijving BEGINT met de exacte karakteromschrijving hierboven
