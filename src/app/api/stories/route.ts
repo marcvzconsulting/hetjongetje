@@ -93,6 +93,11 @@ export async function POST(request: NextRequest) {
     // profiel, nooit uit de request-body (anders kan een client een
     // willekeurige URL als "portret" naar fal.ai sturen).
     characterBible.approvedPreviewUrl = child.approvedPreviewUrl ?? undefined;
+    // Naam en geslacht altijd uit het profiel: daar hangen de voornaamwoorden
+    // in het verhaal aan (hij/zij), en een verouderde of gemanipuleerde
+    // client-body mag dat niet kunnen omdraaien.
+    characterBible.childName = child.name;
+    characterBible.gender = child.gender;
     characterBible.referenceSheetUrls = child.referenceSheetUrls;
 
     // Vervolg-verhaal: haal het vorige verhaal op en verifieer dat het

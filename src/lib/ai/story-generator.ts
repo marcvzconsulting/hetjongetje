@@ -101,7 +101,7 @@ export interface GeneratedStory {
   characterBibleUpdate?: string;
   /** Anthropic-token-usage uit deze generatie. Wordt gebruikt voor
    *  kostentracking; null kan voorkomen als de Claude-call faalde. */
-  textUsage?: { inputTokens: number; outputTokens: number };
+  textUsage?: { inputTokens: number; outputTokens: number; model?: string };
   /** Aantal succesvolle illustraties + welk fal.ai-pad gebruikt is.
    *  Wordt door generateIllustrations gevuld; bij 0 = generatie sloeg
    *  over of mislukte. */
@@ -381,9 +381,62 @@ function pronounRule(childName: string, gender: string): string {
   return `VOORNAAMWOORDEN: gebruik voor ${childName} geen hij/zij of zijn/haar; noem steeds de naam of formuleer zonder voornaamwoord.`;
 }
 
+/**
+ * JSON-schema voor de verhaaluitvoer (structured outputs). Moet in de pas
+ * lopen met het UITVOER-voorbeeld in de prompt en met de parse hieronder.
+ * Aantal pagina's (4) en woordaantallen blijven promptinstructies.
+ */
+const STORY_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "title",
+    "endingText",
+    "endingSign",
+    "sideCharacters",
+    "endingIllustrationPrompt",
+    "characterBibleUpdate",
+    "pages",
+  ],
+  properties: {
+    title: { type: "string" },
+    endingText: { type: "string" },
+    endingSign: { type: "string" },
+    sideCharacters: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name", "description"],
+        properties: { name: { type: "string" }, description: { type: "string" } },
+      },
+    },
+    endingIllustrationPrompt: { type: "string" },
+    characterBibleUpdate: { type: "string" },
+    pages: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["text", "illustrationPrompt"],
+        properties: { text: { type: "string" }, illustrationPrompt: { type: "string" } },
+      },
+    },
+  },
+} as const;
+
+/** Tekstmodel voor verhalen; wisselen zonder deploy via env STORY_MODEL. */
+export const DEFAULT_STORY_MODEL = "claude-sonnet-5";
+
 export async function generateStory(
   rawBible: CharacterBible,
-  rawRequest: StoryRequest
+  rawRequest: StoryRequest,
+  opts: {
+    /** Overschrijft STORY_MODEL (voor scripts/compare-story-models.ts). */
+    model?: string;
+    /** Vooraf geladen prompt-snippets; zonder deze leest de functie de DB. */
+    snippets?: AiPromptValues;
+  } = {},
 ): Promise<GeneratedStory> {
   const characterBible = sanitizeBible(rawBible);
   const request = sanitizeRequest(rawRequest);
@@ -393,7 +446,7 @@ export async function generateStory(
   const charDescription = buildCharacterDescription(characterBible);
   // Load admin-editable snippets once per generation. Defaults are used
   // when no override row exists, so this is safe even on a fresh DB.
-  const snippets = await loadAiPromptSnippets();
+  const snippets = opts.snippets ?? (await loadAiPromptSnippets());
   const styleHint = buildIllustrationStyle(characterBible, snippets);
 
   const settingInfo = STORY_SETTINGS[request.setting as StorySetting];
@@ -504,9 +557,9 @@ De illustratie moet exact weergeven wat er in de tekst op DEZELFDE pagina gebeur
   "title": "Verhaaltitel",
   "endingText": "Afsluitende zin voor de eindpagina (poëtisch, 1-2 zinnen)",
   "endingSign": "Welterusten/Tot ziens, lieve ${characterBible.childName}!",
-  "sideCharacters": { "Naam": "vaste Engelse beschrijving die je LETTERLIJK herhaalt in elke illustratie" },
+  "sideCharacters": [{ "name": "Naam", "description": "vaste Engelse beschrijving die je LETTERLIJK herhaalt in elke illustratie" }],
   "endingIllustrationPrompt": "${charDescription}, [rustige afsluitscène]. Soft watercolor, children's picture book style.",
-  "characterBibleUpdate": "Kort over wat er nieuw is vastgesteld in dit verhaal",
+  "characterBibleUpdate": "Kort over wat er nieuw is vastgesteld in dit verhaal (leeg als er niets nieuws is)",
   "pages": [
     {
       "text": "Nederlandse verhaaltekst voor pagina 1",
@@ -545,9 +598,15 @@ Regels:
     // standaard adaptief mee; "medium" houdt de extra tokens beperkt, een
     // kinderverhaal vraagt geen diep redeneerwerk. max_tokens ruimer,
     // want denk-tokens tellen hierin mee.
-    model: "claude-sonnet-5",
+    model: opts.model ?? process.env.STORY_MODEL ?? DEFAULT_STORY_MODEL,
     max_tokens: 8000,
-    output_config: { effort: "medium" },
+    // Gestructureerde output: de API garandeert JSON volgens STORY_SCHEMA.
+    // Zonder dit gaf Sonnet 5 in de test van 25-09-2026 1 op 3 keer
+    // ongeldige JSON (= mislukte generatie).
+    output_config: {
+      effort: "medium",
+      format: { type: "json_schema", schema: STORY_SCHEMA },
+    },
     system: "Je bent een Nederlandse kinderboekenauteur. Schrijf warm, persoonlijk en leeftijdsgeschikt. Geef altijd JSON terug.",
     messages: [{ role: "user", content: prompt }],
   });
@@ -557,6 +616,12 @@ Regels:
     .map((b) => (b as { type: "text"; text: string }).text)
     .join("");
 
+  if (message.stop_reason === "max_tokens") {
+    throw new Error("Verhaal afgebroken: max_tokens bereikt");
+  }
+  if (message.stop_reason === "refusal") {
+    throw new Error("Model weigerde het verhaal te schrijven");
+  }
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("Geen geldige JSON in API-response");
 
@@ -583,6 +648,7 @@ Regels:
     textUsage: {
       inputTokens: message.usage.input_tokens,
       outputTokens: message.usage.output_tokens,
+      model: message.model,
     },
   };
 }
