@@ -26,7 +26,9 @@ import { buildAppUrl } from "@/lib/url";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 
 // Allow extra time: story gen + illustrations + uploads
-export const maxDuration = 120;
+// 300: Fable 5.1 schrijft een verhaal in ~40-60 s, daarna nog ~30 s
+// illustraties + uploads. 120 was te krap.
+export const maxDuration = 300;
 
 /**
  * Upload a fal.ai (or any) image URL to our Scaleway bucket.

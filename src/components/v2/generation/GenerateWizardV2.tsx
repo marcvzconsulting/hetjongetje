@@ -954,7 +954,7 @@ function GeneratingState({ childName }: { childName: string }) {
           }}
         >
           De verhalenverteller en de illustrator zijn aan het werk. Dit
-          duurt meestal 30 tot 60 seconden.
+          duurt meestal één tot twee minuten.
         </p>
         <Link
           href="/dashboard"

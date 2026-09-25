@@ -426,7 +426,10 @@ const STORY_SCHEMA = {
 } as const;
 
 /** Tekstmodel voor verhalen; wisselen zonder deploy via env STORY_MODEL. */
-export const DEFAULT_STORY_MODEL = "claude-sonnet-5";
+// Fable 5.1 sinds 25-09-2026: blinde leestest (scripts/compare-story-models.ts)
+// + ouderfeedback "verhaal is zo snel uit". Sonnet 5 schreef de helft van de
+// gevraagde woorden, Opus 5 zat er iets onder, Fable 5.1 binnen het bereik.
+export const DEFAULT_STORY_MODEL = "claude-fable-5-1";
 
 export async function generateStory(
   rawBible: CharacterBible,
@@ -593,13 +596,21 @@ Regels:
 - Totaal ${wordCountRange(age, storyLength)} woorden${age <= 2 ? " — bereik dat aantal met MÉÉR korte zinnen, niet met langere zinnen" : ""}
 `.trim();
 
-  const message = await anthropic.messages.create({
-    // Sonnet 5 (sept 2026; Sonnet 4.5 loopt richting retirement). Denkt
-    // standaard adaptief mee; "medium" houdt de extra tokens beperkt, een
-    // kinderverhaal vraagt geen diep redeneerwerk. max_tokens ruimer,
-    // want denk-tokens tellen hierin mee.
-    model: opts.model ?? process.env.STORY_MODEL ?? DEFAULT_STORY_MODEL,
-    max_tokens: 8000,
+  const model = opts.model ?? process.env.STORY_MODEL ?? DEFAULT_STORY_MODEL;
+  // Server-side fallback (Fable 5.1 / Opus 5): weigert het model om
+  // beleidsredenen, dan schrijft de API het verhaal in dezelfde call met
+  // een vervangend model, i.p.v. een mislukte generatie. message.model is
+  // dan het model dat het werk deed (pricing rekent daarop).
+  const withFallback = model.startsWith("claude-fable-") || model === "claude-opus-5";
+  const message = await anthropic.beta.messages.create({
+    model,
+    ...(withFallback
+      ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
+      : {}),
+    // Denkt adaptief mee (bij Fable altijd aan); "medium" houdt de extra
+    // tokens beperkt. max_tokens ruim, want denk-tokens tellen hierin mee
+    // en lange verhalen voor 8+ zijn tot ~900 woorden.
+    max_tokens: 16000,
     // Gestructureerde output: de API garandeert JSON volgens STORY_SCHEMA.
     // Zonder dit gaf Sonnet 5 in de test van 25-09-2026 1 op 3 keer
     // ongeldige JSON (= mislukte generatie).

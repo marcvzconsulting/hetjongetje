@@ -35,6 +35,9 @@ const CLAUDE_USD_PER_MTOK: Record<string, [number, number]> = {
   "claude-sonnet-5": [2, 10],
   "claude-opus-5": [5, 25],
   "claude-fable-5-1": [10, 50],
+  // mogelijke server-side fallback-modellen
+  "claude-opus-4-8": [5, 25],
+  "claude-fable-5": [10, 50],
   "claude-sonnet-4-5-20250929": [3, 15],
 };
 
