@@ -680,6 +680,20 @@ model AiPromptOverride {
   @@map("ai_prompt_overrides")
 }
 
+/// Admin-instelbare app-instellingen als key/value. Zelfde levensloop als
+/// AiPromptOverride: een rij overschrijft de default uit de code, zonder
+/// rij geldt de default. Gebruikt voor de nachtmodus van de lezer
+/// ("reader.autoNight", "reader.nightStart", "reader.nightEnd").
+model AppSetting {
+  /// Stabiele sleutel, punt-gescheiden: "<onderdeel>.<instelling>".
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by_id")
+
+  @@map("app_settings")
+}
+
 model GenerationJob {
   id           String    @id @default(uuid())
   storyId      String    @map("story_id")

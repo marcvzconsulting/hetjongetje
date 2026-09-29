@@ -11,11 +11,14 @@ import {
   BookViewerV3,
   type WordHighlight,
 } from "@/components/v2/story/BookViewerV3";
+import { BookViewerV4 } from "@/components/v2/story/BookViewerV4";
 import {
   StoryAudioPlayer,
   type StoryAudioEntry,
 } from "@/components/v2/story/StoryAudioPlayer";
 import { V2 } from "@/components/v2/tokens";
+import type { ReaderSettings } from "@/lib/reader/night";
+import type { OverflowMode, ReaderVersion } from "@/lib/reader/version";
 
 interface Props {
   storyId: string;
@@ -36,6 +39,11 @@ interface Props {
   canGenerateAudio: boolean;
   /** Al gegenereerde voorlees-audio's (per stem één). */
   initialAudios: StoryAudioEntry[];
+  /** "v3" = de vorige lezer (terugvaloptie). */
+  readerVersion: ReaderVersion;
+  overflowMode: OverflowMode;
+  readerSettings: ReaderSettings;
+  serverMinutes: number;
 }
 
 export function StoryPageClient({
@@ -52,8 +60,14 @@ export function StoryPageClient({
   initialShareToken,
   canGenerateAudio,
   initialAudios,
+  readerVersion,
+  overflowMode,
+  readerSettings,
+  serverMinutes,
 }: Props) {
   const router = useRouter();
+  const v4 = readerVersion === "v4";
+  const [listenSlot, setListenSlot] = useState<HTMLElement | null>(null);
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
   const [feedbackKind, setFeedbackKind] = useState<"up" | "down" | null>(
     initialFeedbackKind,
@@ -233,27 +247,55 @@ export function StoryPageClient({
 
   return (
     <>
-      <BookViewerV3
-        spreads={spreads}
-        childName={childName}
-        childId={childId}
-        storyId={storyId}
-        storyTitle={storyTitle}
-        isFavorite={isFavorite}
-        onToggleFavorite={toggleFavorite}
-        onShareClick={() => setShareOpen(true)}
-        isShared={!!shareToken}
-        onReactClick={() => setReactOpen(true)}
-        hasFeedback={hasFeedback}
-        onListenClick={() => setListenOpen(true)}
-        hasAudio={audios.length > 0}
-        onSpreadChange={setCurrentSpreadIdx}
-        wordHighlight={listenOpen ? wordHighlight : null}
-      />
+      {v4 ? (
+        <BookViewerV4
+          key={storyId}
+          spreads={spreads}
+          childName={childName}
+          childId={childId}
+          storyId={storyId}
+          storyTitle={storyTitle}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          onShareClick={() => setShareOpen(true)}
+          isShared={!!shareToken}
+          onReactClick={() => setReactOpen(true)}
+          hasFeedback={hasFeedback}
+          onListenClick={() => setListenOpen(true)}
+          hasAudio={audios.length > 0}
+          listenOpen={listenOpen}
+          onListenSlot={setListenSlot}
+          onSpreadChange={setCurrentSpreadIdx}
+          wordHighlight={listenOpen ? wordHighlight : null}
+          readerSettings={readerSettings}
+          serverMinutes={serverMinutes}
+          overflowMode={overflowMode}
+        />
+      ) : (
+        <BookViewerV3
+          spreads={spreads}
+          childName={childName}
+          childId={childId}
+          storyId={storyId}
+          storyTitle={storyTitle}
+          isFavorite={isFavorite}
+          onToggleFavorite={toggleFavorite}
+          onShareClick={() => setShareOpen(true)}
+          isShared={!!shareToken}
+          onReactClick={() => setReactOpen(true)}
+          hasFeedback={hasFeedback}
+          onListenClick={() => setListenOpen(true)}
+          hasAudio={audios.length > 0}
+          onSpreadChange={setCurrentSpreadIdx}
+          wordHighlight={listenOpen ? wordHighlight : null}
+        />
+      )}
 
-      {/* Voorlezen — stemkeuze + paginagestuurde spelerbalk. */}
+      {/* Voorlezen — stemkeuze + paginagestuurde speler. */}
       {listenOpen && (
         <StoryAudioPlayer
+          variant={v4 ? "pill" : "bar"}
+          portalTarget={v4 ? listenSlot : null}
           storyId={storyId}
           audios={audios}
           canGenerate={canGenerateAudio}

@@ -5,17 +5,25 @@ import { storyToSpreads } from "@/lib/story/storyToSpreads";
 import type { WordTiming } from "@/lib/ai/tts";
 import { isTtsPremiumOnly } from "@/lib/ai/tts-config";
 import { hasActivePaidSubscription } from "@/lib/payments/subscriptions";
+import { amsterdamMinutes } from "@/lib/reader/night";
+import { loadReaderSettings } from "@/lib/reader/settings";
+import {
+  resolveOverflowMode,
+  resolveReaderVersion,
+} from "@/lib/reader/version";
 import { StoryPageClient } from "./client";
 
 interface Props {
   params: Promise<{ storyId: string }>;
+  searchParams: Promise<{ lezer?: string | string[]; tekst?: string | string[] }>;
 }
 
-export default async function StoryPage({ params }: Props) {
+export default async function StoryPage({ params, searchParams }: Props) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
   const { storyId } = await params;
+  const query = await searchParams;
 
   const story = await prisma.story.findFirst({
     where: {
@@ -46,6 +54,8 @@ export default async function StoryPage({ params }: Props) {
     !isTtsPremiumOnly() ||
     session.user.role === "admin" ||
     (await hasActivePaidSubscription(session.user.id));
+
+  const readerSettings = await loadReaderSettings();
 
   const spreads = storyToSpreads({
     title: story.title,
@@ -82,6 +92,10 @@ export default async function StoryPage({ params }: Props) {
         url: a.url,
         wordTimings: (a.wordTimings as unknown as WordTiming[] | null) ?? null,
       }))}
+      readerVersion={resolveReaderVersion(query.lezer)}
+      overflowMode={resolveOverflowMode(query.tekst)}
+      readerSettings={readerSettings}
+      serverMinutes={amsterdamMinutes(new Date())}
     />
   );
 }

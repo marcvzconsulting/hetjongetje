@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { V2 } from "@/components/v2/tokens";
 import { IconV2 } from "@/components/v2";
 import {
@@ -55,6 +56,12 @@ type Props = {
   /** De speler is de bron van waarheid voor de woord-markering; de parent
    *  geeft dit door aan BookViewerV3. Null = geen markering. */
   onHighlightChange?: (highlight: WordHighlight | null) => void;
+  /** "bar" = losse spelerbalk boven de bladerknoppen (BookViewerV3).
+   *  "pill" = compacte pil ín de onderbalk van BookViewerV4; die wordt in
+   *  `portalTarget` gezet en neemt de dag- of nachtkleuren van de lezer
+   *  over. */
+  variant?: "bar" | "pill";
+  portalTarget?: HTMLElement | null;
 };
 
 const MOBILE_BP = 768;
@@ -100,6 +107,8 @@ export function StoryAudioPlayer({
   onClose,
   onGenerated,
   onHighlightChange,
+  variant = "bar",
+  portalTarget = null,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -476,6 +485,25 @@ export function StoryAudioPlayer({
       pagePos > 0 ? `leest pagina ${pagePos} van ${pageNumbers.length}` : "";
   }
 
+  // De pil toont bij gewoon afspelen "Pagina 2 · speelt"; aanwijzingen
+  // en meldingen (goud, of tijdens genereren) neemt hij letterlijk over.
+  let pillStatus = statusText;
+  if (statusTone !== "gold" && !(genVoice && genLabel)) {
+    const where =
+      currentPageNumber === TITLE_PAGE_NUMBER
+        ? "Titel"
+        : endingPageNumber !== null && currentPageNumber === endingPageNumber
+          ? "Einde"
+          : `Pagina ${
+              pageNumbers
+                .filter(
+                  (p) => p !== TITLE_PAGE_NUMBER && p !== endingPageNumber,
+                )
+                .indexOf(currentPageNumber ?? -1) + 1
+            }`;
+    pillStatus = `${where} · ${playing ? "speelt" : "gepauzeerd"}`;
+  }
+
   return (
     <>
       {/* Keyframes voor slide-in + spinner. Bij reduced motion worden ze
@@ -673,6 +701,158 @@ export function StoryAudioPlayer({
             )}
           </div>
         </div>
+      ) : variant === "pill" ? (
+        activeVoice &&
+        portalTarget &&
+        createPortal(
+          <div
+            role="region"
+            aria-label="Voorleesspeler"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "8px 10px 8px 8px",
+              borderRadius: 999,
+              background: `var(--ovr-ink, ${V2.ink})`,
+              color: `var(--ovr-paper, ${V2.paper})`,
+              boxShadow: "0 8px 24px rgba(20,20,46,0.28)",
+              fontFamily: V2.ui,
+              fontSize: 12,
+              maxWidth: "100%",
+              boxSizing: "border-box",
+              animation: reducedMotion
+                ? "none"
+                : "ovAudioSheetUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label={playing ? "Pauzeer" : "Speel af"}
+              disabled={!activeUrl}
+              style={{
+                width: 34,
+                height: 34,
+                flex: "none",
+                borderRadius: 999,
+                border: "none",
+                padding: 0,
+                background: V2.gold,
+                color: V2.night,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: activeUrl ? "pointer" : "default",
+                opacity: activeUrl ? 1 : 0.4,
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                {playing ? (
+                  <>
+                    <rect x="6" y="5" width="4" height="14" />
+                    <rect x="14" y="5" width="4" height="14" />
+                  </>
+                ) : (
+                  <path d="M7 5v14l12-7z" />
+                )}
+              </svg>
+            </button>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 2,
+                minWidth: 0,
+              }}
+            >
+              {/* "AI-stem": zichtbare AI-vermelding (AI Act art. 50). Een
+                  tik op de naam opent de stemkeuze. */}
+              <button
+                type="button"
+                onClick={() => setView("picker")}
+                aria-label={`AI-stem ${activeVoice.label}, andere stem kiezen`}
+                title="Andere stem kiezen"
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  color: "inherit",
+                  fontFamily: "inherit",
+                  fontSize: "inherit",
+                  fontWeight: 500,
+                  whiteSpace: "nowrap",
+                  textDecoration: "underline",
+                  textDecorationColor: "rgba(138,136,168,0.7)",
+                  textUnderlineOffset: 3,
+                }}
+              >
+                AI-stem {activeVoice.label}
+              </button>
+              <span
+                aria-live="polite"
+                style={{
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  ...(statusTone === "gold"
+                    ? {
+                        color: `var(--ovr-pill-accent, ${V2.gold})`,
+                        fontWeight: 500,
+                      }
+                    : { opacity: 0.7 }),
+                }}
+              >
+                {pillStatus}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Voorlezen sluiten"
+              title="Sluiten"
+              style={{
+                width: 30,
+                height: 30,
+                flex: "none",
+                border: "none",
+                padding: 0,
+                background: "transparent",
+                color: "inherit",
+                opacity: 0.7,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </div>,
+          portalTarget,
+        )
       ) : (
         activeVoice && (
           <div
