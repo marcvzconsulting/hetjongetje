@@ -3,11 +3,13 @@
 import {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
+  type Ref,
 } from "react";
 import { preload } from "react-dom";
 import Image, { getImageProps } from "next/image";
@@ -51,6 +53,18 @@ import { ReaderMenu } from "./v4/ReaderMenu";
 
 export type { WordHighlight };
 
+/** Handvat voor de pagina om de lezer aan te sturen vanuit de speler. */
+export type ReaderHandle = {
+  /** Voorlezen: de audio van de zichtbare pagina is uitgespeeld. Geeft
+   *  true als de lezer zelf doorgaat naar de volgende pagina (doorlopend
+   *  scrollen); anders blijft het aan de lezer om te bladeren. */
+  continueReading: () => boolean;
+};
+
+/** Adempauze tussen de laatste zin en het doorscrollen naar de volgende
+ *  pagina. */
+const READ_ON_DELAY_MS = 700;
+
 type Props = {
   spreads: Spread[];
   childName: string;
@@ -88,6 +102,7 @@ type Props = {
   /** Meldt de nachtstand, zodat vensters buiten de lezer (stemkiezer,
    *  delen, reageren) meekleuren. */
   onNightChange?: (night: boolean) => void;
+  ref?: Ref<ReaderHandle>;
 };
 
 type Flip = { id: number; unit: DisplayUnit; index: number; dir: 1 | -1 };
@@ -95,7 +110,7 @@ type Flip = { id: number; unit: DisplayUnit; index: number; dir: 1 | -1 };
 const FLIP_SECONDS = 1.15;
 const FLIP_EASE = [0.35, 0.05, 0.2, 1] as const;
 const CHROME_HIDE_MS = 3500;
-const IMG_SIZES = "(orientation: landscape) 50vw, 100vw";
+const IMG_SIZES = "(orientation: landscape) 60vw, 100vw";
 
 function positionKey(storyId: string): string {
   return `ov_reader_v4_${storyId}`;
@@ -165,6 +180,7 @@ export function BookViewerV4({
   serverMinutes,
   overflowMode,
   onNightChange,
+  ref,
 }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const baseUnits = useMemo(() => buildBaseUnits(spreads), [spreads]);
@@ -403,6 +419,34 @@ export function BookViewerV4({
     if (followTo === null) return;
     queueMicrotask(() => navigate(followTo));
   }, [followTo, navigate]);
+
+  // Doorlopend scrollen: is de pagina uitgelezen, dan scrolt de lezer na
+  // een adempauze zelf naar de volgende. Bij bladeren blijft het omslaan
+  // aan de lezer (de speler toont dan "Sla de bladzijde om").
+  const navigateRef = useRef(navigate);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+  const readOn = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (readOn.current) clearTimeout(readOn.current);
+  }, []);
+  useImperativeHandle(
+    ref,
+    () => ({
+      continueReading: () => {
+        if (!flow || !units || index >= units.length - 1) return false;
+        const next = index + 1;
+        if (readOn.current) clearTimeout(readOn.current);
+        readOn.current = setTimeout(() => {
+          readOn.current = null;
+          navigateRef.current(next);
+        }, READ_ON_DELAY_MS);
+        return true;
+      },
+    }),
+    [flow, units, index],
+  );
 
   // ── Tikken en vegen ──────────────────────────────────────────
   const pointer = useRef<{ id: number; x: number; y: number } | null>(null);
@@ -673,7 +717,7 @@ export function BookViewerV4({
                 src={url}
                 alt=""
                 fill
-                sizes={layout.orientation === "landscape" ? "50vw" : "100vw"}
+                sizes={layout.orientation === "landscape" ? "60vw" : "100vw"}
                 loading="eager"
               />
             ))}

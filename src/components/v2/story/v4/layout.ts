@@ -40,7 +40,9 @@ export type ReaderLayout = {
   maxImageShare: number;
   minImageShare: number;
 
-  // Liggend: marges van de tekstkolom
+  // Liggend: breedte van de kolom met de illustratie (de tekst krijgt de
+  // rest) en marges van de tekstkolom
+  imageCol: number;
   colPadTop: number;
   colPadBottom: number;
   colPadOuter: number;
@@ -63,6 +65,59 @@ export const TEXT_MAX_EM = 34;
 export const IMAGE_SHARES = [0.47, 0.44, 0.41, 0.38, 0.36, 0.34] as const;
 export const LINE_HEIGHT_PORTRAIT = 1.55;
 export const LINE_HEIGHT_LANDSCAPE = 1.6;
+/** Verhouding van de illustraties (fal.ai `landscape_4_3`). */
+export const ILLUSTRATION_RATIO = 4 / 3;
+
+/** Liggend: aandeel van de breedte voor de illustratie als de hoogte het
+ *  toelaat. Meer dan dit maakt de tekstkolom te smal om prettig te lezen. */
+const IMAGE_COL_MAX = 0.58;
+/** Lucht boven en onder de illustratie waar de hoogte de maat bepaalt. */
+const IMAGE_COL_MARGIN = 40;
+
+/**
+ * Liggend: breedte van de kolom met de illustratie. Een liggend beeld
+ * dat een staande helft moet vullen, verliest links en rechts een derde
+ * tot de helft. Daarom krijgt de illustratie haar eigen verhouding, en
+ * mag haar kolom breder zijn dan de helft zolang het beeld dan nog met
+ * wat lucht in de hoogte past. Minstens de helft, zodat de tekst nooit
+ * meer ruimte krijgt dan het beeld.
+ */
+function landscapeImageCol(width: number, height: number): number {
+  return Math.max(
+    width / 2,
+    Math.min(
+      IMAGE_COL_MAX * width,
+      (height - 2 * IMAGE_COL_MARGIN) * ILLUSTRATION_RATIO,
+    ),
+  );
+}
+
+/**
+ * Liggend: het vak van de illustratie in haar kolom, in de verhouding
+ * van het beeld en in het midden van de hoogte. Meestal bepaalt de
+ * breedte de maat en raakt het beeld de buitenrand; op een heel breed
+ * scherm de hoogte, en dan staat het los van de rand.
+ */
+export function landscapeImageBox(layout: ReaderLayout): {
+  width: number;
+  height: number;
+  top: number;
+  /** Afstand tot de zijkant van het scherm (0 als het beeld die raakt). */
+  side: number;
+  /** Raakt de zijkant van het scherm. */
+  touchesEdge: boolean;
+} {
+  const col = layout.imageCol;
+  const width = Math.min(col, layout.height * ILLUSTRATION_RATIO);
+  const height = width / ILLUSTRATION_RATIO;
+  return {
+    width,
+    height,
+    top: (layout.height - height) / 2,
+    side: (col - width) / 2,
+    touchesEdge: width >= col - 1,
+  };
+}
 
 /** Ruimte onder de kaart voor de bediening; meer als het voorleespaneel
  *  open is of als de laatste pagina extra knoppen toont. */
@@ -133,6 +188,7 @@ export function computeLayout(
     maxImageShare: IMAGE_SHARES[0],
     minImageShare: IMAGE_SHARES[IMAGE_SHARES.length - 1],
 
+    imageCol: landscape ? landscapeImageCol(width, height) : 0,
     colPadTop: phone ? 56 : 72,
     colPadBottom: (phone ? 62 : 104) + (listening ? INSET_LISTENING : 0),
     colPadOuter: 30,
@@ -177,7 +233,7 @@ export function textBox(
   imageShare: number,
 ): TextBox {
   if (layout.orientation === "landscape") {
-    const colWidth = layout.width / 2;
+    const colWidth = layout.width - layout.imageCol;
     return {
       width: Math.min(
         colWidth - layout.colPadOuter - layout.colPadInner,

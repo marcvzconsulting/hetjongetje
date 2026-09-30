@@ -60,6 +60,10 @@ type Props = {
   /** De speler is de bron van waarheid voor de woord-markering; de parent
    *  geeft dit door aan BookViewerV3. Null = geen markering. */
   onHighlightChange?: (highlight: WordHighlight | null) => void;
+  /** De audio van de zichtbare pagina is uitgespeeld. Geeft true als de
+   *  lezer zelf doorgaat naar de volgende pagina (doorlopend scrollen);
+   *  anders toont de speler "Sla de bladzijde om". */
+  onPageEnded?: () => boolean;
   /** "bar" = losse spelerbalk boven de bladerknoppen (BookViewerV3).
    *  "pill" = compacte pil ín de onderbalk van BookViewerV4; die wordt in
    *  `portalTarget` gezet en neemt de dag- of nachtkleuren van de lezer
@@ -113,6 +117,7 @@ export function StoryAudioPlayer({
   onClose,
   onGenerated,
   onHighlightChange,
+  onPageEnded,
   variant = "bar",
   portalTarget = null,
   night = false,
@@ -128,6 +133,8 @@ export function StoryAudioPlayer({
   const [error, setError] = useState<string | null>(null);
   /** Audio van de huidige pagina is uitgespeeld → "Sla de bladzijde om". */
   const [pageEnded, setPageEnded] = useState(false);
+  /** Uitgespeeld en de lezer scrolt zelf door naar de volgende pagina. */
+  const [advancing, setAdvancing] = useState(false);
   /** Browser blokkeerde autoplay → vraag om een tik op de afspeelknop. */
   const [needsTap, setNeedsTap] = useState(false);
 
@@ -365,6 +372,7 @@ export function StoryAudioPlayer({
     startedRef.current = startKey;
 
     setPageEnded(false);
+    setAdvancing(false);
     emitHighlight(null);
     if (el.dataset.src !== activeUrl) {
       el.src = activeUrl;
@@ -509,7 +517,7 @@ export function StoryAudioPlayer({
                 )
                 .indexOf(currentPageNumber ?? -1) + 1
             }`;
-    pillStatus = `${where} · ${playing ? "speelt" : "gepauzeerd"}`;
+    pillStatus = `${where} · ${playing || advancing ? "speelt" : "gepauzeerd"}`;
   }
 
   return (
@@ -536,8 +544,13 @@ export function StoryAudioPlayer({
         onEnded={() => {
           setPlaying(false);
           stopHighlightLoop();
-          setPageEnded(true);
           emitHighlight(null);
+          // Na de eindpagina is het verhaal uit; daarvóór mag de lezer
+          // zelf doorgaan (doorlopend scrollen), anders bladert de lezer.
+          const last =
+            endingPageNumber !== null && currentPageNumber === endingPageNumber;
+          if (!last && onPageEnded?.()) setAdvancing(true);
+          else setPageEnded(true);
         }}
         onTimeUpdate={(e) => {
           setCurrentTime(e.currentTarget.currentTime);

@@ -19,10 +19,11 @@ import {
   LINE_HEIGHT_PORTRAIT,
   TEXT_MAX_EM,
   insetFor,
+  landscapeImageBox,
   px,
   type ReaderLayout,
 } from "./layout";
-import { wavyEdge } from "./edge";
+import { wavyEdge, type WavyEdge } from "./edge";
 import { PAPER_NOISE, type ReaderPalette } from "./palette";
 import { WORD_STYLE, dropcapStyle, textBlockStyle } from "./text-style";
 
@@ -186,16 +187,25 @@ function LandscapePage(props: PageProps) {
   // hebben de illustratie altijd links.
   const textLeft = unit.kind === "text" && unit.storyPage % 2 === 1;
 
-  // De rand aan de kant van de tekst golft zacht, als aquarel.
+  // Het vak heeft de verhouding van de illustratie, zodat het hele beeld
+  // te zien is. De rand aan de kant van de tekst golft zacht, als
+  // aquarel; raakt het beeld de zijkant van het scherm niet, dan golft
+  // ook die kant.
+  const box = landscapeImageBox(layout);
+  const inner: WavyEdge = textLeft ? "left" : "right";
+  const outer: WavyEdge = textLeft ? "right" : "left";
   const image = (
     <div
       style={{
         position: "absolute",
-        inset: 0,
-        ...wavyEdge("top", "bottom", textLeft ? "left" : "right"),
+        top: box.top,
+        [outer]: box.side,
+        width: box.width,
+        height: box.height,
+        ...wavyEdge("top", "bottom", inner, ...(box.touchesEdge ? [] : [outer])),
       }}
     >
-      <Illustration {...props} sizes="50vw" />
+      <Illustration {...props} sizes="60vw" />
       <div
         aria-hidden
         style={{
@@ -253,12 +263,14 @@ function LandscapePage(props: PageProps) {
     );
   }
 
-  const half: CSSProperties = {
+  const col = (width: number): CSSProperties => ({
     position: "relative",
-    width: "50%",
+    width,
     height: "100%",
     overflow: "hidden",
-  };
+  });
+  const imageCol = col(layout.imageCol);
+  const textCol = col(layout.width - layout.imageCol);
 
   return (
     <div
@@ -272,8 +284,12 @@ function LandscapePage(props: PageProps) {
         fontFamily: V2.body,
       }}
     >
-      <div style={half}>{textLeft ? content : image}</div>
-      <div style={half}>{textLeft ? image : content}</div>
+      <div style={textLeft ? textCol : imageCol}>
+        {textLeft ? content : image}
+      </div>
+      <div style={textLeft ? imageCol : textCol}>
+        {textLeft ? image : content}
+      </div>
     </div>
   );
 }

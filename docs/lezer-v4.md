@@ -11,7 +11,7 @@ De lay-out volgt de **oriëntatie** van het scherm, niet de breedte.
 | Oriëntatie | Lay-out |
 |---|---|
 | Staand | Illustratie boven, tekstkaart eronder |
-| Liggend | Tekst en illustratie naast elkaar, elk 50 %. Verhaalpagina's wisselen van kant; kaft en einde hebben de illustratie links |
+| Liggend | Tekst en illustratie naast elkaar. De illustratie houdt haar eigen verhouding (4:3) en staat in het midden van de hoogte; haar kolom is de helft tot 58 % van de breedte, zolang het beeld met wat lucht in de hoogte past. Verhaalpagina's wisselen van kant; kaft en einde hebben de illustratie links |
 
 Tekstschaal: telefoon 1×, tablet staand 1,35×, tablet liggend 1,45×,
 desktop 1,5×, groot beeldscherm (vanaf 1600 × 950) 1,8×.
@@ -45,6 +45,12 @@ maat. Opgesplitste tekst breekt bij voorkeur na een zin en wordt gelijk
 over de delen verdeeld. Tijdens het voorlezen bladert de lezer zelf door
 naar het volgende deel van dezelfde pagina; bij doorlopend scrollen
 scrolt hij mee. De audio loopt dan door.
+
+Is een pagina uitgelezen, dan scrolt de lezer bij doorlopend scrollen na
+een korte adempauze zelf naar de volgende pagina en leest die voor, tot
+en met het einde (`ReaderHandle.continueReading`, aangeroepen door de
+speler). Bij bladeren blijft het omslaan aan de lezer: de pil toont dan
+"Sla de bladzijde om".
 
 Op 30 sep 2026 zijn vier opties naast elkaar gezet (extra pagina met
 krimpende illustratie, extra pagina met vaste illustratie, scrollende
@@ -102,6 +108,13 @@ Op verzoek van Marc (30 sep 2026):
   rand boven en onder, en liggend ook aan de kant van de tekst
   (`v4/edge.ts`, een SVG-masker met ruis), als aquarel op nat papier.
   Browsers zonder maskers tonen een rechte rand.
+- **Liggend het hele beeld.** Het ontwerp vult liggend de halve breedte
+  bij de volle hoogte (`object-fit: cover`); van een 4:3-illustratie
+  bleef op een laptop dan 60 % over en op een tablet 54 %. De illustratie
+  houdt nu haar verhouding (`landscapeImageBox`), staand blijft `cover`
+  (daar past het vak beter bij het beeld).
+- **Voorlezen loopt door** bij doorlopend scrollen (zie boven); het
+  ontwerp kende alleen "Sla de bladzijde om".
 
 Uit de bouw:
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Spread } from "@/lib/story/spread-types";
 import {
@@ -11,7 +11,10 @@ import {
   BookViewerV3,
   type WordHighlight,
 } from "@/components/v2/story/BookViewerV3";
-import { BookViewerV4 } from "@/components/v2/story/BookViewerV4";
+import {
+  BookViewerV4,
+  type ReaderHandle,
+} from "@/components/v2/story/BookViewerV4";
 import {
   StoryAudioPlayer,
   type StoryAudioEntry,
@@ -95,6 +98,7 @@ export function StoryPageClient({
   // Nachtstand van de lezer (alleen V4 meldt die); de vensters hieronder
   // kleuren mee.
   const [night, setNight] = useState(false);
+  const readerRef = useRef<ReaderHandle>(null);
   const d = dialogPalette(night);
 
   // ── Voorlezen: spread ↔ pagina-koppeling + woord-markering ──────
@@ -279,6 +283,7 @@ export function StoryPageClient({
           serverMinutes={serverMinutes}
           overflowMode={overflowMode}
           onNightChange={setNight}
+          ref={readerRef}
         />
       ) : (
         <BookViewerV3
@@ -330,6 +335,7 @@ export function StoryPageClient({
             )
           }
           onHighlightChange={setWordHighlight}
+          onPageEnded={() => readerRef.current?.continueReading() ?? false}
         />
       )}
 

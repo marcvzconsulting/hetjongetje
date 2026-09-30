@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Spread } from "@/lib/story/spread-types";
 import {
   endingNarrationPageNumber,
@@ -10,7 +10,10 @@ import {
   BookViewerV3,
   type WordHighlight,
 } from "@/components/v2/story/BookViewerV3";
-import { BookViewerV4 } from "@/components/v2/story/BookViewerV4";
+import {
+  BookViewerV4,
+  type ReaderHandle,
+} from "@/components/v2/story/BookViewerV4";
 import {
   StoryAudioPlayer,
   type StoryAudioEntry,
@@ -51,6 +54,7 @@ export function PublicStoryReader({
   const [listenOpen, setListenOpen] = useState(false);
   // Nachtstand van de lezer (alleen V4 meldt die); de stemkiezer kleurt mee.
   const [night, setNight] = useState(false);
+  const readerRef = useRef<ReaderHandle>(null);
   const [currentSpreadIdx, setCurrentSpreadIdx] = useState(0);
   const [wordHighlight, setWordHighlight] = useState<WordHighlight | null>(
     null,
@@ -115,6 +119,7 @@ export function PublicStoryReader({
           serverMinutes={serverMinutes}
           overflowMode={overflowMode}
           onNightChange={setNight}
+          ref={readerRef}
         />
       ) : (
         <BookViewerV3
@@ -149,6 +154,7 @@ export function PublicStoryReader({
             setWordHighlight(null);
           }}
           onHighlightChange={setWordHighlight}
+          onPageEnded={() => readerRef.current?.continueReading() ?? false}
         />
       )}
     </main>
