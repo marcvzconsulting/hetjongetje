@@ -2,14 +2,20 @@ import type { CSSProperties } from "react";
 
 /**
  * Zachte, golvende rand aan een illustratie, als aquarel op nat papier.
- * Een SVG-masker met ruis verplaatst de rand van een rechthoek een paar
- * pixels heen en weer en vervaagt hem licht. Browsers zonder ondersteuning
- * voor maskers tonen gewoon een rechte rand.
+ * Een SVG-masker met ruis verplaatst de rand van een rechthoek heen en
+ * weer en vervaagt hem licht. Browsers zonder ondersteuning voor maskers
+ * tonen gewoon een rechte rand.
  *
- * Alleen de gevraagde kant golft: de rechthoek steekt aan de andere kanten
- * ruim buiten het beeld.
+ * Alleen de gevraagde kanten golven: aan de andere kanten steekt de
+ * rechthoek ruim buiten het beeld.
  */
-export type WavyEdge = "bottom" | "left" | "right";
+export type WavyEdge = "top" | "bottom" | "left" | "right";
+
+const SIZE = 400;
+/** Hoe ver een golvende rand binnen het beeld begint (in maskereenheden). */
+const INSET = 14;
+/** Hoe ver een rechte rand buiten het beeld ligt. */
+const OVERHANG = 60;
 
 const FILTER =
   "<filter id='f' x='-0.1' y='-0.1' width='1.2' height='1.2'>" +
@@ -19,25 +25,29 @@ const FILTER =
   "<feGaussianBlur stdDeviation='1'/>" +
   "</filter>";
 
-function svg(viewBox: string, rect: string): string {
+const cache = new Map<string, string>();
+
+function maskFor(edges: WavyEdge[]): string {
+  const key = [...edges].sort().join(",");
+  const known = cache.get(key);
+  if (known) return known;
+
+  const has = (e: WavyEdge) => edges.includes(e);
+  const x = has("left") ? INSET : -OVERHANG;
+  const y = has("top") ? INSET : -OVERHANG;
+  const right = has("right") ? SIZE - INSET : SIZE + OVERHANG;
+  const bottom = has("bottom") ? SIZE - INSET : SIZE + OVERHANG;
   const markup =
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='${viewBox}' preserveAspectRatio='none'>` +
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${SIZE} ${SIZE}' preserveAspectRatio='none'>` +
     FILTER +
-    `<rect ${rect} fill='%23fff' filter='url(%23f)'/></svg>`;
-  return `url("data:image/svg+xml;utf8,${markup}")`;
+    `<rect x='${x}' y='${y}' width='${right - x}' height='${bottom - y}' fill='%23fff' filter='url(%23f)'/></svg>`;
+  const url = `url("data:image/svg+xml;utf8,${markup}")`;
+  cache.set(key, url);
+  return url;
 }
 
-const MASKS: Record<WavyEdge, string> = {
-  // Onderrand golft; boven en opzij steekt de rechthoek buiten beeld.
-  bottom: svg("0 0 400 300", "x='-60' y='-60' width='520' height='344'"),
-  // Rechterrand golft (illustratie links van de tekst).
-  right: svg("0 0 300 400", "x='-60' y='-60' width='344' height='520'"),
-  // Linkerrand golft (illustratie rechts van de tekst).
-  left: svg("0 0 300 400", "x='16' y='-60' width='344' height='520'"),
-};
-
-export function wavyEdge(edge: WavyEdge): CSSProperties {
-  const mask = MASKS[edge];
+export function wavyEdge(...edges: WavyEdge[]): CSSProperties {
+  const mask = maskFor(edges);
   return {
     maskImage: mask,
     WebkitMaskImage: mask,

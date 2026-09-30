@@ -82,7 +82,7 @@ function PortraitPage(props: PageProps) {
           position: "relative",
           flex: `0 0 ${share * 100}%`,
           overflow: "hidden",
-          ...wavyEdge("bottom"),
+          ...wavyEdge("top", "bottom"),
         }}
       >
         <Illustration {...props} sizes="100vw" />
@@ -194,7 +194,7 @@ function LandscapePage(props: PageProps) {
       style={{
         position: "absolute",
         inset: 0,
-        ...wavyEdge(textLeft ? "left" : "right"),
+        ...wavyEdge("top", "bottom", textLeft ? "left" : "right"),
       }}
     >
       <Illustration {...props} sizes="50vw" />

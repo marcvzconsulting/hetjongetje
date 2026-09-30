@@ -285,7 +285,7 @@ export function ReaderFlow({
               zIndex: 1,
               height: imageHeight,
               overflow: "hidden",
-              ...wavyEdge("bottom"),
+              ...wavyEdge("top", "bottom"),
             }}
           >
             <Illustration
