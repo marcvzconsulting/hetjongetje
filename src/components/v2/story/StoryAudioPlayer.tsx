@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { V2 } from "@/components/v2/tokens";
+import {
+  dialogPalette,
+  type DialogPalette,
+} from "@/components/v2/story/dialog-palette";
 import { IconV2 } from "@/components/v2";
 import {
   TTS_VOICES,
@@ -62,6 +66,8 @@ type Props = {
    *  over. */
   variant?: "bar" | "pill";
   portalTarget?: HTMLElement | null;
+  /** Nachtstand van de lezer: de stemkiezer kleurt mee. */
+  night?: boolean;
 };
 
 const MOBILE_BP = 768;
@@ -109,8 +115,10 @@ export function StoryAudioPlayer({
   onHighlightChange,
   variant = "bar",
   portalTarget = null,
+  night = false,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const d = dialogPalette(night);
 
   const [view, setView] = useState<"picker" | "player">("picker");
   const [active, setActive] = useState<TtsVoiceKey | null>(null);
@@ -562,7 +570,7 @@ export function StoryAudioPlayer({
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "center",
-            background: "rgba(20,20,46,0.45)",
+            background: d.scrim,
             backdropFilter: "blur(2px)",
             WebkitBackdropFilter: "blur(2px)",
           }}
@@ -575,12 +583,12 @@ export function StoryAudioPlayer({
               maxWidth: 640,
               maxHeight: "90vh",
               overflow: "auto",
-              background: V2.paper,
+              background: d.paper,
               padding: "28px 24px 32px",
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
               marginBottom: "env(safe-area-inset-bottom, 0px)",
-              boxShadow: "0 -10px 40px rgba(20,20,46,0.25)",
+              boxShadow: d.shadow,
               animation: reducedMotion
                 ? "none"
                 : "ovAudioSheetUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -598,7 +606,7 @@ export function StoryAudioPlayer({
                 border: "none",
                 fontSize: 22,
                 lineHeight: 1,
-                color: V2.inkMute,
+                color: d.inkMute,
                 cursor: "pointer",
               }}
             >
@@ -612,7 +620,7 @@ export function StoryAudioPlayer({
                 fontSize: 22,
                 letterSpacing: -0.4,
                 margin: "0 0 6px",
-                color: V2.ink,
+                color: d.ink,
               }}
             >
               Voorlezen
@@ -621,7 +629,7 @@ export function StoryAudioPlayer({
               style={{
                 fontFamily: V2.body,
                 fontSize: 14,
-                color: V2.inkSoft,
+                color: d.inkSoft,
                 margin: "0 0 18px",
                 lineHeight: 1.55,
               }}
@@ -638,10 +646,10 @@ export function StoryAudioPlayer({
                   marginBottom: 14,
                   padding: "10px 14px",
                   background: "rgba(176,74,65,0.12)",
-                  borderLeft: `3px solid ${V2.heart}`,
+                  borderLeft: `3px solid ${d.heart}`,
                   fontFamily: V2.body,
                   fontSize: 13,
-                  color: V2.ink,
+                  color: d.ink,
                 }}
               >
                 {error}
@@ -670,6 +678,7 @@ export function StoryAudioPlayer({
                   generatingLabel={genVoice === key ? genLabel : null}
                   generateLocked={genVoice !== null && genVoice !== key}
                   reducedMotion={reducedMotion}
+                  d={d}
                   onSelect={() => void chooseVoice(key)}
                 />
               ))}
@@ -680,7 +689,7 @@ export function StoryAudioPlayer({
                 style={{
                   fontFamily: V2.body,
                   fontSize: 14,
-                  color: V2.inkSoft,
+                  color: d.inkSoft,
                   margin: "18px 0 0",
                   lineHeight: 1.55,
                 }}
@@ -690,7 +699,7 @@ export function StoryAudioPlayer({
                 <a
                   href="/subscribe"
                   style={{
-                    color: V2.goldDeep,
+                    color: d.goldDeep,
                     textDecoration: "underline",
                     textUnderlineOffset: 3,
                   }}
@@ -1080,6 +1089,7 @@ function VoiceTile({
   generatingLabel,
   generateLocked,
   reducedMotion,
+  d,
   onSelect,
 }: {
   voiceKey: TtsVoiceKey;
@@ -1095,6 +1105,7 @@ function VoiceTile({
   /** Er loopt al een generatie (voor een andere stem). */
   generateLocked: boolean;
   reducedMotion: boolean;
+  d: DialogPalette;
   onSelect: () => void;
 }) {
   const voice = TTS_VOICES[voiceKey];
@@ -1121,8 +1132,8 @@ function VoiceTile({
         gap: 6,
         textAlign: "left",
         padding: "12px 14px",
-        background: dimmed ? V2.paperDeep : V2.paper,
-        border: `1px solid ${isActive ? V2.goldDeep : V2.paperShade}`,
+        background: dimmed ? d.paperDeep : d.paper,
+        border: `1px solid ${isActive ? d.goldDeep : d.paperShade}`,
         borderRadius: 8,
         cursor: disabled ? "default" : "pointer",
         opacity: dimmed ? 0.55 : 1,
@@ -1137,13 +1148,13 @@ function VoiceTile({
           minWidth: 0,
         }}
       >
-        <GenderGlyph gender={voice.gender} color={dimmed ? V2.inkMute : V2.goldDeep} />
+        <GenderGlyph gender={voice.gender} color={dimmed ? d.inkMute : d.goldDeep} />
         <span
           style={{
             fontFamily: V2.ui,
             fontSize: 14,
             fontWeight: 500,
-            color: V2.ink,
+            color: d.ink,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -1158,8 +1169,8 @@ function VoiceTile({
               fontSize: 9,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: V2.goldDeep,
-              border: `1px solid ${V2.gold}`,
+              color: d.goldDeep,
+              border: `1px solid ${d.gold}`,
               borderRadius: 999,
               padding: "2px 7px",
               whiteSpace: "nowrap",
@@ -1174,7 +1185,7 @@ function VoiceTile({
         style={{
           fontFamily: V2.body,
           fontSize: 13,
-          color: V2.inkSoft,
+          color: d.inkSoft,
           lineHeight: 1.4,
         }}
       >
@@ -1190,7 +1201,7 @@ function VoiceTile({
           fontSize: 10,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: complete ? V2.goldDeep : V2.inkMute,
+          color: complete ? d.goldDeep : d.inkMute,
           marginTop: 2,
         }}
       >
@@ -1207,7 +1218,7 @@ function VoiceTile({
               width="10"
               height="10"
               viewBox="0 0 24 24"
-              fill={V2.goldDeep}
+              fill={d.goldDeep}
               aria-hidden
             >
               <path d="M7 4v16l13-8z" />
@@ -1215,7 +1226,7 @@ function VoiceTile({
             <span>Afspelen</span>
           </>
         ) : canGenerate ? (
-          <span style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
+          <span style={{ borderBottom: `1px solid ${d.paperShade}` }}>
             {presentCount > 0 ? "Maak stem af" : "Genereer stem (eenmalig)"}
           </span>
         ) : premiumGated ? (
@@ -1223,7 +1234,7 @@ function VoiceTile({
             style={{
               textTransform: "none",
               letterSpacing: "0.04em",
-              color: V2.goldDeep,
+              color: d.goldDeep,
             }}
           >
             Onderdeel van het abonnement

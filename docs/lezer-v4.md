@@ -63,6 +63,9 @@ illustratie en de scrollende tekstkaart zijn verwijderd.
   `reader.nightStart`, `reader.nightEnd` (minuten sinds middernacht).
   Ontbreekt een rij of de hele tabel, dan geldt de standaard.
 - Elke wijziging schrijft een auditregel `reader.night_mode.update`.
+- De vensters buiten de lezer (stemkiezer, delen, reageren) kleuren mee:
+  de lezer meldt zijn nachtstand via `onNightChange`, de pagina kiest het
+  palet in `src/components/v2/story/dialog-palette.ts`.
 
 ## Uitrol
 

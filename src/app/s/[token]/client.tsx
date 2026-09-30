@@ -49,6 +49,8 @@ export function PublicStoryReader({
   const v4 = readerVersion === "v4";
   const [listenSlot, setListenSlot] = useState<HTMLElement | null>(null);
   const [listenOpen, setListenOpen] = useState(false);
+  // Nachtstand van de lezer (alleen V4 meldt die); de stemkiezer kleurt mee.
+  const [night, setNight] = useState(false);
   const [currentSpreadIdx, setCurrentSpreadIdx] = useState(0);
   const [wordHighlight, setWordHighlight] = useState<WordHighlight | null>(
     null,
@@ -112,6 +114,7 @@ export function PublicStoryReader({
           readerSettings={readerSettings}
           serverMinutes={serverMinutes}
           overflowMode={overflowMode}
+          onNightChange={setNight}
         />
       ) : (
         <BookViewerV3
@@ -133,6 +136,7 @@ export function PublicStoryReader({
         <StoryAudioPlayer
           variant={v4 ? "pill" : "bar"}
           portalTarget={v4 ? listenSlot : null}
+          night={night}
           storyId={storyId}
           audios={audios}
           canGenerate={false}

@@ -85,6 +85,9 @@ type Props = {
    *  voor de eerste weergave vóór de klok van het toestel bekend is. */
   serverMinutes: number;
   overflowMode: OverflowMode;
+  /** Meldt de nachtstand, zodat vensters buiten de lezer (stemkiezer,
+   *  delen, reageren) meekleuren. */
+  onNightChange?: (night: boolean) => void;
 };
 
 type Flip = { id: number; unit: DisplayUnit; index: number; dir: 1 | -1 };
@@ -161,6 +164,7 @@ export function BookViewerV4({
   readerSettings,
   serverMinutes,
   overflowMode,
+  onNightChange,
 }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const baseUnits = useMemo(() => buildBaseUnits(spreads), [spreads]);
@@ -233,6 +237,10 @@ export function BookViewerV4({
       autoNote = `Nachtmodus gaat automatisch aan om ${formatMinutes(nightStart)}`;
     }
   }
+
+  useEffect(() => {
+    onNightChange?.(night);
+  }, [night, onNightChange]);
 
   // Kleur van de statusbalk van de browser mee laten gaan.
   useEffect(() => {

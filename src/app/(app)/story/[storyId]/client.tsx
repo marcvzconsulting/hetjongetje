@@ -17,6 +17,10 @@ import {
   type StoryAudioEntry,
 } from "@/components/v2/story/StoryAudioPlayer";
 import { V2 } from "@/components/v2/tokens";
+import {
+  dialogPalette,
+  type DialogPalette,
+} from "@/components/v2/story/dialog-palette";
 import type { ReaderSettings } from "@/lib/reader/night";
 import type { OverflowMode, ReaderVersion } from "@/lib/reader/version";
 
@@ -88,6 +92,10 @@ export function StoryPageClient({
   const [copyConfirmed, setCopyConfirmed] = useState(false);
   const [listenOpen, setListenOpen] = useState(false);
   const [audios, setAudios] = useState<StoryAudioEntry[]>(initialAudios);
+  // Nachtstand van de lezer (alleen V4 meldt die); de vensters hieronder
+  // kleuren mee.
+  const [night, setNight] = useState(false);
+  const d = dialogPalette(night);
 
   // ── Voorlezen: spread ↔ pagina-koppeling + woord-markering ──────
   const [currentSpreadIdx, setCurrentSpreadIdx] = useState(0);
@@ -270,6 +278,7 @@ export function StoryPageClient({
           readerSettings={readerSettings}
           serverMinutes={serverMinutes}
           overflowMode={overflowMode}
+          onNightChange={setNight}
         />
       ) : (
         <BookViewerV3
@@ -296,6 +305,7 @@ export function StoryPageClient({
         <StoryAudioPlayer
           variant={v4 ? "pill" : "bar"}
           portalTarget={v4 ? listenSlot : null}
+          night={night}
           storyId={storyId}
           audios={audios}
           canGenerate={canGenerateAudio}
@@ -326,7 +336,7 @@ export function StoryPageClient({
       {/* Modal — slides up from bottom on mobile, centered card on
           desktop. Click outside or press Esc closes. */}
       {reactOpen && (
-        <ReactModal onClose={() => setReactOpen(false)}>
+        <ReactModal d={d} onClose={() => setReactOpen(false)}>
           <div style={{ display: "grid", gap: 28 }}>
             {/* Feedback */}
             <div>
@@ -337,7 +347,7 @@ export function StoryPageClient({
                   fontSize: 22,
                   letterSpacing: -0.4,
                   margin: "0 0 6px",
-                  color: V2.ink,
+                  color: d.ink,
                 }}
               >
                 Hoe vond je dit verhaal?
@@ -346,7 +356,7 @@ export function StoryPageClient({
                 style={{
                   fontFamily: V2.body,
                   fontSize: 14,
-                  color: V2.inkSoft,
+                  color: d.inkSoft,
                   margin: "0 0 14px",
                   lineHeight: 1.55,
                 }}
@@ -355,6 +365,7 @@ export function StoryPageClient({
               </p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <ThumbButton
+                  d={d}
                   label="Mooi"
                   glyph="👍"
                   active={feedbackKind === "up"}
@@ -363,6 +374,7 @@ export function StoryPageClient({
                   }
                 />
                 <ThumbButton
+                  d={d}
                   label="Minder"
                   glyph="👎"
                   active={feedbackKind === "down"}
@@ -375,7 +387,7 @@ export function StoryPageClient({
                     style={{
                       fontFamily: V2.mono,
                       fontSize: 11,
-                      color: V2.inkMute,
+                      color: d.inkMute,
                       alignSelf: "center",
                       letterSpacing: "0.06em",
                     }}
@@ -405,9 +417,9 @@ export function StoryPageClient({
                     fontFamily: V2.body,
                     fontSize: 14,
                     lineHeight: 1.5,
-                    color: V2.ink,
-                    background: V2.paperDeep,
-                    border: `1px solid ${V2.paperShade}`,
+                    color: d.ink,
+                    background: d.paperDeep,
+                    border: `1px solid ${d.paperShade}`,
                     outline: "none",
                     resize: "vertical",
                   }}
@@ -418,7 +430,7 @@ export function StoryPageClient({
             {/* Regenerate */}
             <div
               style={{
-                borderTop: `1px solid ${V2.paperShade}`,
+                borderTop: `1px solid ${d.paperShade}`,
                 paddingTop: 24,
               }}
             >
@@ -429,7 +441,7 @@ export function StoryPageClient({
                   fontSize: 22,
                   letterSpacing: -0.4,
                   margin: "0 0 6px",
-                  color: V2.ink,
+                  color: d.ink,
                 }}
               >
                 Niet helemaal goed?
@@ -438,7 +450,7 @@ export function StoryPageClient({
                 style={{
                   fontFamily: V2.body,
                   fontSize: 14,
-                  color: V2.inkSoft,
+                  color: d.inkSoft,
                   margin: "0 0 14px",
                   lineHeight: 1.55,
                 }}
@@ -446,7 +458,7 @@ export function StoryPageClient({
                 Je kunt dit verhaal één keer opnieuw laten maken met
                 dezelfde instellingen.{" "}
                 {!canRegenerate ? (
-                  <span style={{ color: V2.inkMute }}>
+                  <span style={{ color: d.inkMute }}>
                     Je hebt deze keuze al gebruikt voor dit verhaal.
                   </span>
                 ) : (
@@ -467,24 +479,28 @@ export function StoryPageClient({
                   }}
                 >
                   <ThumbButton
+                    d={d}
                     label="Korter"
                     glyph="✂️"
                     active={quickAdjustments.includes("shorter")}
                     onClick={() => toggleAdjustment("shorter")}
                   />
                   <ThumbButton
+                    d={d}
                     label="Langer"
                     glyph="📖"
                     active={quickAdjustments.includes("longer")}
                     onClick={() => toggleAdjustment("longer")}
                   />
                   <ThumbButton
+                    d={d}
                     label="Grappiger"
                     glyph="😄"
                     active={quickAdjustments.includes("funnier")}
                     onClick={() => toggleAdjustment("funnier")}
                   />
                   <ThumbButton
+                    d={d}
                     label="Rustiger"
                     glyph="🌙"
                     active={quickAdjustments.includes("calmer")}
@@ -511,9 +527,9 @@ export function StoryPageClient({
                     fontFamily: V2.body,
                     fontSize: 14,
                     lineHeight: 1.5,
-                    color: V2.ink,
-                    background: V2.paperDeep,
-                    border: `1px solid ${V2.paperShade}`,
+                    color: d.ink,
+                    background: d.paperDeep,
+                    border: `1px solid ${d.paperShade}`,
                     outline: "none",
                     resize: "vertical",
                     opacity: regenInFlight ? 0.6 : 1,
@@ -531,14 +547,14 @@ export function StoryPageClient({
                   letterSpacing: "0.04em",
                   padding: "10px 22px",
                   border: `1px solid ${
-                    canRegenerate ? V2.ink : V2.paperShade
+                    canRegenerate ? d.ink : d.paperShade
                   }`,
                   background: regenInFlight
-                    ? V2.paperDeep
+                    ? d.paperDeep
                     : canRegenerate
-                      ? V2.paper
-                      : V2.paperDeep,
-                  color: canRegenerate ? V2.ink : V2.inkMute,
+                      ? d.paper
+                      : d.paperDeep,
+                  color: canRegenerate ? d.ink : d.inkMute,
                   cursor:
                     canRegenerate && !regenInFlight
                       ? "pointer"
@@ -556,10 +572,10 @@ export function StoryPageClient({
                     marginTop: 12,
                     padding: "10px 14px",
                     background: "rgba(176,74,65,0.12)",
-                    borderLeft: `3px solid ${V2.heart}`,
+                    borderLeft: `3px solid ${d.heart}`,
                     fontFamily: V2.body,
                     fontSize: 13,
-                    color: V2.ink,
+                    color: d.ink,
                   }}
                 >
                   {regenError}
@@ -572,7 +588,7 @@ export function StoryPageClient({
 
       {/* Share modal — toon link wanneer aan, knop wanneer uit. */}
       {shareOpen && (
-        <ReactModal onClose={() => setShareOpen(false)}>
+        <ReactModal d={d} onClose={() => setShareOpen(false)}>
           <div style={{ display: "grid", gap: 18 }}>
             <div>
               <h2
@@ -582,7 +598,7 @@ export function StoryPageClient({
                   fontSize: 22,
                   letterSpacing: -0.4,
                   margin: "0 0 6px",
-                  color: V2.ink,
+                  color: d.ink,
                 }}
               >
                 Verhaal delen
@@ -591,7 +607,7 @@ export function StoryPageClient({
                 style={{
                   fontFamily: V2.body,
                   fontSize: 14,
-                  color: V2.inkSoft,
+                  color: d.inkSoft,
                   margin: 0,
                   lineHeight: 1.55,
                 }}
@@ -621,9 +637,9 @@ export function StoryPageClient({
                       padding: "10px 12px",
                       fontFamily: V2.mono,
                       fontSize: 13,
-                      color: V2.ink,
-                      background: V2.paperDeep,
-                      border: `1px solid ${V2.paperShade}`,
+                      color: d.ink,
+                      background: d.paperDeep,
+                      border: `1px solid ${d.paperShade}`,
                       outline: "none",
                     }}
                   />
@@ -636,8 +652,8 @@ export function StoryPageClient({
                       fontSize: 13,
                       fontWeight: 500,
                       letterSpacing: "0.04em",
-                      background: copyConfirmed ? V2.goldSoft : V2.ink,
-                      color: copyConfirmed ? V2.goldDeep : V2.paper,
+                      background: copyConfirmed ? d.goldSoft : d.ink,
+                      color: copyConfirmed ? d.goldDeep : d.paper,
                       border: "none",
                       cursor: "pointer",
                     }}
@@ -653,14 +669,14 @@ export function StoryPageClient({
                     gap: 12,
                     flexWrap: "wrap",
                     paddingTop: 10,
-                    borderTop: `1px solid ${V2.paperShade}`,
+                    borderTop: `1px solid ${d.paperShade}`,
                   }}
                 >
                   <span
                     style={{
                       fontFamily: V2.body,
                       fontSize: 13,
-                      color: V2.inkMute,
+                      color: d.inkMute,
                     }}
                   >
                     Verhaal staat nu publiek (alleen via deze link).
@@ -676,8 +692,8 @@ export function StoryPageClient({
                       letterSpacing: "0.04em",
                       padding: "8px 16px",
                       background: "transparent",
-                      color: V2.ink,
-                      border: `1px solid ${V2.paperShade}`,
+                      color: d.ink,
+                      border: `1px solid ${d.paperShade}`,
                       cursor: shareInFlight ? "default" : "pointer",
                       opacity: shareInFlight ? 0.6 : 1,
                     }}
@@ -697,8 +713,8 @@ export function StoryPageClient({
                   fontWeight: 500,
                   letterSpacing: "0.04em",
                   padding: "12px 22px",
-                  background: V2.ink,
-                  color: V2.paper,
+                  background: d.ink,
+                  color: d.paper,
                   border: "none",
                   cursor: shareInFlight ? "default" : "pointer",
                   opacity: shareInFlight ? 0.7 : 1,
@@ -716,9 +732,11 @@ export function StoryPageClient({
 }
 
 function ReactModal({
+  d,
   onClose,
   children,
 }: {
+  d: DialogPalette;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -734,7 +752,7 @@ function ReactModal({
         display: "flex",
         alignItems: "flex-end",
         justifyContent: "center",
-        background: "rgba(20,20,46,0.45)",
+        background: d.scrim,
         backdropFilter: "blur(2px)",
         WebkitBackdropFilter: "blur(2px)",
       }}
@@ -742,16 +760,18 @@ function ReactModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
+          // Anker voor de sluitknop; zonder dit stond die bovenin het scherm.
+          position: "relative",
           width: "100%",
           maxWidth: 560,
           maxHeight: "90vh",
           overflow: "auto",
-          background: V2.paper,
+          background: d.paper,
           padding: "28px 24px 32px",
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
           marginBottom: "env(safe-area-inset-bottom, 0px)",
-          boxShadow: "0 -10px 40px rgba(20,20,46,0.25)",
+          boxShadow: d.shadow,
         }}
       >
         <button
@@ -766,7 +786,7 @@ function ReactModal({
             border: "none",
             fontSize: 22,
             lineHeight: 1,
-            color: V2.inkMute,
+            color: d.inkMute,
             cursor: "pointer",
           }}
         >
@@ -779,11 +799,13 @@ function ReactModal({
 }
 
 function ThumbButton({
+  d,
   label,
   glyph,
   active,
   onClick,
 }: {
+  d: DialogPalette;
   label: string;
   glyph: string;
   active: boolean;
@@ -798,9 +820,9 @@ function ThumbButton({
         alignItems: "center",
         gap: 8,
         padding: "8px 16px",
-        border: `1px solid ${active ? V2.ink : V2.paperShade}`,
-        background: active ? V2.ink : V2.paper,
-        color: active ? V2.paper : V2.ink,
+        border: `1px solid ${active ? d.ink : d.paperShade}`,
+        background: active ? d.ink : d.paper,
+        color: active ? d.paper : d.ink,
         fontFamily: V2.ui,
         fontSize: 14,
         fontWeight: active ? 500 : 400,
