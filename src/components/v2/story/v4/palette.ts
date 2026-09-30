@@ -59,7 +59,7 @@ export const READER_LIGHT: ReaderPalette = {
   grain: 0,
   imgFilter: "none",
   stackGrad:
-    "linear-gradient(to bottom, transparent 70%, rgba(245,239,228,0.9) 100%)",
+    "linear-gradient(to bottom, transparent 82%, rgba(245,239,228,0.45) 100%)",
   themeColor: V2.paper,
 };
 
@@ -87,7 +87,7 @@ export const READER_NIGHT: ReaderPalette = {
   grain: 0,
   imgFilter: "brightness(0.86) saturate(0.9)",
   stackGrad:
-    "linear-gradient(to bottom, transparent 62%, rgba(20,20,46,0.95) 100%)",
+    "linear-gradient(to bottom, transparent 72%, rgba(20,20,46,0.7) 100%)",
   themeColor: V2.night,
 };
 

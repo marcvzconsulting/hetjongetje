@@ -18,6 +18,7 @@ import {
   insetFor,
   type ReaderLayout,
 } from "./layout";
+import { wavyEdge } from "./edge";
 import type { ReaderPalette } from "./palette";
 import { CoverContent, EndingContent, Illustration } from "./ReaderPage";
 import { WORD_STYLE, dropcapStyle, textBlockStyle } from "./text-style";
@@ -284,6 +285,7 @@ export function ReaderFlow({
               zIndex: 1,
               height: imageHeight,
               overflow: "hidden",
+              ...wavyEdge("bottom"),
             }}
           >
             <Illustration

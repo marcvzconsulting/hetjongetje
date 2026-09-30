@@ -90,6 +90,9 @@ Op verzoek van Marc (30 sep 2026):
 - **Tekst direct op het papier.** De tekstkaart heeft geen eigen kleur en
   geen korrel meer; tekst en illustratie vormen één geheel, zoals in de
   liggende lay-out.
+- **Golvende rand.** Elke illustratie krijgt een zachte, onregelmatige
+  rand aan de kant van de tekst (`v4/edge.ts`, een SVG-masker met ruis),
+  als aquarel op nat papier. Browsers zonder maskers tonen een rechte rand.
 
 Uit de bouw:
 

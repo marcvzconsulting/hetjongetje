@@ -23,6 +23,7 @@ import {
   textBox,
   type ReaderLayout,
 } from "./layout";
+import { wavyEdge } from "./edge";
 import { PAPER_NOISE, type ReaderPalette } from "./palette";
 import { WORD_STYLE, dropcapStyle, textBlockStyle } from "./text-style";
 
@@ -81,6 +82,7 @@ function PortraitPage(props: PageProps) {
           position: "relative",
           flex: `0 0 ${share * 100}%`,
           overflow: "hidden",
+          ...wavyEdge("bottom"),
         }}
       >
         <Illustration {...props} sizes="100vw" />
@@ -186,8 +188,15 @@ function LandscapePage(props: PageProps) {
   // hebben de illustratie altijd links.
   const textLeft = unit.kind === "text" && unit.storyPage % 2 === 1;
 
+  // De rand aan de kant van de tekst golft zacht, als aquarel.
   const image = (
-    <>
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        ...wavyEdge(textLeft ? "left" : "right"),
+      }}
+    >
       <Illustration {...props} sizes="50vw" />
       <div
         aria-hidden
@@ -199,7 +208,7 @@ function LandscapePage(props: PageProps) {
             "radial-gradient(ellipse at center, transparent 55%, rgba(20,20,46,0.18) 100%)",
         }}
       />
-    </>
+    </div>
   );
 
   let content: ReactNode;
