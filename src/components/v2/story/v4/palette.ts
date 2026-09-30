@@ -33,11 +33,15 @@ export type ReaderPalette = {
   themeColor: string;
 };
 
+// De tekst staat direct op het papier, zonder eigen kaartkleur of korrel:
+// tekst en illustratie vormen dan één geheel (keuze van Marc, 30 sep).
+// De bovenbalk is doorzichtig met een zachte overgang, zodat de
+// illustratie erdoorheen zichtbaar blijft.
 export const READER_LIGHT: ReaderPalette = {
   night: false,
   stage: V2.paperDeep,
   bg: V2.paper,
-  card: V2.paper,
+  card: "transparent",
   ink: V2.ink,
   soft: V2.inkSoft,
   mute: V2.inkMute,
@@ -46,12 +50,13 @@ export const READER_LIGHT: ReaderPalette = {
   goldDeep: V2.goldDeep,
   line: V2.paperShade,
   paper: V2.paper,
-  chromeBg: "rgba(245,239,228,0.86)",
+  chromeBg:
+    "linear-gradient(to bottom, rgba(245,239,228,0.7) 0%, rgba(245,239,228,0.25) 60%, rgba(245,239,228,0) 100%)",
   bottomBg:
     "linear-gradient(to top, rgba(235,226,209,0.96) 0%, rgba(235,226,209,0.55) 70%, transparent 100%)",
   word: "rgba(201,169,97,0.38)",
   dot: "rgba(31,30,58,0.22)",
-  grain: 0.5,
+  grain: 0,
   imgFilter: "none",
   stackGrad:
     "linear-gradient(to bottom, transparent 70%, rgba(245,239,228,0.9) 100%)",
@@ -62,7 +67,7 @@ export const READER_NIGHT: ReaderPalette = {
   night: true,
   stage: V2.night,
   bg: V2.night,
-  card: "rgba(20,20,46,0.78)",
+  card: "transparent",
   ink: V2.paper,
   soft: V2.goldSoft,
   mute: V2.nightMute,
@@ -71,7 +76,10 @@ export const READER_NIGHT: ReaderPalette = {
   goldDeep: V2.gold,
   line: "rgba(245,239,228,0.14)",
   paper: V2.nightSoft,
-  chromeBg: "rgba(20,20,46,0.72)",
+  // 's Nachts is de illustratie lichter dan de balk: iets meer dekking
+  // bovenin, anders zijn titel en knoppen niet te lezen.
+  chromeBg:
+    "linear-gradient(to bottom, rgba(20,20,46,0.88) 0%, rgba(20,20,46,0.4) 60%, rgba(20,20,46,0) 100%)",
   bottomBg:
     "linear-gradient(to top, rgba(20,20,46,0.95) 0%, rgba(20,20,46,0.6) 70%, transparent 100%)",
   word: "rgba(201,169,97,0.32)",

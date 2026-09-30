@@ -186,10 +186,9 @@ export function ReaderTopBar({
         alignItems: "center",
         justifyContent: "space-between",
         gap: 10,
+        // Doorzichtig: alleen een zachte overgang voor de leesbaarheid,
+        // zodat de illustratie eronder zichtbaar blijft.
         background: c.chromeBg,
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        borderBottom: `1px solid ${c.line}`,
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(-6px)",
         transition: "opacity .5s ease, transform .5s ease",

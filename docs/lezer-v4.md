@@ -80,6 +80,18 @@ de standaard. Alleen opslaan op `/admin/nachtmodus` mislukt dan.
 
 ## Bewuste afwijkingen van het ontwerp
 
+Op verzoek van Marc (30 sep 2026):
+
+- **Bovenbalk doorzichtig.** Geen dekkende balk met vervaging; alleen een
+  zachte overgang van boven naar beneden, zodat de illustratie erdoorheen
+  zichtbaar blijft. 's Nachts iets meer dekking, anders zijn titel en
+  knoppen op een lichte illustratie niet te lezen.
+- **Tekst direct op het papier.** De tekstkaart heeft geen eigen kleur en
+  geen korrel meer; tekst en illustratie vormen één geheel, zoals in de
+  liggende lay-out.
+
+Uit de bouw:
+
 - **Marge boven en onder.** Het ontwerp rekent met 54 px bovenin voor de
   statusbalk van het toestelkader. In een browser staat de pagina daar
   niet onder; de lezer gebruikt de veilige marge van het toestel
