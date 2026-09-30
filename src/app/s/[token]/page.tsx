@@ -6,10 +6,17 @@ import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
 import type { WordTiming } from "@/lib/ai/tts";
+import { amsterdamMinutes } from "@/lib/reader/night";
+import { loadReaderSettings } from "@/lib/reader/settings";
+import {
+  resolveOverflowMode,
+  resolveReaderVersion,
+} from "@/lib/reader/version";
 import { PublicStoryReader } from "./client";
 
 interface Props {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ lezer?: string | string[]; tekst?: string | string[] }>;
 }
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,32}$/;
@@ -75,8 +82,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function SharedStoryPage({ params }: Props) {
+export default async function SharedStoryPage({
+  params,
+  searchParams,
+}: Props) {
   const { token } = await params;
+  const query = await searchParams;
 
   // Rate-limit per IP: 60 requests / minuut. Genoeg voor normale lees-sessies
   // (images zijn server-cached), strak genoeg om brute-forcing van tokens
@@ -95,6 +106,8 @@ export default async function SharedStoryPage({ params }: Props) {
 
   const story = await loadSharedStory(token);
   if (!story) notFound();
+
+  const readerSettings = await loadReaderSettings();
 
   const spreads = storyToSpreads({
     title: story.title,
@@ -123,6 +136,10 @@ export default async function SharedStoryPage({ params }: Props) {
         url: a.url,
         wordTimings: (a.wordTimings as unknown as WordTiming[] | null) ?? null,
       }))}
+      readerVersion={resolveReaderVersion(query.lezer)}
+      overflowMode={resolveOverflowMode(query.tekst)}
+      readerSettings={readerSettings}
+      serverMinutes={amsterdamMinutes(new Date())}
     />
   );
 }

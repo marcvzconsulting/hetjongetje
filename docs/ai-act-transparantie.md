@@ -64,10 +64,12 @@ onze eigen markering is dus noodzakelijk en afdoende.
 
 ## Zichtbare vermelding
 
-- Titelspread van elk verhaal (app én deelpagina): colofonregel
-  "VERHAAL & ILLUSTRATIES MET AI GEMAAKT" (`BookViewerV3.tsx`).
+- Kaft van elk verhaal (app én deelpagina): colofonregel
+  "VERHAAL & ILLUSTRATIES MET AI GEMAAKT" (`v4/ReaderPage.tsx`; in de
+  vorige lezer `BookViewerV3.tsx`).
 - Voorleespaneel: stemmen heten expliciet "AI-stem"
-  (`StoryAudioPlayer.tsx`).
+  (`StoryAudioPlayer.tsx`). In de nieuwe lezer staat "AI-stem {naam}"
+  ook op de voorleespil zelf.
 - Publieke deellink `/s/[token]`: label via de titelspread; de
   OG-preview draagt "onsverhaaltje.nl · met ai gemaakt".
 - PDF: colofonregel op de afsluitpagina.

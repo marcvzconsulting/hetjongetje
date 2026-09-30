@@ -42,6 +42,7 @@ export const ADMIN_NAV: Omit<NavItem, "active">[] = [
   { label: "Mails", href: "/admin/email-templates", icon: "✉" },
   { label: "Reminders", href: "/admin/reminders", icon: "◷" },
   { label: "AI-prompts", href: "/admin/ai-prompts", icon: "✦" },
+  { label: "Nachtmodus", href: "/admin/nachtmodus", icon: "☾" },
   { label: "FAQ", href: "/admin/faq", icon: "?" },
   { label: "Nieuwsbrief", href: "/admin/newsletter", icon: "▦" },
   { label: "Referrals", href: "/admin/referrals", icon: "↗" },

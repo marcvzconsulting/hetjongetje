@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { V2 } from "@/components/v2/tokens";
+import {
+  dialogPalette,
+  type DialogPalette,
+} from "@/components/v2/story/dialog-palette";
 import { IconV2 } from "@/components/v2";
 import {
   TTS_VOICES,
@@ -55,6 +60,18 @@ type Props = {
   /** De speler is de bron van waarheid voor de woord-markering; de parent
    *  geeft dit door aan BookViewerV3. Null = geen markering. */
   onHighlightChange?: (highlight: WordHighlight | null) => void;
+  /** De audio van de zichtbare pagina is uitgespeeld. Geeft true als de
+   *  lezer zelf doorgaat naar de volgende pagina (doorlopend scrollen);
+   *  anders toont de speler "Sla de bladzijde om". */
+  onPageEnded?: () => boolean;
+  /** "bar" = losse spelerbalk boven de bladerknoppen (BookViewerV3).
+   *  "pill" = compacte pil ín de onderbalk van BookViewerV4; die wordt in
+   *  `portalTarget` gezet en neemt de dag- of nachtkleuren van de lezer
+   *  over. */
+  variant?: "bar" | "pill";
+  portalTarget?: HTMLElement | null;
+  /** Nachtstand van de lezer: de stemkiezer kleurt mee. */
+  night?: boolean;
 };
 
 const MOBILE_BP = 768;
@@ -100,8 +117,13 @@ export function StoryAudioPlayer({
   onClose,
   onGenerated,
   onHighlightChange,
+  onPageEnded,
+  variant = "bar",
+  portalTarget = null,
+  night = false,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const d = dialogPalette(night);
 
   const [view, setView] = useState<"picker" | "player">("picker");
   const [active, setActive] = useState<TtsVoiceKey | null>(null);
@@ -111,6 +133,8 @@ export function StoryAudioPlayer({
   const [error, setError] = useState<string | null>(null);
   /** Audio van de huidige pagina is uitgespeeld → "Sla de bladzijde om". */
   const [pageEnded, setPageEnded] = useState(false);
+  /** Uitgespeeld en de lezer scrolt zelf door naar de volgende pagina. */
+  const [advancing, setAdvancing] = useState(false);
   /** Browser blokkeerde autoplay → vraag om een tik op de afspeelknop. */
   const [needsTap, setNeedsTap] = useState(false);
 
@@ -348,6 +372,7 @@ export function StoryAudioPlayer({
     startedRef.current = startKey;
 
     setPageEnded(false);
+    setAdvancing(false);
     emitHighlight(null);
     if (el.dataset.src !== activeUrl) {
       el.src = activeUrl;
@@ -476,6 +501,25 @@ export function StoryAudioPlayer({
       pagePos > 0 ? `leest pagina ${pagePos} van ${pageNumbers.length}` : "";
   }
 
+  // De pil toont bij gewoon afspelen "Pagina 2 · speelt"; aanwijzingen
+  // en meldingen (goud, of tijdens genereren) neemt hij letterlijk over.
+  let pillStatus = statusText;
+  if (statusTone !== "gold" && !(genVoice && genLabel)) {
+    const where =
+      currentPageNumber === TITLE_PAGE_NUMBER
+        ? "Titel"
+        : endingPageNumber !== null && currentPageNumber === endingPageNumber
+          ? "Einde"
+          : `Pagina ${
+              pageNumbers
+                .filter(
+                  (p) => p !== TITLE_PAGE_NUMBER && p !== endingPageNumber,
+                )
+                .indexOf(currentPageNumber ?? -1) + 1
+            }`;
+    pillStatus = `${where} · ${playing || advancing ? "speelt" : "gepauzeerd"}`;
+  }
+
   return (
     <>
       {/* Keyframes voor slide-in + spinner. Bij reduced motion worden ze
@@ -500,8 +544,13 @@ export function StoryAudioPlayer({
         onEnded={() => {
           setPlaying(false);
           stopHighlightLoop();
-          setPageEnded(true);
           emitHighlight(null);
+          // Na de eindpagina is het verhaal uit; daarvóór mag de lezer
+          // zelf doorgaan (doorlopend scrollen), anders bladert de lezer.
+          const last =
+            endingPageNumber !== null && currentPageNumber === endingPageNumber;
+          if (!last && onPageEnded?.()) setAdvancing(true);
+          else setPageEnded(true);
         }}
         onTimeUpdate={(e) => {
           setCurrentTime(e.currentTarget.currentTime);
@@ -534,7 +583,7 @@ export function StoryAudioPlayer({
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "center",
-            background: "rgba(20,20,46,0.45)",
+            background: d.scrim,
             backdropFilter: "blur(2px)",
             WebkitBackdropFilter: "blur(2px)",
           }}
@@ -547,12 +596,12 @@ export function StoryAudioPlayer({
               maxWidth: 640,
               maxHeight: "90vh",
               overflow: "auto",
-              background: V2.paper,
+              background: d.paper,
               padding: "28px 24px 32px",
               borderTopLeftRadius: 12,
               borderTopRightRadius: 12,
               marginBottom: "env(safe-area-inset-bottom, 0px)",
-              boxShadow: "0 -10px 40px rgba(20,20,46,0.25)",
+              boxShadow: d.shadow,
               animation: reducedMotion
                 ? "none"
                 : "ovAudioSheetUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -570,7 +619,7 @@ export function StoryAudioPlayer({
                 border: "none",
                 fontSize: 22,
                 lineHeight: 1,
-                color: V2.inkMute,
+                color: d.inkMute,
                 cursor: "pointer",
               }}
             >
@@ -584,7 +633,7 @@ export function StoryAudioPlayer({
                 fontSize: 22,
                 letterSpacing: -0.4,
                 margin: "0 0 6px",
-                color: V2.ink,
+                color: d.ink,
               }}
             >
               Voorlezen
@@ -593,7 +642,7 @@ export function StoryAudioPlayer({
               style={{
                 fontFamily: V2.body,
                 fontSize: 14,
-                color: V2.inkSoft,
+                color: d.inkSoft,
                 margin: "0 0 18px",
                 lineHeight: 1.55,
               }}
@@ -610,10 +659,10 @@ export function StoryAudioPlayer({
                   marginBottom: 14,
                   padding: "10px 14px",
                   background: "rgba(176,74,65,0.12)",
-                  borderLeft: `3px solid ${V2.heart}`,
+                  borderLeft: `3px solid ${d.heart}`,
                   fontFamily: V2.body,
                   fontSize: 13,
-                  color: V2.ink,
+                  color: d.ink,
                 }}
               >
                 {error}
@@ -642,6 +691,7 @@ export function StoryAudioPlayer({
                   generatingLabel={genVoice === key ? genLabel : null}
                   generateLocked={genVoice !== null && genVoice !== key}
                   reducedMotion={reducedMotion}
+                  d={d}
                   onSelect={() => void chooseVoice(key)}
                 />
               ))}
@@ -652,7 +702,7 @@ export function StoryAudioPlayer({
                 style={{
                   fontFamily: V2.body,
                   fontSize: 14,
-                  color: V2.inkSoft,
+                  color: d.inkSoft,
                   margin: "18px 0 0",
                   lineHeight: 1.55,
                 }}
@@ -662,7 +712,7 @@ export function StoryAudioPlayer({
                 <a
                   href="/subscribe"
                   style={{
-                    color: V2.goldDeep,
+                    color: d.goldDeep,
                     textDecoration: "underline",
                     textUnderlineOffset: 3,
                   }}
@@ -673,6 +723,158 @@ export function StoryAudioPlayer({
             )}
           </div>
         </div>
+      ) : variant === "pill" ? (
+        activeVoice &&
+        portalTarget &&
+        createPortal(
+          <div
+            role="region"
+            aria-label="Voorleesspeler"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "8px 10px 8px 8px",
+              borderRadius: 999,
+              background: `var(--ovr-ink, ${V2.ink})`,
+              color: `var(--ovr-paper, ${V2.paper})`,
+              boxShadow: "0 8px 24px rgba(20,20,46,0.28)",
+              fontFamily: V2.ui,
+              fontSize: 12,
+              maxWidth: "100%",
+              boxSizing: "border-box",
+              animation: reducedMotion
+                ? "none"
+                : "ovAudioSheetUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label={playing ? "Pauzeer" : "Speel af"}
+              disabled={!activeUrl}
+              style={{
+                width: 34,
+                height: 34,
+                flex: "none",
+                borderRadius: 999,
+                border: "none",
+                padding: 0,
+                background: V2.gold,
+                color: V2.night,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: activeUrl ? "pointer" : "default",
+                opacity: activeUrl ? 1 : 0.4,
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                {playing ? (
+                  <>
+                    <rect x="6" y="5" width="4" height="14" />
+                    <rect x="14" y="5" width="4" height="14" />
+                  </>
+                ) : (
+                  <path d="M7 5v14l12-7z" />
+                )}
+              </svg>
+            </button>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 2,
+                minWidth: 0,
+              }}
+            >
+              {/* "AI-stem": zichtbare AI-vermelding (AI Act art. 50). Een
+                  tik op de naam opent de stemkeuze. */}
+              <button
+                type="button"
+                onClick={() => setView("picker")}
+                aria-label={`AI-stem ${activeVoice.label}, andere stem kiezen`}
+                title="Andere stem kiezen"
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  color: "inherit",
+                  fontFamily: "inherit",
+                  fontSize: "inherit",
+                  fontWeight: 500,
+                  whiteSpace: "nowrap",
+                  textDecoration: "underline",
+                  textDecorationColor: "rgba(138,136,168,0.7)",
+                  textUnderlineOffset: 3,
+                }}
+              >
+                AI-stem {activeVoice.label}
+              </button>
+              <span
+                aria-live="polite"
+                style={{
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  ...(statusTone === "gold"
+                    ? {
+                        color: `var(--ovr-pill-accent, ${V2.gold})`,
+                        fontWeight: 500,
+                      }
+                    : { opacity: 0.7 }),
+                }}
+              >
+                {pillStatus}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Voorlezen sluiten"
+              title="Sluiten"
+              style={{
+                width: 30,
+                height: 30,
+                flex: "none",
+                border: "none",
+                padding: 0,
+                background: "transparent",
+                color: "inherit",
+                opacity: 0.7,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+          </div>,
+          portalTarget,
+        )
       ) : (
         activeVoice && (
           <div
@@ -900,6 +1102,7 @@ function VoiceTile({
   generatingLabel,
   generateLocked,
   reducedMotion,
+  d,
   onSelect,
 }: {
   voiceKey: TtsVoiceKey;
@@ -915,6 +1118,7 @@ function VoiceTile({
   /** Er loopt al een generatie (voor een andere stem). */
   generateLocked: boolean;
   reducedMotion: boolean;
+  d: DialogPalette;
   onSelect: () => void;
 }) {
   const voice = TTS_VOICES[voiceKey];
@@ -941,8 +1145,8 @@ function VoiceTile({
         gap: 6,
         textAlign: "left",
         padding: "12px 14px",
-        background: dimmed ? V2.paperDeep : V2.paper,
-        border: `1px solid ${isActive ? V2.goldDeep : V2.paperShade}`,
+        background: dimmed ? d.paperDeep : d.paper,
+        border: `1px solid ${isActive ? d.goldDeep : d.paperShade}`,
         borderRadius: 8,
         cursor: disabled ? "default" : "pointer",
         opacity: dimmed ? 0.55 : 1,
@@ -957,13 +1161,13 @@ function VoiceTile({
           minWidth: 0,
         }}
       >
-        <GenderGlyph gender={voice.gender} color={dimmed ? V2.inkMute : V2.goldDeep} />
+        <GenderGlyph gender={voice.gender} color={dimmed ? d.inkMute : d.goldDeep} />
         <span
           style={{
             fontFamily: V2.ui,
             fontSize: 14,
             fontWeight: 500,
-            color: V2.ink,
+            color: d.ink,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -978,8 +1182,8 @@ function VoiceTile({
               fontSize: 9,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: V2.goldDeep,
-              border: `1px solid ${V2.gold}`,
+              color: d.goldDeep,
+              border: `1px solid ${d.gold}`,
               borderRadius: 999,
               padding: "2px 7px",
               whiteSpace: "nowrap",
@@ -994,7 +1198,7 @@ function VoiceTile({
         style={{
           fontFamily: V2.body,
           fontSize: 13,
-          color: V2.inkSoft,
+          color: d.inkSoft,
           lineHeight: 1.4,
         }}
       >
@@ -1010,7 +1214,7 @@ function VoiceTile({
           fontSize: 10,
           letterSpacing: "0.14em",
           textTransform: "uppercase",
-          color: complete ? V2.goldDeep : V2.inkMute,
+          color: complete ? d.goldDeep : d.inkMute,
           marginTop: 2,
         }}
       >
@@ -1027,7 +1231,7 @@ function VoiceTile({
               width="10"
               height="10"
               viewBox="0 0 24 24"
-              fill={V2.goldDeep}
+              fill={d.goldDeep}
               aria-hidden
             >
               <path d="M7 4v16l13-8z" />
@@ -1035,7 +1239,7 @@ function VoiceTile({
             <span>Afspelen</span>
           </>
         ) : canGenerate ? (
-          <span style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
+          <span style={{ borderBottom: `1px solid ${d.paperShade}` }}>
             {presentCount > 0 ? "Maak stem af" : "Genereer stem (eenmalig)"}
           </span>
         ) : premiumGated ? (
@@ -1043,7 +1247,7 @@ function VoiceTile({
             style={{
               textTransform: "none",
               letterSpacing: "0.04em",
-              color: V2.goldDeep,
+              color: d.goldDeep,
             }}
           >
             Onderdeel van het abonnement

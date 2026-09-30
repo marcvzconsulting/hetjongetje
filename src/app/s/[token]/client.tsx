@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Spread } from "@/lib/story/spread-types";
 import {
   endingNarrationPageNumber,
@@ -11,9 +11,15 @@ import {
   type WordHighlight,
 } from "@/components/v2/story/BookViewerV3";
 import {
+  BookViewerV4,
+  type ReaderHandle,
+} from "@/components/v2/story/BookViewerV4";
+import {
   StoryAudioPlayer,
   type StoryAudioEntry,
 } from "@/components/v2/story/StoryAudioPlayer";
+import type { ReaderSettings } from "@/lib/reader/night";
+import type { OverflowMode, ReaderVersion } from "@/lib/reader/version";
 
 interface Props {
   storyId: string;
@@ -25,6 +31,11 @@ interface Props {
    *  eigenaar. Een stem is hier pas kiesbaar als ALLE pagina's voor die
    *  stem audio hebben. */
   audios: StoryAudioEntry[];
+  /** "v3" = de vorige lezer (terugvaloptie). */
+  readerVersion: ReaderVersion;
+  overflowMode: OverflowMode;
+  readerSettings: ReaderSettings;
+  serverMinutes: number;
 }
 
 export function PublicStoryReader({
@@ -33,8 +44,17 @@ export function PublicStoryReader({
   storyTitle,
   spreads,
   audios,
+  readerVersion,
+  overflowMode,
+  readerSettings,
+  serverMinutes,
 }: Props) {
+  const v4 = readerVersion === "v4";
+  const [listenSlot, setListenSlot] = useState<HTMLElement | null>(null);
   const [listenOpen, setListenOpen] = useState(false);
+  // Nachtstand van de lezer (alleen V4 meldt die); de stemkiezer kleurt mee.
+  const [night, setNight] = useState(false);
+  const readerRef = useRef<ReaderHandle>(null);
   const [currentSpreadIdx, setCurrentSpreadIdx] = useState(0);
   const [wordHighlight, setWordHighlight] = useState<WordHighlight | null>(
     null,
@@ -78,20 +98,50 @@ export function PublicStoryReader({
 
   return (
     <main>
-      <BookViewerV3
-        readOnly
-        storyId={storyId}
-        childName={childName}
-        storyTitle={storyTitle}
-        spreads={spreads}
-        isFavorite={false}
-        onListenClick={hasCompleteVoice ? () => setListenOpen(true) : undefined}
-        hasAudio={hasCompleteVoice}
-        onSpreadChange={setCurrentSpreadIdx}
-        wordHighlight={listenOpen ? wordHighlight : null}
-      />
+      {v4 ? (
+        <BookViewerV4
+          key={storyId}
+          readOnly
+          storyId={storyId}
+          childName={childName}
+          storyTitle={storyTitle}
+          spreads={spreads}
+          isFavorite={false}
+          onListenClick={
+            hasCompleteVoice ? () => setListenOpen(true) : undefined
+          }
+          hasAudio={hasCompleteVoice}
+          listenOpen={listenOpen}
+          onListenSlot={setListenSlot}
+          onSpreadChange={setCurrentSpreadIdx}
+          wordHighlight={listenOpen ? wordHighlight : null}
+          readerSettings={readerSettings}
+          serverMinutes={serverMinutes}
+          overflowMode={overflowMode}
+          onNightChange={setNight}
+          ref={readerRef}
+        />
+      ) : (
+        <BookViewerV3
+          readOnly
+          storyId={storyId}
+          childName={childName}
+          storyTitle={storyTitle}
+          spreads={spreads}
+          isFavorite={false}
+          onListenClick={
+            hasCompleteVoice ? () => setListenOpen(true) : undefined
+          }
+          hasAudio={hasCompleteVoice}
+          onSpreadChange={setCurrentSpreadIdx}
+          wordHighlight={listenOpen ? wordHighlight : null}
+        />
+      )}
       {listenOpen && (
         <StoryAudioPlayer
+          variant={v4 ? "pill" : "bar"}
+          portalTarget={v4 ? listenSlot : null}
+          night={night}
           storyId={storyId}
           audios={audios}
           canGenerate={false}
@@ -104,6 +154,7 @@ export function PublicStoryReader({
             setWordHighlight(null);
           }}
           onHighlightChange={setWordHighlight}
+          onPageEnded={() => readerRef.current?.continueReading() ?? false}
         />
       )}
     </main>
