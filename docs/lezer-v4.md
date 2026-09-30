@@ -36,7 +36,7 @@ deploy opnieuw. Voor één verhaal: zet `?lezer=v3` achter het adres.
 | `splits` | De illustratie krimpt eerst (van 47 % tot minimaal 34 % van de hoogte), dan gaat de letter een trap kleiner. Past het dan nog niet, dan komt er een extra pagina met dezelfde illustratie |
 | `splits-vast` | De illustratie houdt 47 %. Past de tekst niet, dan direct een extra pagina |
 | `scroll` | De illustratie krimpt. Past het dan nog niet, dan scrollt de tekstkaart |
-| `doorlopend` | Staande telefoon: het hele verhaal scrolt door. Elke pagina is een blok met de illustratie bovenaan vastgezet en de tekst eronder; de tekst schuift onder de illustratie door, en is de tekst op, dan duwt de volgende pagina de illustratie omhoog. Knoppen en stipjes scrollen naar het blok. Op tablet en liggend werkt dit als `splits` |
+| `doorlopend` | Staande telefoon: het hele verhaal scrolt door. Elke pagina is een blok met de illustratie bovenaan vastgezet en de tekst eronder; de tekst schuift onder de illustratie door, en is de tekst op, dan duwt de volgende pagina de illustratie omhoog. Kaft en pagina 1 delen één blok (ze hebben dezelfde illustratie): titel en direct daaronder de tekst. Knoppen en stipjes scrollen naar de pagina. Op tablet en liggend werkt dit als `splits` |
 
 De illustratie heeft binnen één verhaal overal dezelfde maat. Opgesplitste
 tekst breekt bij voorkeur na een zin en wordt gelijk over de delen

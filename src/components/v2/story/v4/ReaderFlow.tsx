@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   type CSSProperties,
   type RefObject,
@@ -46,12 +47,49 @@ type Props = {
   controlRef: RefObject<FlowControl | null>;
 };
 
+/** Eén blok met een vastgezette illustratie en één of meer pagina's. */
+type Block = { image: DisplayUnit; parts: { unit: DisplayUnit; index: number }[] };
+
 /**
- * Doorlopend scrollen (staande telefoon): elke pagina is een blok met de
- * illustratie bovenaan vastgezet (`position: sticky`) en de tekst
- * eronder. De tekst schuift onder de illustratie door; is de tekst op,
- * dan duwt de volgende pagina de illustratie omhoog en schuift z'n eigen
- * illustratie erin.
+ * De kaft gebruikt de illustratie van pagina 1. Dezelfde illustratie twee
+ * keer achter elkaar oogt vreemd, dus kaft en pagina 1 delen één blok:
+ * illustratie, titel, en direct daaronder de tekst.
+ */
+function buildBlocks(units: DisplayUnit[]): Block[] {
+  const blocks: Block[] = [];
+  for (let i = 0; i < units.length; i++) {
+    const unit = units[i];
+    const next = units[i + 1];
+    if (
+      unit.kind === "cover" &&
+      next?.kind === "text" &&
+      next.image?.url === unit.image?.url
+    ) {
+      blocks.push({
+        image: unit,
+        parts: [
+          { unit, index: i },
+          { unit: next, index: i + 1 },
+        ],
+      });
+      i += 1;
+      continue;
+    }
+    blocks.push({ image: unit, parts: [{ unit, index: i }] });
+  }
+  return blocks;
+}
+
+/** Waar een pagina begint: het element, en of het onder een illustratie
+ *  van een eerdere pagina in hetzelfde blok staat. */
+type Anchor = { el: HTMLElement; followsImage: boolean };
+
+/**
+ * Doorlopend scrollen (staande telefoon): elk blok heeft de illustratie
+ * bovenaan vastgezet (`position: sticky`) en de tekst eronder. De tekst
+ * schuift onder de illustratie door; is de tekst op, dan duwt het
+ * volgende blok de illustratie omhoog en schuift z'n eigen illustratie
+ * erin.
  */
 export function ReaderFlow({
   units,
@@ -68,8 +106,9 @@ export function ReaderFlow({
   onUserScroll,
   controlRef,
 }: Props) {
+  const blocks = useMemo(() => buildBlocks(units), [units]);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+  const anchorRefs = useRef<(Anchor | null)[]>([]);
   const activeWordRef = useRef<HTMLSpanElement | null>(null);
   const currentRef = useRef(initialIndex);
   /** Doel van een gestuurde scroll (knop, voorlezen): tot dat bereikt is
@@ -78,6 +117,23 @@ export function ReaderFlow({
   const targetGuard = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUserTop = useRef(0);
   const frame = useRef(0);
+
+  /** Scrollpositie waarop pagina `index` bovenaan staat: het blok zelf,
+   *  of (voor een pagina die de illustratie deelt) het punt waarop de
+   *  tekst precies onder de illustratie zit. */
+  const startOf = useCallback(
+    (index: number): number | null => {
+      const container = containerRef.current;
+      const anchor = anchorRefs.current[index];
+      if (!container || !anchor) return null;
+      const top =
+        anchor.el.getBoundingClientRect().top -
+        container.getBoundingClientRect().top +
+        container.scrollTop;
+      return anchor.followsImage ? top - imageHeight : top;
+    },
+    [imageHeight],
+  );
 
   const glideTo = useCallback(
     (top: number, animate: boolean) => {
@@ -101,26 +157,26 @@ export function ReaderFlow({
     [reducedMotion],
   );
 
-  const scrollToSection = useCallback(
+  const scrollToIndex = useCallback(
     (index: number, animate: boolean) => {
-      const section = sectionRefs.current[index];
-      if (section) glideTo(section.offsetTop, animate);
+      const top = startOf(index);
+      if (top !== null) glideTo(top, animate);
     },
-    [glideTo],
+    [startOf, glideTo],
   );
 
   useEffect(() => {
-    controlRef.current = { scrollTo: scrollToSection };
+    controlRef.current = { scrollTo: scrollToIndex };
     return () => {
       controlRef.current = null;
     };
-  }, [controlRef, scrollToSection]);
+  }, [controlRef, scrollToIndex]);
 
   // Herstelde leespositie: direct naar die pagina, zonder animatie.
   useLayoutEffect(() => {
-    const section = sectionRefs.current[initialIndex];
     const container = containerRef.current;
-    if (section && container) container.scrollTop = section.offsetTop;
+    const top = startOf(initialIndex);
+    if (container && top !== null) container.scrollTop = top;
     lastUserTop.current = container?.scrollTop ?? 0;
     // Alleen bij het opbouwen: daarna bepaalt de lezer zelf de positie.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,11 +189,18 @@ export function ReaderFlow({
       if (!container) return;
       const top = container.scrollTop;
 
-      // De pagina waarvan de illustratie bovenaan staat: de laatste die
-      // (meer dan half) tot boven het scherm is gescrold.
+      // De pagina die bovenaan staat: de laatste die tot boven het scherm
+      // is gescrold. Een blok telt zodra het meer dan half in beeld
+      // schuift; een pagina onder een gedeelde illustratie zodra haar
+      // tekst de illustratie raakt.
       let current = 0;
-      sectionRefs.current.forEach((section, i) => {
-        if (section && section.offsetTop <= top + imageHeight / 2) current = i;
+      anchorRefs.current.forEach((anchor, i) => {
+        if (!anchor) return;
+        const start = startOf(i);
+        if (start === null) return;
+        // Kleine marge: scrollTop is een geheel getal, de positie niet.
+        const lead = anchor.followsImage ? 1 : imageHeight / 2;
+        if (start <= top + lead) current = i;
       });
       if (current !== currentRef.current) {
         currentRef.current = current;
@@ -180,7 +243,7 @@ export function ReaderFlow({
   }, [wordHighlight, imageHeight, layout, readOnly, glideTo]);
 
   const padX = layout.cardMarginX + CARD_PAD_X;
-  const last = units.length - 1;
+  const lastIndex = units.length - 1;
 
   return (
     <div
@@ -197,109 +260,127 @@ export function ReaderFlow({
         fontFamily: V2.body,
       }}
     >
-      {units.map((unit, i) => {
-        const isLast = i === last;
-        const activeWord =
-          wordHighlight !== null &&
-          unit.kind === "text" &&
-          unit.pageNumber !== null &&
-          wordHighlight.pageNumber === unit.pageNumber
-            ? wordHighlight.wordIndex
-            : null;
-
-        return (
-          <section
-            key={i}
-            ref={(el) => {
-              sectionRefs.current[i] = el;
+      {blocks.map((block, b) => (
+        <section
+          key={b}
+          ref={(el) => {
+            // Het blok zelf markeert het begin van z'n eerste pagina.
+            const first = block.parts[0].index;
+            anchorRefs.current[first] = el ? { el, followsImage: false } : null;
+          }}
+          aria-label={
+            block.image.kind === "cover"
+              ? "Kaft"
+              : block.image.kind === "ending"
+                ? "Einde"
+                : `Pagina ${block.image.storyPage}`
+          }
+          style={{ position: "relative" }}
+        >
+          <div
+            style={{
+              position: "sticky",
+              top: 0,
+              zIndex: 1,
+              height: imageHeight,
+              overflow: "hidden",
             }}
-            aria-label={
-              unit.kind === "cover"
-                ? "Kaft"
-                : unit.kind === "ending"
-                  ? "Einde"
-                  : `Pagina ${unit.storyPage}`
-            }
-            style={{ position: "relative" }}
           >
+            <Illustration
+              unit={block.image}
+              layout={layout}
+              c={c}
+              childName={childName}
+              roman=""
+              activeWord={null}
+              reducedMotion={reducedMotion}
+              readOnly={readOnly}
+              eager={b <= 1}
+              imageShare={layout.maxImageShare}
+              sizes="100vw"
+            />
             <div
+              aria-hidden
               style={{
-                position: "sticky",
-                top: 0,
-                zIndex: 1,
-                height: imageHeight,
-                overflow: "hidden",
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                background: c.stackGrad,
               }}
-            >
-              <Illustration
-                unit={unit}
-                layout={layout}
-                c={c}
-                childName={childName}
-                roman=""
-                activeWord={null}
-                reducedMotion={reducedMotion}
-                readOnly={readOnly}
-                eager={i <= 1}
-                imageShare={layout.maxImageShare}
-                sizes="100vw"
-              />
-              <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  pointerEvents: "none",
-                  background: c.stackGrad,
-                }}
-              />
-            </div>
+            />
+          </div>
 
-            <div
-              style={{
-                position: "relative",
-                zIndex: 0,
-                boxSizing: "border-box",
-                padding: `18px ${padX}px ${
-                  isLast ? insetFor(layout, "ending", readOnly) : 44
-                }px`,
-                // Kaft en einde vullen het scherm; de tekst daartussen
-                // neemt de ruimte die hij nodig heeft.
-                minHeight:
-                  unit.kind === "text" ? undefined : layout.height - imageHeight,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: unit.kind === "ending" ? "center" : "flex-start",
-              }}
-            >
-              {unit.kind === "cover" && (
-                <CoverContent unit={unit} layout={layout} c={c} />
-              )}
-              {unit.kind === "text" && (
-                <FlowText
-                  unit={unit}
-                  c={c}
-                  fontPx={fontPx}
-                  activeWord={activeWord}
-                  activeRef={activeWordRef}
-                  reducedMotion={reducedMotion}
-                  roman={toRoman(i + 1)}
-                />
-              )}
-              {unit.kind === "ending" && (
-                <div style={{ textAlign: "center" }}>
-                  <EndingContent
+          {block.parts.map(({ unit, index }, p) => {
+            const isLast = index === lastIndex;
+            const lastInBlock = p === block.parts.length - 1;
+            const activeWord =
+              wordHighlight !== null &&
+              unit.kind === "text" &&
+              unit.pageNumber !== null &&
+              wordHighlight.pageNumber === unit.pageNumber
+                ? wordHighlight.wordIndex
+                : null;
+            return (
+              <div
+                key={index}
+                ref={(el) => {
+                  if (p === 0) return; // het blok zelf is het anker
+                  anchorRefs.current[index] = el
+                    ? { el, followsImage: true }
+                    : null;
+                }}
+                style={{
+                  position: "relative",
+                  zIndex: 0,
+                  boxSizing: "border-box",
+                  padding: `${p === 0 ? 18 : 28}px ${padX}px ${
+                    !lastInBlock
+                      ? 0
+                      : isLast
+                        ? insetFor(layout, "ending", readOnly)
+                        : 44
+                  }px`,
+                  // Kaft en einde vullen het scherm; de tekst neemt de
+                  // ruimte die hij nodig heeft.
+                  minHeight:
+                    unit.kind === "ending"
+                      ? layout.height - imageHeight
+                      : undefined,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent:
+                    unit.kind === "ending" ? "center" : "flex-start",
+                }}
+              >
+                {unit.kind === "cover" && (
+                  <CoverContent unit={unit} layout={layout} c={c} />
+                )}
+                {unit.kind === "text" && (
+                  <FlowText
                     unit={unit}
-                    layout={layout}
                     c={c}
-                    childName={childName}
+                    fontPx={fontPx}
+                    activeWord={activeWord}
+                    activeRef={activeWordRef}
+                    reducedMotion={reducedMotion}
+                    roman={toRoman(index + 1)}
                   />
-                </div>
-              )}
-            </div>
-          </section>
-        );
-      })}
+                )}
+                {unit.kind === "ending" && (
+                  <div style={{ textAlign: "center" }}>
+                    <EndingContent
+                      unit={unit}
+                      layout={layout}
+                      c={c}
+                      childName={childName}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      ))}
     </div>
   );
 }
