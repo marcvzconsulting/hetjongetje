@@ -13,9 +13,10 @@ export type WavyEdge = "bottom" | "left" | "right";
 
 const FILTER =
   "<filter id='f' x='-0.1' y='-0.1' width='1.2' height='1.2'>" +
-  "<feTurbulence type='fractalNoise' baseFrequency='0.012 0.06' numOctaves='3' seed='4'/>" +
-  "<feDisplacementMap in='SourceGraphic' scale='18' xChannelSelector='R' yChannelSelector='G'/>" +
-  "<feGaussianBlur stdDeviation='0.7'/>" +
+  // Grote, trage golven met wat fijne rafel erop, zoals een aquarelrand.
+  "<feTurbulence type='fractalNoise' baseFrequency='0.007 0.035' numOctaves='3' seed='4'/>" +
+  "<feDisplacementMap in='SourceGraphic' scale='34' xChannelSelector='R' yChannelSelector='G'/>" +
+  "<feGaussianBlur stdDeviation='1'/>" +
   "</filter>";
 
 function svg(viewBox: string, rect: string): string {
@@ -28,11 +29,11 @@ function svg(viewBox: string, rect: string): string {
 
 const MASKS: Record<WavyEdge, string> = {
   // Onderrand golft; boven en opzij steekt de rechthoek buiten beeld.
-  bottom: svg("0 0 400 300", "x='-40' y='-40' width='480' height='328'"),
+  bottom: svg("0 0 400 300", "x='-60' y='-60' width='520' height='344'"),
   // Rechterrand golft (illustratie links van de tekst).
-  right: svg("0 0 300 400", "x='-40' y='-40' width='328' height='480'"),
+  right: svg("0 0 300 400", "x='-60' y='-60' width='344' height='520'"),
   // Linkerrand golft (illustratie rechts van de tekst).
-  left: svg("0 0 300 400", "x='12' y='-40' width='328' height='480'"),
+  left: svg("0 0 300 400", "x='16' y='-60' width='344' height='520'"),
 };
 
 export function wavyEdge(edge: WavyEdge): CSSProperties {
