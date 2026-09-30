@@ -21,7 +21,7 @@ desktop 1,5×, groot beeldscherm (vanaf 1600 × 950) 1,8×.
 | Schakelaar | Waarden | Standaard |
 |---|---|---|
 | Env `READER_VERSION` of `?lezer=` | `v4`, `v3` | `v4` |
-| Env `READER_TEXT_OVERFLOW` of `?tekst=` | `splits`, `splits-vast`, `scroll`, `doorlopend` | `splits` |
+| Env `READER_TEXT_OVERFLOW` of `?tekst=` | `doorlopend`, `splits` | `doorlopend` |
 
 De URL-parameter wint van de env-variabele. Een env-wijziging in Vercel
 gaat pas in na een nieuwe deploy.
@@ -29,22 +29,27 @@ gaat pas in na een nieuwe deploy.
 **Terug naar de vorige lezer:** zet `READER_VERSION=v3` in Vercel en
 deploy opnieuw. Voor één verhaal: zet `?lezer=v3` achter het adres.
 
+**Terug naar bladeren op de telefoon:** zet `READER_TEXT_OVERFLOW=splits`
+in Vercel en deploy opnieuw. Voor één verhaal: `?tekst=splits`.
+
 ## Tekst die niet op de pagina past
 
-| Optie | Gedrag |
+| Scherm | Gedrag |
 |---|---|
-| `splits` | De illustratie krimpt eerst (van 47 % tot minimaal 34 % van de hoogte), dan gaat de letter een trap kleiner. Past het dan nog niet, dan komt er een extra pagina met dezelfde illustratie |
-| `splits-vast` | De illustratie houdt 47 %. Past de tekst niet, dan direct een extra pagina |
-| `scroll` | De illustratie krimpt. Past het dan nog niet, dan scrollt de tekstkaart |
-| `doorlopend` | Staande telefoon: het hele verhaal scrolt door. Elke pagina is een blok met de illustratie bovenaan vastgezet en de tekst eronder; de tekst schuift onder de illustratie door, en is de tekst op, dan duwt de volgende pagina de illustratie omhoog. Kaft en pagina 1 delen één blok (ze hebben dezelfde illustratie): titel en direct daaronder de tekst. Knoppen en stipjes scrollen naar de pagina. Op tablet en liggend werkt dit als `splits` |
+| Staande telefoon (`doorlopend`, standaard) | Het hele verhaal scrolt door. Elke pagina is een blok met de illustratie bovenaan vastgezet en de tekst eronder; de tekst schuift onder de illustratie door, en is de tekst op, dan duwt de volgende pagina de illustratie omhoog. Kaft en pagina 1 delen één blok (ze hebben dezelfde illustratie): titel en direct daaronder de tekst. Knoppen en stipjes scrollen naar de pagina |
+| Tablet staand, en de telefoon met `splits` | Bladeren. De illustratie krimpt eerst (van 47 % tot minimaal 34 % van de hoogte), dan gaat de letter een trap kleiner. Past het dan nog niet, dan komt er een extra pagina met dezelfde illustratie |
+| Liggend | Bladeren. De illustratie staat naast de tekst en krimpt niet; past de tekst niet, dan een kleinere letter en daarna een extra pagina |
 
-De illustratie heeft binnen één verhaal overal dezelfde maat. Opgesplitste
-tekst breekt bij voorkeur na een zin en wordt gelijk over de delen
-verdeeld. Liggend staat de illustratie naast de tekst; daar speelt
-krimpen niet.
+Bij bladeren heeft de illustratie binnen één verhaal overal dezelfde
+maat. Opgesplitste tekst breekt bij voorkeur na een zin en wordt gelijk
+over de delen verdeeld. Tijdens het voorlezen bladert de lezer zelf door
+naar het volgende deel van dezelfde pagina; bij doorlopend scrollen
+scrolt hij mee. De audio loopt dan door.
 
-Tijdens het voorlezen bladert de lezer zelf door naar het volgende deel
-van dezelfde pagina. De audio loopt dan door.
+Op 30 sep 2026 zijn vier opties naast elkaar gezet (extra pagina met
+krimpende illustratie, extra pagina met vaste illustratie, scrollende
+tekstkaart, doorlopend scrollen). Marc koos doorlopend scrollen; de vaste
+illustratie en de scrollende tekstkaart zijn verwijderd.
 
 ## Nachtmodus
 

@@ -1,20 +1,16 @@
 import {
-  layoutScrollPortrait,
   layoutSplit,
   layoutSplitAdaptive,
-  sizeStepForLength,
   type BaseUnit,
   type FitsFn,
   type TextLayout,
   type TextUnit,
 } from "@/lib/story/reader-units";
-import type { OverflowMode } from "@/lib/reader/version";
 import {
   IMAGE_SHARES,
   LINE_HEIGHT_LANDSCAPE,
   LINE_HEIGHT_PORTRAIT,
   fontPxFor,
-  portraitOverhead,
   textBox,
   type ReaderLayout,
 } from "./layout";
@@ -141,22 +137,7 @@ function fitters(m: TextMeasurer, unit: TextUnit, layout: ReaderLayout) {
 type Fitters = ReturnType<typeof fitters>;
 
 /** Het aandeel voor de illustratie dat déze pagina nodig heeft. */
-function neededShare(
-  f: Fitters,
-  unit: TextUnit,
-  layout: ReaderLayout,
-  mode: OverflowMode,
-): number {
-  if (mode === "scroll") {
-    const step = sizeStepForLength(unit.charCount);
-    return layoutScrollPortrait({
-      textHeight: f.heightOf(0, unit.words.length, step),
-      rootHeight: layout.height,
-      overhead: portraitOverhead(layout, "text"),
-      maxShare: layout.maxImageShare,
-      minShare: layout.minImageShare,
-    }).imageShare;
-  }
+function neededShare(f: Fitters, unit: TextUnit): number {
   return layoutSplitAdaptive(
     unit.words,
     unit.charCount,
@@ -169,20 +150,8 @@ function pageLayout(
   f: Fitters,
   unit: TextUnit,
   layout: ReaderLayout,
-  mode: OverflowMode,
   share: number,
 ): TextLayout {
-  if (mode === "scroll") {
-    const step = sizeStepForLength(unit.charCount);
-    const fontPx = fontPxFor(layout, step);
-    return {
-      fontPx,
-      parts: [{ start: 0, end: unit.words.length }],
-      scroll:
-        f.heightOf(0, unit.words.length, step) >
-        textBox(layout, fontPx, share).height + 0.5,
-    };
-  }
   const { step, parts } = layoutSplit(
     unit.words,
     unit.charCount,
@@ -204,7 +173,6 @@ export function measureStory(
   host: HTMLElement,
   units: BaseUnit[],
   layout: ReaderLayout,
-  mode: OverflowMode,
 ): MeasuredStory {
   const layouts = new Map<number, TextLayout>();
   const textUnits = units.filter((u): u is TextUnit => u.kind === "text");
@@ -215,23 +183,17 @@ export function measureStory(
       f: fitters(m, unit, layout),
     }));
 
-    // Liggend staat de illustratie naast de tekst, en bij `split-fixed`
-    // houdt ze haar vaste maat: krimpen speelt dan niet.
-    const canShrink =
-      layout.orientation === "portrait" && mode !== "split-fixed";
-    const imageShare = canShrink
-      ? measured.reduce(
-          (min, { unit, f }) =>
-            Math.min(min, neededShare(f, unit, layout, mode)),
-          layout.maxImageShare,
-        )
-      : layout.maxImageShare;
+    // Liggend staat de illustratie naast de tekst: krimpen speelt dan niet.
+    const imageShare =
+      layout.orientation === "portrait"
+        ? measured.reduce(
+            (min, { unit, f }) => Math.min(min, neededShare(f, unit)),
+            layout.maxImageShare,
+          )
+        : layout.maxImageShare;
 
     for (const { unit, f } of measured) {
-      layouts.set(
-        unit.spreadIdx,
-        pageLayout(f, unit, layout, mode, imageShare),
-      );
+      layouts.set(unit.spreadIdx, pageLayout(f, unit, layout, imageShare));
     }
     return { layouts, imageShare };
   } finally {

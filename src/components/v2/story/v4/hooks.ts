@@ -13,7 +13,6 @@ import {
   type DisplayUnit,
 } from "@/lib/story/reader-units";
 import { minutesOfDay } from "@/lib/reader/night";
-import type { OverflowMode } from "@/lib/reader/version";
 import { computeLayout, type ReaderLayout } from "./layout";
 import { measureStory } from "./measure";
 
@@ -112,7 +111,6 @@ export type ReaderView = {
 export function useReaderView(
   rootRef: RefObject<HTMLElement | null>,
   baseUnits: BaseUnit[],
-  mode: OverflowMode,
   listening: boolean,
 ): ReaderView | null {
   const [view, setView] = useState<ReaderView | null>(null);
@@ -128,12 +126,7 @@ export function useReaderView(
       const rect = root.getBoundingClientRect();
       if (rect.width < 1 || rect.height < 1) return;
       const layout = computeLayout(rect.width, rect.height, listening);
-      const { layouts, imageShare } = measureStory(
-        root,
-        baseUnits,
-        layout,
-        mode,
-      );
+      const { layouts, imageShare } = measureStory(root, baseUnits, layout);
       setView({
         layout,
         units: expandUnits(baseUnits, layouts),
@@ -157,7 +150,7 @@ export function useReaderView(
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [rootRef, baseUnits, mode, listening]);
+  }, [rootRef, baseUnits, listening]);
 
   return view;
 }

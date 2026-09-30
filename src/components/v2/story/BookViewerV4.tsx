@@ -177,7 +177,7 @@ export function BookViewerV4({
   );
 
   // ── Lay-out en pagina's ──────────────────────────────────────
-  const view = useReaderView(rootRef, baseUnits, overflowMode, pillOpen);
+  const view = useReaderView(rootRef, baseUnits, pillOpen);
   const layout = view?.layout ?? null;
   const imageShare = view?.imageShare ?? 0;
 

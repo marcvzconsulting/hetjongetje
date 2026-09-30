@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import { V2 } from "@/components/v2/tokens";
 import type {
@@ -20,7 +20,6 @@ import {
   TEXT_MAX_EM,
   insetFor,
   px,
-  textBox,
   type ReaderLayout,
 } from "./layout";
 import { wavyEdge } from "./edge";
@@ -62,7 +61,6 @@ export function ReaderPage(props: PageProps) {
 function PortraitPage(props: PageProps) {
   const { unit, layout, c, readOnly, imageShare: share } = props;
   const inset = insetFor(layout, unit.kind, readOnly);
-  const scroll = unit.kind === "text" && unit.scroll === true;
 
   return (
     <div
@@ -140,7 +138,7 @@ function PortraitPage(props: PageProps) {
           )}
           {unit.kind === "text" && (
             <>
-              <StoryText {...props} unit={unit} scroll={scroll} />
+              <StoryText {...props} unit={unit} />
               <div
                 style={{
                   display: "flex",
@@ -283,8 +281,7 @@ function LandscapePage(props: PageProps) {
 function TextColumn(
   props: PageProps & { unit: DisplayTextUnit; side: "left" | "right" },
 ) {
-  const { unit, layout, side } = props;
-  const scroll = unit.scroll === true;
+  const { layout, side } = props;
   const left = side === "left" ? layout.colPadOuter : layout.colPadInner;
   const right = side === "left" ? layout.colPadInner : layout.colPadOuter;
   return (
@@ -299,7 +296,7 @@ function TextColumn(
         alignItems: "center",
       }}
     >
-      <StoryText {...props} scroll={scroll} />
+      <StoryText {...props} />
     </div>
   );
 }
@@ -312,43 +309,18 @@ function StoryText({
   c,
   activeWord,
   reducedMotion,
-  scroll,
-  imageShare,
-}: PageProps & { unit: DisplayTextUnit; scroll: boolean }) {
+}: PageProps & { unit: DisplayTextUnit }) {
   const landscape = layout.orientation === "landscape";
   const { start, end } = unit.part;
   const dropcap = unit.dropcap && start === 0;
   const visible = unit.words.slice(start, end);
-
-  const boxRef = useRef<HTMLDivElement | null>(null);
-  const activeRef = useRef<HTMLSpanElement | null>(null);
   const activeInPart =
     activeWord !== null && activeWord >= start && activeWord < end
       ? activeWord
       : null;
 
-  // Scrollende tekst: houd het voorgelezen woord in beeld.
-  useEffect(() => {
-    if (!scroll || activeInPart === null) return;
-    const box = boxRef.current;
-    const word = activeRef.current;
-    if (!box || !word) return;
-    const top = word.offsetTop - box.offsetTop;
-    const bottom = top + word.offsetHeight;
-    const margin = word.offsetHeight * 1.5;
-    if (top < box.scrollTop + margin || bottom > box.scrollTop + box.clientHeight - margin) {
-      box.scrollTo({
-        top: Math.max(0, top - box.clientHeight / 3),
-        behavior: reducedMotion ? "auto" : "smooth",
-      });
-    }
-  }, [scroll, activeInPart, reducedMotion]);
-
-  const box = textBox(layout, unit.fontPx, imageShare);
-
   return (
     <div
-      ref={boxRef}
       style={{
         ...(textBlockStyle(
           unit.fontPx,
@@ -358,21 +330,6 @@ function StoryText({
         width: "100%",
         maxWidth: landscape ? `${TEXT_MAX_EM}em` : undefined,
         color: c.ink,
-        ...(scroll
-          ? {
-              maxHeight: box.height,
-              overflowY: "auto",
-              overscrollBehavior: "contain",
-              touchAction: "pan-y",
-              // Zachte rand onderin: er staat nog tekst onder.
-              maskImage:
-                "linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%)",
-              WebkitMaskImage:
-                "linear-gradient(to bottom, #000 calc(100% - 28px), transparent 100%)",
-              paddingBottom: 20,
-              boxSizing: "border-box",
-            }
-          : null),
       }}
     >
       {/* Schermlezers krijgen de lopende tekst; de losse woordblokjes
@@ -390,7 +347,6 @@ function StoryText({
           return (
             <span
               key={index}
-              ref={active ? activeRef : undefined}
               style={{
                 ...(WORD_STYLE as CSSProperties),
                 background: active ? c.word : "transparent",

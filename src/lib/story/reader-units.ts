@@ -55,8 +55,6 @@ export type TextPart = { start: number; end: number };
 export type TextLayout = {
   fontPx: number;
   parts: TextPart[];
-  /** Alleen bij `scroll`: de tekst past niet en de kaart scrollt. */
-  scroll?: boolean;
 };
 
 export type DisplayTextUnit = TextUnit & {
@@ -64,7 +62,6 @@ export type DisplayTextUnit = TextUnit & {
   partIndex: number;
   partCount: number;
   fontPx: number;
-  scroll?: boolean;
 };
 
 export type DisplayUnit = CoverUnit | DisplayTextUnit | EndingUnit;
@@ -165,7 +162,6 @@ export function expandUnits(
         partIndex,
         partCount: parts.length,
         fontPx: layout?.fontPx ?? 16,
-        scroll: layout?.scroll,
       });
     });
   }
@@ -427,32 +423,6 @@ export function layoutSplitAdaptive(
     }
   }
   return { step: LAST_SIZE_STEP, share: minShare, parts: smallest };
-}
-
-/**
- * Staande lay-out bij `scroll`: laat de illustratie krimpen tot de tekst
- * past. Lukt dat niet binnen de ondergrens, dan scrollt de tekstkaart.
- */
-export function layoutScrollPortrait(opts: {
-  /** Gemeten hoogte van de volledige tekst. */
-  textHeight: number;
-  /** Hoogte van de lezer. */
-  rootHeight: number;
-  /** Alles in de onderste helft dat geen tekst is (marges, bediening). */
-  overhead: number;
-  maxShare: number;
-  minShare: number;
-}): { imageShare: number; scroll: boolean } {
-  const { textHeight, rootHeight, overhead, maxShare, minShare } = opts;
-  const needed = textHeight + overhead;
-  const share = 1 - needed / rootHeight;
-  if (share >= maxShare) return { imageShare: maxShare, scroll: false };
-  if (share >= minShare) {
-    // Naar beneden afronden op hele procenten: liever iets te veel
-    // ruimte voor de tekst dan een regel die net niet past.
-    return { imageShare: Math.floor(share * 100) / 100, scroll: false };
-  }
-  return { imageShare: minShare, scroll: true };
 }
 
 // ── Overig ─────────────────────────────────────────────────────

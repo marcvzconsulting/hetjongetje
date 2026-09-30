@@ -17,7 +17,6 @@ import {
   buildBaseUnits,
   expandUnits,
   findUnitIndex,
-  layoutScrollPortrait,
   layoutSplit,
   layoutSplitAdaptive,
   sizeStepForLength,
@@ -327,22 +326,6 @@ check("krimpen: bij splitsen krijgt de illustratie de ruimte terug", () => {
     fakeFitsFor(words, [400, 450, 520, 600]),
   );
   assert.ok(r.share > 0.34, `aandeel ${r.share}`);
-});
-
-check("scroll: illustratie krimpt, daarna pas scrollen", () => {
-  const common = { rootHeight: 800, overhead: 180, maxShare: 0.47, minShare: 0.3 };
-  assert.deepEqual(layoutScrollPortrait({ ...common, textHeight: 200 }), {
-    imageShare: 0.47,
-    scroll: false,
-  });
-  const shrunk = layoutScrollPortrait({ ...common, textHeight: 320 });
-  assert.equal(shrunk.scroll, false);
-  assert.ok(shrunk.imageShare < 0.47 && shrunk.imageShare >= 0.3);
-  assert.ok(800 * (1 - shrunk.imageShare) >= 320 + 180, "tekst past");
-  assert.deepEqual(layoutScrollPortrait({ ...common, textHeight: 700 }), {
-    imageShare: 0.3,
-    scroll: true,
-  });
 });
 
 // ── Positie ────────────────────────────────────────────────────
