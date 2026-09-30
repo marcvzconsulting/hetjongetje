@@ -17,6 +17,7 @@ import type { Spread } from "@/lib/story/spread-types";
 import {
   anchorOf,
   buildBaseUnits,
+  expandUnits,
   findUnitIndex,
   toRoman,
   type DisplayUnit,
@@ -37,7 +38,9 @@ import {
   useNightOverride,
   useReaderView,
 } from "./v4/hooks";
+import { fontPxFor } from "./v4/layout";
 import { READER_LIGHT, READER_NIGHT, paletteVars } from "./v4/palette";
+import { ReaderFlow, type FlowControl } from "./v4/ReaderFlow";
 import { ReaderPage } from "./v4/ReaderPage";
 import {
   ReaderBottomBar,
@@ -175,9 +178,19 @@ export function BookViewerV4({
 
   // ── Lay-out en pagina's ──────────────────────────────────────
   const view = useReaderView(rootRef, baseUnits, overflowMode, pillOpen);
-  const units = view?.units ?? null;
   const layout = view?.layout ?? null;
   const imageShare = view?.imageShare ?? 0;
+
+  // Doorlopend scrollen: alleen op een staande telefoon. Elders (tablet,
+  // liggend) gedraagt deze optie zich als `split`.
+  const flow =
+    overflowMode === "flow" &&
+    layout !== null &&
+    layout.orientation === "portrait" &&
+    layout.device === "phone";
+  const flowUnits = useMemo(() => expandUnits(baseUnits, new Map()), [baseUnits]);
+  const flowControl = useRef<FlowControl | null>(null);
+  const units = flow ? flowUnits : (view?.units ?? null);
 
   // De leespositie is een anker (spread + eerste woord), geen index: de
   // indeling in pagina's verandert als de lezer het toestel draait.
@@ -290,6 +303,13 @@ export function BookViewerV4({
     (next: number) => {
       if (!units || activeFlip.current !== null) return;
       if (next < 0 || next >= units.length || next === index) return;
+      if (flow) {
+        // Geen omslag: naar het blok van die pagina scrollen.
+        setAnchor(anchorOf(units[next]));
+        flowControl.current?.scrollTo(next, true);
+        bump();
+        return;
+      }
       const id = ++flipSeq.current;
       activeFlip.current = id;
       setFlip({
@@ -308,8 +328,24 @@ export function BookViewerV4({
       );
       bump();
     },
-    [units, index, bump, endFlip],
+    [units, index, flow, bump, endFlip],
   );
+
+  // Doorlopend scrollen: de pagina waarvan de illustratie bovenaan staat
+  // is de leespositie (dit stuurt ook het voorlezen).
+  const onFlowIndex = useCallback(
+    (i: number) => {
+      const unit = flowUnits[i];
+      if (unit) setAnchor(anchorOf(unit));
+    },
+    [flowUnits],
+  );
+  const onFlowScroll = useCallback(() => {
+    // Zelf scrollen = lezen: de bediening dan uit de weg, tot een tik.
+    if (hasMouse) return;
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    setChromeShown(false);
+  }, [hasMouse]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -378,7 +414,7 @@ export function BookViewerV4({
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
     if (Math.hypot(dx, dy) > 8) {
-      if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (!flow && Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy)) {
         navigate(index + (dx < 0 ? 1 : -1));
       }
       return;
@@ -386,8 +422,10 @@ export function BookViewerV4({
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
-    if (x > 0.66) navigate(index + 1);
-    else if (x < 0.34) navigate(index - 1);
+    // Doorlopend scrollen: bladeren gaat met scrollen, een tik toont of
+    // verbergt alleen de bediening.
+    if (!flow && x > 0.66) navigate(index + 1);
+    else if (!flow && x < 0.34) navigate(index - 1);
     else if (hasMouse) return;
     else if (chromeShown) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -510,6 +548,23 @@ export function BookViewerV4({
             animation: reducedMotion ? "none" : "ovrIn .25s ease both",
           }}
         >
+          {flow ? (
+            <ReaderFlow
+              units={units}
+              layout={layout}
+              c={c}
+              childName={childName}
+              readOnly={readOnly}
+              fontPx={fontPxFor(layout, 0)}
+              imageHeight={Math.round(layout.height * layout.maxImageShare)}
+              wordHighlight={wordHighlight}
+              reducedMotion={reducedMotion}
+              initialIndex={index}
+              onIndexChange={onFlowIndex}
+              onUserScroll={onFlowScroll}
+              controlRef={flowControl}
+            />
+          ) : (
           <div
             style={{
               position: "absolute",
@@ -591,6 +646,7 @@ export function BookViewerV4({
               </motion.div>
             )}
           </div>
+          )}
 
           <div
             aria-hidden
@@ -657,6 +713,7 @@ export function BookViewerV4({
             total={total}
             autoNote={autoNote}
             flipping={flip !== null}
+            flow={flow}
             showCta={readOnly}
             onPrev={() => navigate(index - 1)}
             onNext={() => navigate(index + 1)}

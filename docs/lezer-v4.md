@@ -21,7 +21,7 @@ desktop 1,5×, groot beeldscherm (vanaf 1600 × 950) 1,8×.
 | Schakelaar | Waarden | Standaard |
 |---|---|---|
 | Env `READER_VERSION` of `?lezer=` | `v4`, `v3` | `v4` |
-| Env `READER_TEXT_OVERFLOW` of `?tekst=` | `splits`, `splits-vast`, `scroll` | `splits` |
+| Env `READER_TEXT_OVERFLOW` of `?tekst=` | `splits`, `splits-vast`, `scroll`, `doorlopend` | `splits` |
 
 De URL-parameter wint van de env-variabele. Een env-wijziging in Vercel
 gaat pas in na een nieuwe deploy.
@@ -36,6 +36,7 @@ deploy opnieuw. Voor één verhaal: zet `?lezer=v3` achter het adres.
 | `splits` | De illustratie krimpt eerst (van 47 % tot minimaal 34 % van de hoogte), dan gaat de letter een trap kleiner. Past het dan nog niet, dan komt er een extra pagina met dezelfde illustratie |
 | `splits-vast` | De illustratie houdt 47 %. Past de tekst niet, dan direct een extra pagina |
 | `scroll` | De illustratie krimpt. Past het dan nog niet, dan scrollt de tekstkaart |
+| `doorlopend` | Staande telefoon: het hele verhaal scrolt door. Elke pagina is een blok met de illustratie bovenaan vastgezet en de tekst eronder; de tekst schuift onder de illustratie door, en is de tekst op, dan duwt de volgende pagina de illustratie omhoog. Knoppen en stipjes scrollen naar het blok. Op tablet en liggend werkt dit als `splits` |
 
 De illustratie heeft binnen één verhaal overal dezelfde maat. Opgesplitste
 tekst breekt bij voorkeur na een zin en wordt gelijk over de delen
@@ -72,7 +73,7 @@ de standaard. Alleen opslaan op `/admin/nachtmodus` mislukt dan.
 | Pad | Inhoud |
 |---|---|
 | `src/components/v2/story/BookViewerV4.tsx` | Bladeren, omslag, nachtmodus, bediening |
-| `src/components/v2/story/v4/` | Pagina, bediening, menu, lay-out, meten, palet |
+| `src/components/v2/story/v4/` | Pagina, doorlopend scrollen (`ReaderFlow`), bediening, menu, lay-out, meten, palet |
 | `src/lib/story/reader-units.ts` | Spreads naar pagina-eenheden, tekst opsplitsen |
 | `src/lib/reader/` | Nachtvenster, instelling laden en opslaan, schakelaars |
 | `src/app/(admin)/admin/nachtmodus/` | Adminpagina |

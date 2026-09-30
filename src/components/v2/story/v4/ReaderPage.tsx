@@ -399,7 +399,7 @@ function StoryText({
 
 // ── Kaft ───────────────────────────────────────────────────────
 
-function CoverContent({
+export function CoverContent({
   unit,
   layout,
   c,
@@ -481,7 +481,7 @@ function CoverContent({
 
 // ── Einde ──────────────────────────────────────────────────────
 
-function EndingContent({
+export function EndingContent({
   unit,
   layout,
   c,
@@ -593,7 +593,7 @@ function Flourish({
 
 // ── Illustratie ────────────────────────────────────────────────
 
-function Illustration({
+export function Illustration({
   unit,
   c,
   readOnly,

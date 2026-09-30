@@ -338,6 +338,8 @@ type BottomBarProps = {
   autoNote: string | null;
   /** Bezig met omslaan: hint en melding even weg. */
   flipping: boolean;
+  /** Doorlopend scrollen: andere bladerhint. */
+  flow?: boolean;
   /** Toon de uitnodiging om zelf een verhaal te maken (deelpagina). */
   showCta: boolean;
   onPrev: () => void;
@@ -358,6 +360,7 @@ export function ReaderBottomBar({
   total,
   autoNote,
   flipping,
+  flow = false,
   showCta,
   onPrev,
   onNext,
@@ -403,7 +406,7 @@ export function ReaderBottomBar({
             opacity: 0.8,
           }}
         >
-          ← veeg of tik om te bladeren →
+          {flow ? "↓ scrol om te lezen ↓" : "← veeg of tik om te bladeren →"}
         </div>
       )}
       {isFirst && !flipping && autoNote && (

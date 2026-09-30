@@ -11,11 +11,16 @@
  *                    extra pagina                  (`?tekst=splits-vast`)
  *     `scroll`       illustratie krimpt, daarna scrollt de tekstkaart
  *                                                  (`?tekst=scroll`)
+ *     `flow`         staande telefoon: het hele verhaal scrolt door; de
+ *                    illustratie blijft bovenaan staan tot de tekst op is
+ *                    en de volgende illustratie erin schuift. Op andere
+ *                    schermen gedraagt dit zich als `split`.
+ *                                                  (`?tekst=doorlopend`)
  *   Env `READER_TEXT_OVERFLOW` zet de standaard.
  */
 
 export type ReaderVersion = "v3" | "v4";
-export type OverflowMode = "split" | "split-fixed" | "scroll";
+export type OverflowMode = "split" | "split-fixed" | "scroll" | "flow";
 
 export const DEFAULT_READER_VERSION: ReaderVersion = "v4";
 export const DEFAULT_OVERFLOW_MODE: OverflowMode = "split";
@@ -34,6 +39,7 @@ function parseOverflow(value: string | undefined): OverflowMode | null {
   if (v === "scroll") return "scroll";
   if (v === "split" || v === "splits") return "split";
   if (v === "split-fixed" || v === "splits-vast") return "split-fixed";
+  if (v === "flow" || v === "doorlopend") return "flow";
   return null;
 }
 
