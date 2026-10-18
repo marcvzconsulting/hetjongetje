@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import NextAuth from "next-auth";
+import * as Sentry from "@sentry/nextjs";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
@@ -77,6 +78,23 @@ async function sendWelcomeMails(user: {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
+  // Auth.js vangt fouten in de inlogflow zelf af en stuurt de gebruiker
+  // door naar de foutpagina. De oorzaak (bv. een Prisma-fout in de
+  // jwt-callback, of een state/PKCE-cookie-mismatch bij Google) komt
+  // standaard alleen in de console terecht, en Vercel bewaart die logs op
+  // het Hobby-plan maar één uur. Daarom sturen we hem ook naar Sentry,
+  // inclusief `cause`, zodat de oorzaak 90 dagen terug te vinden is.
+  // (Aanleiding: Google-login van een klant mislukte op 16 okt 2026 met
+  // de kale "Server error"-pagina en het spoor was de volgende dag weg.)
+  logger: {
+    error(error) {
+      const cause = (error as { cause?: unknown }).cause;
+      console.error(`[auth][error] ${error.name}: ${error.message}`, cause ?? "");
+      Sentry.captureException(error, {
+        tags: { source: "authjs", authErrorType: error.name },
+      });
+    },
+  },
   providers: [
     // Google OAuth — picks up AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET from env
     // automatically. allowDangerousEmailAccountLinking is acceptable here:
@@ -195,6 +213,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    // Eigen Nederlandse foutpagina i.p.v. de ingebouwde Engelse
+    // "Server error"-pagina van Auth.js (src/app/(auth)/inlogfout).
+    error: "/inlogfout",
   },
   callbacks: {
     async jwt({ token, user, account }) {
