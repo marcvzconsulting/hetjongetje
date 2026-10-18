@@ -30,6 +30,17 @@ export function CookieBanner() {
     });
   }, []);
 
+  // Markeer op <html> dat de banner open staat, zodat andere vaste
+  // elementen onderaan (de sticky CTA op de landingspagina) zich kunnen
+  // terugtrekken en niet onder of over de banner heen vallen.
+  useEffect(() => {
+    if (!visible) return;
+    document.documentElement.setAttribute("data-cookie-banner-open", "");
+    return () => {
+      document.documentElement.removeAttribute("data-cookie-banner-open");
+    };
+  }, [visible]);
+
   function accept() {
     try {
       window.localStorage.setItem(STORAGE_KEY, VERSION);
