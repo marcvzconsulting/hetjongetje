@@ -161,7 +161,7 @@ export default async function DashboardPage() {
           }}
         >
           <Image
-            src="/images/spots/voorlezen.png"
+            src="/images/spots/voorlezen.webp"
             alt=""
             fill
             sizes="240px"
