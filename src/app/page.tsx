@@ -6,6 +6,7 @@ import { StarField } from "@/components/v2/StarField";
 import { StoryPreviewV2 } from "@/components/v2/landing/StoryPreviewV2";
 import { LandingFooter } from "@/components/v2/landing/LandingFooter";
 import { RotatingName } from "@/components/v2/landing/RotatingName";
+import { StickyMobileCta } from "@/components/v2/landing/StickyMobileCta";
 import { fetchLandingPreviews } from "@/lib/story/landing-previews";
 import { prisma } from "@/lib/db";
 
@@ -40,7 +41,11 @@ export default function Home() {
         <FounderNote />
         <SlotCTA />
       </main>
-      <LandingFooter />
+      {/* Footer heeft eigen aanmeldknop: sticky CTA verbergt zich zolang hij in beeld is */}
+      <div data-sticky-cta-hide>
+        <LandingFooter />
+      </div>
+      <StickyMobileCta />
     </div>
   );
 }
@@ -276,7 +281,7 @@ function Hero() {
               er een voorleesverhaal van, met een illustratie, klaar om
               voor te lezen. Elke avond anders.
             </p>
-            <div style={{ marginTop: 36 }}>
+            <div style={{ marginTop: 36 }} data-sticky-cta-anchor>
               <EBtn kind="primary" size="lg" href="/register">
                 Begin met vijf gratis verhalen{" "}
                 <IconV2 name="arrow" size={16} color={V2.paper} />
@@ -1284,6 +1289,7 @@ function FounderNote() {
 function SlotCTA() {
   return (
     <section
+      data-sticky-cta-hide
       className="lp-section lp-section-tall"
       style={{
         padding: "120px 48px",
