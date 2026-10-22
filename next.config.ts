@@ -91,7 +91,13 @@ const nextConfig: NextConfig = {
    */
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "**.scw.cloud" },
+      // Exacte productie-bucket i.p.v. een `**.scw.cloud`-wildcard: zo kan
+      // de image-optimizer (/_next/image) niet als open proxy voor
+      // willekeurige Scaleway-buckets van andere tenants misbruikt worden.
+      {
+        protocol: "https",
+        hostname: "ons-verhaaltje-prod.s3.nl-ams.scw.cloud",
+      },
       { protocol: "https", hostname: "**.fal.media" },
       { protocol: "https", hostname: "**.fal.run" },
       { protocol: "https", hostname: "**.fal.ai" },
