@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { applyMolliePaymentStatus } from "@/lib/payments/orders";
+import { rateLimit } from "@/lib/rate-limit/rate-limit";
 
 /**
  * Mollie payment webhook.
@@ -29,6 +30,22 @@ export async function POST(request: NextRequest) {
   if (!paymentId.startsWith("tr_")) {
     // Not a payment id at all — silent 200 so Mollie doesn't keep retrying.
     return NextResponse.json({ ok: true });
+  }
+
+  // Lichte flood-bescherming: de echte status wordt nog steeds bij Mollie
+  // geverifieerd, maar dit voorkomt dat iemand met een stroom tr_-ids onze
+  // Mollie-API-calls + DB laat leeglopen. Ruim boven legitiem Mollie-volume.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+  const limited = await rateLimit({
+    key: `mollie-webhook:${ip}`,
+    limit: 300,
+    windowSeconds: 60,
+  });
+  if (!limited.allowed) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   try {

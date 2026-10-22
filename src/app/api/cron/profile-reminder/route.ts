@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/cron-auth";
 import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/email/client";
 import { buildProfileIncompleteReminderMail } from "@/lib/email/templates/profile-incomplete-reminder";
@@ -16,11 +17,8 @@ import { signUnsubscribeToken } from "@/lib/newsletter/unsubscribe-token";
  * moeten weigeren.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const expected = process.env.CRON_SECRET;
-  if (!expected || authHeader !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const unauthorized = verifyCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000);
   const candidates = await prisma.user.findMany({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/cron-auth";
 import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/email/client";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
@@ -19,11 +20,8 @@ export const maxDuration = 30;
  * per 3 dagen. Zelfde recept als /api/cron/fal-balance.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const expected = process.env.CRON_SECRET;
-  if (!expected || authHeader !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const unauthorized = verifyCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const usage = await fetchElevenLabsUsage();
   if (!usage) {

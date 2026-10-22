@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { safeEqual } from "@/lib/security/secure-compare";
 
 /**
  * Brevo posts events here when subscribers act on a campaign (unsubscribe,
@@ -12,8 +13,13 @@ import { prisma } from "@/lib/db";
  */
 export async function POST(req: NextRequest) {
   const expected = process.env.BREVO_WEBHOOK_SECRET;
-  const provided = req.nextUrl.searchParams.get("secret");
-  if (!expected || provided !== expected) {
+  // Secret bij voorkeur via de `X-Webhook-Secret`-header. De query-param
+  // blijft tijdelijk werken voor backward-compat tot de Brevo-config is
+  // omgezet (zie SECURITY-notes); vergelijking is constant-time.
+  const provided =
+    req.headers.get("x-webhook-secret") ??
+    req.nextUrl.searchParams.get("secret");
+  if (!expected || !provided || !safeEqual(provided, expected)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

@@ -16,6 +16,7 @@ import {
 } from "@/lib/referral";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
+import { z } from "zod";
 
 function clientIp(request: NextRequest): string {
   const fwd = request.headers.get("x-forwarded-for");
@@ -57,6 +58,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Formaat + lengtecaps zodat misvormde input de DB niet in rolt. De
+    // diepere wachtwoord-policy blijft in lib/auth/password-policy.ts.
+    const emailParsed = z
+      .string()
+      .trim()
+      .email("ongeldig e-mailadres")
+      .max(254)
+      .safeParse(email);
+    const nameStr = typeof name === "string" ? name.trim() : "";
+    if (
+      !emailParsed.success ||
+      nameStr.length === 0 ||
+      nameStr.length > 120 ||
+      typeof password !== "string" ||
+      password.length > 128
+    ) {
+      return NextResponse.json({ error: "Ongeldige invoer" }, { status: 400 });
+    }
+    const normalizedEmail = emailParsed.data.toLowerCase();
+
     // De frontend blokkeert dit al met een checkbox; deze server-check
     // vangt directe API-calls af. We slaan het moment van akkoord op
     // (termsAcceptedAt) als bewijs van instemming.
@@ -75,7 +96,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+    });
     if (existing) {
       return NextResponse.json(
         { error: "Er bestaat al een account met dit e-mailadres" },
@@ -95,8 +118,8 @@ export async function POST(request: NextRequest) {
       // 5 starter credits — direct approved, geen goedkeuringswachtrij meer.
       // Plus eventuele referral-bonus.
       data: {
-        name,
-        email,
+        name: nameStr,
+        email: normalizedEmail,
         passwordHash,
         storyCredits: 5 + refBonus,
         status: "approved",

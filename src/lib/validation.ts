@@ -101,6 +101,41 @@ export const childProfileUpdateSchema = z
   .strict();
 export type ChildProfileUpdateInput = z.infer<typeof childProfileUpdateSchema>;
 
+/**
+ * POST /api/children - dezelfde velden als de update, maar de kern is
+ * verplicht en niet-leeg. Onbekende extra velden worden genegeerd (geen
+ * `.strict`) zodat een iets rijkere form-body de create niet breekt.
+ */
+export const childProfileCreateSchema = z.object({
+  name: shortText,
+  dateOfBirth: isoDate,
+  gender: shortText,
+  mainCharacterType: shortText,
+  interests: z.array(shortText).max(20).optional(),
+  pets: z.unknown().optional(),
+  friends: z.unknown().optional(),
+  favoriteThings: z.unknown().optional(),
+  fears: z.array(shortText).max(20).optional(),
+  mainCharacterDescription: mediumTextLoose.optional(),
+  hairColor: shortTextLoose.optional(),
+  hairStyle: shortTextLoose.optional(),
+  eyeColor: shortTextLoose.optional(),
+  skinColor: shortTextLoose.optional(),
+  wearsGlasses: z.boolean().optional(),
+  hasFreckles: z.boolean().optional(),
+});
+export type ChildProfileCreateInput = z.infer<typeof childProfileCreateSchema>;
+
+/**
+ * PATCH /api/children/[childId]/preview (approve) - cap de prompt die
+ * teruggevoerd wordt in de AI-generatie, en eis een geldige image-URL.
+ */
+export const approvePreviewSchema = z.object({
+  characterPrompt: z.string().trim().min(1).max(4000),
+  imageUrl: z.string().url().max(2048).nullable().optional(),
+});
+export type ApprovePreviewInput = z.infer<typeof approvePreviewSchema>;
+
 /** POST /api/stories — childId + characterBible + storyRequest. */
 export const createStorySchema = z
   .object({
