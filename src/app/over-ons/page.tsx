@@ -5,6 +5,7 @@ import {
 } from "@/components/v2/landing/ContentPage";
 import { EBtn } from "@/components/v2";
 import { V2 } from "@/components/v2/tokens";
+import { headers } from "next/headers";
 
 export const metadata = {
   title: "Over ons",
@@ -13,7 +14,8 @@ export const metadata = {
   alternates: { canonical: "/over-ons" },
 };
 
-export default function OverOnsPage() {
+export default async function OverOnsPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <ContentPage
       eyebrow="Over ons"
@@ -179,6 +181,7 @@ export default function OverOnsPage() {
           aan het bedrijf kunnen koppelen. */}
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",

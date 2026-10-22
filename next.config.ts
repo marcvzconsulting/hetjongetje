@@ -1,38 +1,17 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
-const isDev = process.env.NODE_ENV !== "production";
-
 /**
  * Security headers applied to every response. Together they harden the
- * app against XSS amplification, clickjacking, MIME-sniffing, downgrade
- * attacks, popup-based tab-jacking, cross-origin asset leeching, and
- * unnecessary feature exposure.
+ * app against clickjacking, MIME-sniffing, downgrade attacks,
+ * popup-based tab-jacking, cross-origin asset leeching, and unnecessary
+ * feature exposure.
  *
- * The CSP keeps `'unsafe-inline'` on `style-src` because every page
- * currently composes inline `<style>` blocks (responsive overrides
- * etc.). Switching to nonce-based CSP requires per-request nonces from
- * middleware and component-side <style nonce={...}> wiring — a known
- * follow-up that's been parked.
- *
- * `'unsafe-eval'` on `script-src` is now DEV-ONLY: the webpack/HMR dev
- * runtime needs it, but a Next.js production build doesn't evaluate code
- * from strings in the browser, so we drop it in prod to restore the XSS
- * mitigation there. (Verify with a prod smoke-test after deploy.)
- *
- * Dev only: `ws:`/`wss:` permitted on connect-src for HMR over
- * WebSocket. Production responses don't include them.
+ * De Content-Security-Policy staat in `src/middleware.ts`, niet hier:
+ * die heeft een per-request nonce voor `script-src` nodig, wat een
+ * statische config-header niet kan leveren. `style-src` houdt daar
+ * `'unsafe-inline'` (inline <style> voor responsive overrides).
  */
-const PROD_CONNECT = [
-  "'self'",
-  "https://api.brevo.com",
-  "https://*.sentry.io",
-  "https://*.ingest.sentry.io",
-  "https://vitals.vercel-insights.com",
-  "https://va.vercel-scripts.com",
-];
-const DEV_EXTRA_CONNECT = ["ws:", "wss:"];
-
 const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -95,30 +74,6 @@ const SECURITY_HEADERS = [
       "clipboard-read=()",
       "clipboard-write=(self)",
     ].join(", "),
-  },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://*.sentry.io https://va.vercel-scripts.com`,
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://*.scw.cloud https://*.fal.media https://*.fal.run https://*.fal.ai",
-      // Voorlees-audio (mp3) komt uit onze eigen Scaleway-bucket; zonder
-      // media-src valt <audio> terug op default-src 'self' en blokkeert
-      // de browser het bestand stilletjes.
-      "media-src 'self' https://*.scw.cloud",
-      "font-src 'self' data:",
-      `connect-src ${[...PROD_CONNECT, ...(isDev ? DEV_EXTRA_CONNECT : [])].join(" ")}`,
-      // Lock down the niche directives explicitly so a browser default
-      // can't widen them silently in a future spec change.
-      "frame-src 'none'",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      "worker-src 'self' blob:",
-      "manifest-src 'self'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
   },
 ];
 
