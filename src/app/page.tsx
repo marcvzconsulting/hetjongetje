@@ -9,6 +9,7 @@ import { RotatingName } from "@/components/v2/landing/RotatingName";
 import { StickyMobileCta } from "@/components/v2/landing/StickyMobileCta";
 import { fetchLandingPreviews } from "@/lib/story/landing-previews";
 import { prisma } from "@/lib/db";
+import { headers } from "next/headers";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
@@ -55,7 +56,8 @@ export default function Home() {
  * Organization, WebSite en WebPage aan elkaar gekoppeld zijn.
  * Search/answer engines hangen hun snippets aan deze entiteiten op.
  */
-function LandingJsonLd() {
+async function LandingJsonLd() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const siteUrl = "https://www.onsverhaaltje.nl";
   const data = {
     "@context": "https://schema.org",
@@ -119,6 +121,7 @@ function LandingJsonLd() {
   return (
     <script
       type="application/ld+json"
+      nonce={nonce}
       // schema.org JSON-LD wordt door Next.js niet als XSS-risico
       // behandeld; we maken de data zelf.
       dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}

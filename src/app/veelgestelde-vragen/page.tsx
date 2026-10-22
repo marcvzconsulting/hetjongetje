@@ -2,6 +2,7 @@ import { ContentPage, Lead } from "@/components/v2/landing/ContentPage";
 import { EBtn } from "@/components/v2";
 import { V2 } from "@/components/v2/tokens";
 import { loadPublishedFaq } from "@/lib/faq";
+import { headers } from "next/headers";
 
 export const metadata = {
   title: "Veelgestelde vragen",
@@ -14,6 +15,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function VeelgesteldeVragenPage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const entries = await loadPublishedFaq();
 
   return (
@@ -109,6 +111,7 @@ export default async function VeelgesteldeVragenPage() {
 
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{
           // Escape "<" so admin-editable FAQ content can't break out of the
           // script tag with a literal </script>.
