@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { normalizeChildName, normalizeNamesIn } from "@/lib/utils/name";
+import { childProfileCreateSchema, parseJsonBody } from "@/lib/validation";
 
 export async function GET() {
   const session = await auth();
@@ -23,53 +25,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
 
+  const parsed = await parseJsonBody(request, childProfileCreateSchema);
+  if (parsed instanceof NextResponse) return parsed;
+
   try {
-    const body = await request.json();
-    const {
-      name,
-      dateOfBirth,
-      gender,
-      interests,
-      pets,
-      friends,
-      favoriteThings,
-      fears,
-      mainCharacterType,
-      mainCharacterDescription,
-      hairColor,
-      hairStyle,
-      eyeColor,
-      skinColor,
-      wearsGlasses,
-      hasFreckles,
-    } = body;
-
-    if (!name || !dateOfBirth || !gender || !mainCharacterType) {
-      return NextResponse.json(
-        { error: "Naam, geboortedatum, geslacht en personagetype zijn verplicht" },
-        { status: 400 }
-      );
-    }
-
     const child = await prisma.childProfile.create({
       data: {
         userId: session.user.id,
-        name: normalizeChildName(name),
-        dateOfBirth: new Date(dateOfBirth),
-        gender,
-        interests: interests || [],
-        pets: normalizeNamesIn(pets) || pets || null,
-        friends: normalizeNamesIn(friends) || friends || null,
-        favoriteThings: favoriteThings || null,
-        fears: fears || [],
-        mainCharacterType,
-        mainCharacterDescription: mainCharacterDescription || null,
-        hairColor: hairColor || null,
-        hairStyle: hairStyle || null,
-        eyeColor: eyeColor || null,
-        skinColor: skinColor || null,
-        wearsGlasses: wearsGlasses || false,
-        hasFreckles: hasFreckles || false,
+        name: normalizeChildName(parsed.name),
+        dateOfBirth: new Date(parsed.dateOfBirth),
+        gender: parsed.gender,
+        interests: parsed.interests ?? [],
+        pets:
+          (normalizeNamesIn(parsed.pets) as Prisma.InputJsonValue | undefined) ??
+          (parsed.pets as Prisma.InputJsonValue | undefined),
+        friends:
+          (normalizeNamesIn(parsed.friends) as Prisma.InputJsonValue | undefined) ??
+          (parsed.friends as Prisma.InputJsonValue | undefined),
+        favoriteThings: parsed.favoriteThings as Prisma.InputJsonValue | undefined,
+        fears: parsed.fears ?? [],
+        mainCharacterType: parsed.mainCharacterType,
+        mainCharacterDescription: parsed.mainCharacterDescription ?? null,
+        hairColor: parsed.hairColor ?? null,
+        hairStyle: parsed.hairStyle ?? null,
+        eyeColor: parsed.eyeColor ?? null,
+        skinColor: parsed.skinColor ?? null,
+        wearsGlasses: parsed.wearsGlasses ?? false,
+        hasFreckles: parsed.hasFreckles ?? false,
         characterBible: undefined,
         referenceImages: [],
       },

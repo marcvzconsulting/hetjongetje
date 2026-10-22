@@ -17,6 +17,7 @@ import {
   isOwnStorageUrl,
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
+import { approvePreviewSchema, parseJsonBody } from "@/lib/validation";
 import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import { loadUserGate } from "@/lib/user-gate";
 
@@ -129,12 +130,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     );
   }
 
+  const parsed = await parseJsonBody(request, approvePreviewSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { characterPrompt } = parsed;
+  const imageUrl = parsed.imageUrl ?? null;
+
   const { childId } = await params;
-  const body = await request.json();
-  const { characterPrompt, imageUrl } = body as {
-    characterPrompt: string;
-    imageUrl: string | null;
-  };
 
   const child = await prisma.childProfile.findFirst({
     where: { id: childId, userId: session.user.id },

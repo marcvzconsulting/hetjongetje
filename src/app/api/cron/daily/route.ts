@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/cron-auth";
 import { prisma } from "@/lib/db";
 import { finalizeStaleLoraTrainings } from "@/lib/ai/lora-training";
 
@@ -18,11 +19,8 @@ export const maxDuration = 120;
  * the others. Guarded by CRON_SECRET, fail-closed when the env is unset.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const expected = process.env.CRON_SECRET;
-  if (!expected || authHeader !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const unauthorized = verifyCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const results: Record<string, unknown> = {};
 

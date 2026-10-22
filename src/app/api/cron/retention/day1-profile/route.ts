@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronAuth } from "@/lib/cron-auth";
 import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/email/client";
 import { buildDay1ProfileReminderMail } from "@/lib/email/templates/day1-profile-reminder";
@@ -18,11 +19,8 @@ import { buildReminderOptOutUrl } from "@/lib/reminders/opt-out-url";
  * - Respects newsletter preference (newsletterOptIn = true)
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const expected = process.env.CRON_SECRET;
-  if (!expected || authHeader !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const unauthorized = verifyCronAuth(request);
+  if (unauthorized) return unauthorized;
 
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 1 * 86_400_000);
