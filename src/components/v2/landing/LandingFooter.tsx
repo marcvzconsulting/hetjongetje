@@ -106,6 +106,14 @@ export function LandingFooter() {
             Contact
           </Link>
           <a
+            href="https://www.instagram.com/onsverhaaltje/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Instagram
+          </a>
+          <a
             href="mailto:info@onsverhaaltje.nl"
             style={{ color: "inherit", textDecoration: "none" }}
           >
