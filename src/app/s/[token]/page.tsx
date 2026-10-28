@@ -55,7 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const story = await loadSharedStory(token);
   if (!story) {
     return {
-      title: "Verhaal niet gevonden — Ons Verhaaltje",
+      title: "Verhaal niet gevonden",
       robots: { index: false, follow: false },
     };
   }

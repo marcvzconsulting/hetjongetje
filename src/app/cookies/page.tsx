@@ -7,7 +7,7 @@ import {
 import { COMPANY } from "@/lib/legal";
 
 export const metadata = {
-  title: "Cookies · Ons Verhaaltje",
+  title: "Cookies",
   description:
     "Welke cookies Ons Verhaaltje gebruikt — en vooral welke niet.",
 };
