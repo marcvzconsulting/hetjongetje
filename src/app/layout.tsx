@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Lora, Fraunces, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -103,11 +104,18 @@ export const viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // De CSP in proxy.ts staat alleen scripts toe met de nonce van dít
+  // request. Next.js kan die nonce alleen injecteren bij dynamisch
+  // renderen; een statisch gebouwde pagina heeft geen nonce, de browser
+  // blokkeert al z'n inline scripts en React hydrateert nooit (zo was
+  // /auth/magic een lege pagina). Daarom rendert elke pagina per request.
+  await connection();
+
   return (
     <html
       lang="nl"
