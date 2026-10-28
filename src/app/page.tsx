@@ -10,6 +10,7 @@ import { StickyMobileCta } from "@/components/v2/landing/StickyMobileCta";
 import { fetchLandingPreviews } from "@/lib/story/landing-previews";
 import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
+import { freeStoriesLabel, loadStarterCredits } from "@/lib/starter-credits";
 
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
@@ -18,7 +19,11 @@ export const metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function Home() {
+export default async function Home() {
+  // Aantal gratis verhalen is instelbaar via /admin/pricing; alle copy op
+  // deze pagina volgt die ene waarde.
+  const starterCredits = await loadStarterCredits();
+
   return (
     <div
       className="v2-root"
@@ -32,21 +37,27 @@ export default function Home() {
       <ResponsiveStyles />
       <Nav />
       <main>
-        <Hero />
+        <Hero starterCredits={starterCredits} />
         <StoryPreviewSection />
         <HowItGoes />
         <NightHero />
         <BookSection />
-        <Pricing />
+        <Pricing starterCredits={starterCredits} />
         <TrustStrip />
         <FounderNote />
-        <SlotCTA />
+        <SlotCTA starterCredits={starterCredits} />
       </main>
       {/* Footer heeft eigen aanmeldknop: sticky CTA verbergt zich zolang hij in beeld is */}
       <div data-sticky-cta-hide>
         <LandingFooter />
       </div>
-      <StickyMobileCta />
+      <StickyMobileCta
+        label={
+          starterCredits > 0
+            ? `Begin met ${freeStoriesLabel(starterCredits)}`
+            : "Maak het eerste verhaal"
+        }
+      />
     </div>
   );
 }
@@ -231,7 +242,7 @@ function Nav() {
 
 // ── Hero ───────────────────────────────────────────────────────────
 
-function Hero() {
+function Hero({ starterCredits }: { starterCredits: number }) {
   const vignette =
     "radial-gradient(ellipse 68% 74% at 50% 47%, black 52%, transparent 92%)";
   return (
@@ -286,7 +297,9 @@ function Hero() {
             </p>
             <div style={{ marginTop: 36 }} data-sticky-cta-anchor>
               <EBtn kind="primary" size="lg" href="/register">
-                Begin met vijf gratis verhalen{" "}
+                {starterCredits > 0
+                  ? `Begin met ${freeStoriesLabel(starterCredits)}`
+                  : "Maak het eerste verhaal"}{" "}
                 <IconV2 name="arrow" size={16} color={V2.paper} />
               </EBtn>
               <div
@@ -787,7 +800,7 @@ function eurosFromCents(cents: number): string {
   return s.endsWith(",00") ? s.slice(0, -3) : s;
 }
 
-async function Pricing() {
+async function Pricing({ starterCredits }: { starterCredits: number }) {
   // Pull subscription plans + a representative credit pack from the DB so
   // /admin/pricing can tune the landing without a code deploy. Falls back
   // to hardcoded copy if the DB isn't reachable yet (during a fresh
@@ -1100,17 +1113,20 @@ async function Pricing() {
           </div>
         )}
 
-        <p
-          style={{
-            textAlign: "center",
-            fontFamily: V2.body,
-            fontSize: 14,
-            color: V2.inkMute,
-            marginTop: 24,
-          }}
-        >
-          Altijd vijf gratis proefverhalen voor je iets afsluit.
-        </p>
+        {starterCredits > 0 && (
+          <p
+            style={{
+              textAlign: "center",
+              fontFamily: V2.body,
+              fontSize: 14,
+              color: V2.inkMute,
+              marginTop: 24,
+            }}
+          >
+            Altijd {freeStoriesLabel(starterCredits)} om te proberen voor je
+            iets afsluit.
+          </p>
+        )}
       </div>
     </section>
   );
@@ -1289,7 +1305,7 @@ function FounderNote() {
 
 // ── Slot CTA ────────────────────────────────────────────────────────
 
-function SlotCTA() {
+function SlotCTA({ starterCredits }: { starterCredits: number }) {
   return (
     <section
       data-sticky-cta-hide
@@ -1337,7 +1353,9 @@ function SlotCTA() {
             opacity: 0.8,
           }}
         >
-          Vijf gratis verhalen om te proberen. Klaar in drie minuten.
+          {starterCredits > 0 &&
+            `${freeStoriesLabel(starterCredits, { capital: true })} om te proberen. `}
+          Klaar in drie minuten.
         </p>
         <div style={{ marginTop: 44 }}>
           <EBtn kind="on-dark" size="lg" href="/register">

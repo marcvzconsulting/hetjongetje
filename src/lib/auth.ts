@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { RATE_LIMITS } from "@/lib/rate-limit/api-rate-limit";
+import { loadStarterCredits } from "@/lib/starter-credits";
 import { sendMail } from "@/lib/email/client";
 import { buildWelcomeMail } from "@/lib/email/templates/welcome";
 import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
@@ -245,9 +246,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               // Direct approved — geen goedkeuringswachtrij meer (mirror
               // van het credentials-registratiepad).
               status: "approved",
-              // 5 starter credits, identiek aan het credentials-
+              // Starter credits, identiek aan het credentials-
               // registratiepad zodat de welkomstervaring gelijk is.
-              storyCredits: 5,
+              storyCredits: await loadStarterCredits(),
               lastLoginAt: new Date(),
               // Onder de Google-knop staat de kennisgeving dat doorgaan
               // akkoord met de voorwaarden betekent (AuthTermsNotice) —

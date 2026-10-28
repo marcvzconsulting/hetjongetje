@@ -16,6 +16,7 @@ import {
 } from "@/lib/referral";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
+import { loadStarterCredits } from "@/lib/starter-credits";
 import { z } from "zod";
 
 function clientIp(request: NextRequest): string {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
-    // Per-IP rate limit BEFORE any work: each signup grants 5 free credits
+    // Per-IP rate limit BEFORE any work: each signup grants free starter credits
     // (real AI spend) and fires an admin mail, so unthrottled registration
     // is a credit-farming and inbox-flooding vector.
     const ip = clientIp(request);
@@ -113,15 +114,17 @@ export async function POST(request: NextRequest) {
     const refCookie = request.cookies.get(REFERRAL_COOKIE)?.value ?? null;
     const inviterId = await resolveReferralCode(refCookie);
     const refBonus = inviterId ? REFERRAL_BONUS_CREDITS : 0;
+    const starterCredits = await loadStarterCredits();
 
     const user = await prisma.user.create({
-      // 5 starter credits — direct approved, geen goedkeuringswachtrij meer.
+      // Starter credits (instelbaar via /admin/pricing) — direct approved,
+      // geen goedkeuringswachtrij meer.
       // Plus eventuele referral-bonus.
       data: {
         name: nameStr,
         email: normalizedEmail,
         passwordHash,
-        storyCredits: 5 + refBonus,
+        storyCredits: starterCredits + refBonus,
         status: "approved",
         referredByUserId: inviterId,
         termsAcceptedAt: new Date(),

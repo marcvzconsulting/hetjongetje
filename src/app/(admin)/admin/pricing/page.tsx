@@ -12,7 +12,13 @@ import {
   createSubscriptionPlanAction,
   updateSubscriptionPlanAction,
   deleteSubscriptionPlanAction,
+  updateStarterCreditsAction,
 } from "./actions";
+import {
+  STARTER_CREDITS_RANGE,
+  firstStoriesFreeLabel,
+  loadStarterCredits,
+} from "@/lib/starter-credits";
 
 type SearchParams = Promise<{ saved?: string; error?: string }>;
 
@@ -27,6 +33,7 @@ const ERROR_LABELS: Record<string, string> = {
   price: "Prijs ongeldig — gebruik een getal als 12 of 12.50.",
   duplicate_code: "Die code bestaat al — kies een unieke code.",
   not_found: "Kon het item niet vinden, mogelijk al verwijderd.",
+  starter_credits: `Aantal gratis verhalen moet een heel getal van ${STARTER_CREDITS_RANGE.min} t/m ${STARTER_CREDITS_RANGE.max} zijn.`,
 };
 
 function eurosFromCents(cents: number): string {
@@ -43,11 +50,12 @@ export default async function PricingPage({
   const flash = params.saved ? SAVED_LABELS[params.saved] : null;
   const error = params.error ? ERROR_LABELS[params.error] : null;
 
-  const [creditPacks, subscriptionPlans] = await Promise.all([
+  const [creditPacks, subscriptionPlans, starterCredits] = await Promise.all([
     prisma.creditPack.findMany({ orderBy: [{ sortOrder: "asc" }, { code: "asc" }] }),
     prisma.subscriptionPlan.findMany({
       orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
     }),
+    loadStarterCredits(),
   ]);
 
   const session = await auth();
@@ -70,6 +78,16 @@ export default async function PricingPage({
     >
       {flash && <Flash kind="success">{flash}</Flash>}
       {error && <Flash kind="error">{error}</Flash>}
+
+      {/* Gratis verhalen bij registratie */}
+      <section style={{ marginTop: 40 }}>
+        <SectionHeader
+          kicker="Nieuwe accounts"
+          title="Gratis verhalen"
+          meta={`nu ${starterCredits}`}
+        />
+        <StarterCreditsForm value={starterCredits} />
+      </section>
 
       {/* Credit packs */}
       <section style={{ marginTop: 40, marginBottom: 64 }}>
@@ -105,6 +123,50 @@ export default async function PricingPage({
         <NewSubscriptionPlanForm />
       </section>
     </AdminShell>
+  );
+}
+
+// ── Gratis verhalen ──────────────────────────────────────────────
+
+function StarterCreditsForm({ value }: { value: number }) {
+  return (
+    <form
+      action={updateStarterCreditsAction}
+      style={{
+        background: V2.paperDeep,
+        border: `1px solid ${V2.paperShade}`,
+        padding: 20,
+      }}
+    >
+      <FieldGrid>
+        <FieldNumber
+          name="starterCredits"
+          label="Gratis verhalen per nieuw account"
+          defaultValue={value}
+          min={STARTER_CREDITS_RANGE.min}
+          max={STARTER_CREDITS_RANGE.max}
+          required
+        />
+      </FieldGrid>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: V2.inkSoft,
+          margin: "14px 0 0",
+        }}
+      >
+        Geldt voor nieuwe registraties (e-mail en Google); bestaande accounts
+        houden hun saldo. De teksten op de homepage, over ons en de
+        veelgestelde vragen volgen dit aantal
+        {value > 0 ? ` (nu: “${firstStoriesFreeLabel(value)}”)` : ""}. Bij 0
+        verdwijnt de gratis-belofte van de site.
+      </p>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+        <SaveButton />
+      </div>
+    </form>
   );
 }
 
