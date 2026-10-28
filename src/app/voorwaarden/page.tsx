@@ -8,7 +8,7 @@ import {
 import { COMPANY } from "@/lib/legal";
 
 export const metadata = {
-  title: "Voorwaarden · Ons Verhaaltje",
+  title: "Voorwaarden",
   description:
     "De afspraken tussen jou en Ons Verhaaltje, in begrijpelijke taal.",
 };

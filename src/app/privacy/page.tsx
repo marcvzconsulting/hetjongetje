@@ -7,7 +7,7 @@ import {
 import { COMPANY } from "@/lib/legal";
 
 export const metadata = {
-  title: "Privacy · Ons Verhaaltje",
+  title: "Privacy",
   description:
     "Wat Ons Verhaaltje bewaart aan gegevens van ouder en kind, en hoe we daarmee omgaan.",
 };
