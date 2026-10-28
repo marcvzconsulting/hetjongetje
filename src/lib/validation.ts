@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z, type ZodType } from "zod";
+import { toRoetveegpiet } from "@/lib/ai/sanitize";
 
 /**
  * Centrale plek voor request-body validatie. Doel is bescheiden:
@@ -154,7 +155,9 @@ export const createStorySchema = z
       .passthrough(), // accepteer ook overige velden zonder strict te zijn
     storyRequest: z
       .object({
-        setting: shortText,
+        // Een eigen plek wordt als setting opgeslagen en in de bibliotheek
+        // getoond, dus de Roetveegpiet-regel geldt hier al.
+        setting: shortText.transform(toRoetveegpiet),
         adventureType: shortText,
         mood: shortText,
         occasion: shortText.optional(),

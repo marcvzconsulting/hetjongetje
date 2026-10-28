@@ -65,7 +65,7 @@ export const OCCASIONS = {
   none: { label: "Geen", labelEn: "", description: "", emoji: "" },
   birthday: { label: "Verjaardag", labelEn: "Birthday", description: "A birthday celebration with cake, presents, balloons, and a party", emoji: "🎂" },
   christmas: { label: "Kerst", labelEn: "Christmas", description: "Christmas with snow, a decorated tree, Santa Claus, reindeer, and presents", emoji: "🎄" },
-  sinterklaas: { label: "Sinterklaas", labelEn: "Sinterklaas (Dutch holiday)", description: "The Dutch Sinterklaas with his steamboat from Spain, pieten helpers, pepernoten, shoes by the fireplace, and surprises", emoji: "🎅" },
+  sinterklaas: { label: "Sinterklaas", labelEn: "Sinterklaas (Dutch holiday)", description: "The Dutch Sinterklaas with his steamboat from Spain, his helpers the Roetveegpieten (a few soot smudges from the chimney on their cheeks), pepernoten, shoes by the fireplace, and surprises", emoji: "🎅" },
   easter: { label: "Pasen", labelEn: "Easter", description: "Easter with the Easter bunny, hidden colorful eggs, baby chicks, and chocolate", emoji: "🐣" },
   new_years: { label: "Oud & Nieuw", labelEn: "New Year's Eve", description: "New Year's Eve with fireworks, confetti, counting down, and wishes", emoji: "🎆" },
   mothers_day: { label: "Moederdag", labelEn: "Mother's Day", description: "A Mother's Day celebration with love, flowers, breakfast in bed, and handmade gifts", emoji: "💐" },
