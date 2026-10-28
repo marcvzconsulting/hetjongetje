@@ -40,6 +40,9 @@ interface Props {
   initialFeedbackNote: string | null;
   /** Bestaande share-token uit DB; null = nog niet gedeeld. */
   initialShareToken: string | null;
+  /** Staat de voorleesfunctie aan (env TTS_ENABLED)? Uit = geen
+   *  luisterknop en geen speler. */
+  audioEnabled: boolean;
   /** Mag deze gebruiker nieuwe voorlees-audio genereren? False wanneer
    *  de TTS-premium-schakelaar aan staat en er geen actief betaald
    *  abonnement is — bestaande audio afspelen blijft wel werken. */
@@ -65,6 +68,7 @@ export function StoryPageClient({
   initialFeedbackKind,
   initialFeedbackNote,
   initialShareToken,
+  audioEnabled,
   canGenerateAudio,
   initialAudios,
   readerVersion,
@@ -273,7 +277,7 @@ export function StoryPageClient({
           isShared={!!shareToken}
           onReactClick={() => setReactOpen(true)}
           hasFeedback={hasFeedback}
-          onListenClick={() => setListenOpen(true)}
+          onListenClick={audioEnabled ? () => setListenOpen(true) : undefined}
           hasAudio={audios.length > 0}
           listenOpen={listenOpen}
           onListenSlot={setListenSlot}
@@ -298,7 +302,7 @@ export function StoryPageClient({
           isShared={!!shareToken}
           onReactClick={() => setReactOpen(true)}
           hasFeedback={hasFeedback}
-          onListenClick={() => setListenOpen(true)}
+          onListenClick={audioEnabled ? () => setListenOpen(true) : undefined}
           hasAudio={audios.length > 0}
           onSpreadChange={setCurrentSpreadIdx}
           wordHighlight={listenOpen ? wordHighlight : null}
@@ -306,7 +310,7 @@ export function StoryPageClient({
       )}
 
       {/* Voorlezen — stemkeuze + paginagestuurde speler. */}
-      {listenOpen && (
+      {audioEnabled && listenOpen && (
         <StoryAudioPlayer
           variant={v4 ? "pill" : "bar"}
           portalTarget={v4 ? listenSlot : null}

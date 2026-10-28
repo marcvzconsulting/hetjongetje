@@ -9,6 +9,7 @@ import {
   elevenLabsQuotaThreshold,
   ELEVENLABS_QUOTA_MAIL_TAG,
 } from "@/lib/ai/elevenlabs-quota";
+import { isTtsEnabled } from "@/lib/ai/tts-config";
 
 export const maxDuration = 30;
 
@@ -22,6 +23,12 @@ export const maxDuration = 30;
 export async function GET(request: NextRequest) {
   const unauthorized = verifyCronAuth(request);
   if (unauthorized) return unauthorized;
+
+  // Voorleesfunctie uit: geen quotum-waarschuwingen voor een dienst die
+  // we niet gebruiken.
+  if (!isTtsEnabled()) {
+    return NextResponse.json({ ok: true, skipped: "voorlezen staat uit" });
+  }
 
   const usage = await fetchElevenLabsUsage();
   if (!usage) {
