@@ -3,68 +3,70 @@
 # Het Jongetje - Gepersonaliseerde Kinderverhalen
 
 ## Project Overview
-A personalized children's story generator web app. Parents fill in a profile about their child, and the app generates short stories with AI illustrations. Stories can be bundled into a printed book.
+Live as **Ons Verhaaltje** on www.onsverhaaltje.nl. Parents fill in a profile about their child, and the app generates short illustrated stories that can be read aloud, shared via a link and downloaded as PDF. A printed book is not live yet (see `docs/roadmap.md`).
+
+Hosting is Vercel: `master` on GitHub (`marcvzconsulting/hetjongetje`) deploys to production, every PR gets a preview (behind Vercel login). Work goes via a branch and PR.
 
 ## Tech Stack
-- **Framework**: Next.js 16 (App Router) + TypeScript
-- **Styling**: Tailwind CSS v4 + Google Fonts (Fraunces display, Lora body, Inter UI) via V2 design tokens
-- **State**: TanStack Query (server) + Zustand (client)
-- **Database**: PostgreSQL + Prisma ORM
-- **AI Stories**: Claude API (Sonnet 5, adaptive thinking op effort "medium") via @anthropic-ai/sdk
+- **Framework**: Next.js 16 (App Router) + TypeScript, React 19
+- **Styling**: V2 design tokens in `src/components/v2/tokens.ts` (paper/ink/gold/night), mostly as inline styles; Google Fonts Fraunces (display), Lora (body), Inter (UI). Tailwind CSS v4 is set up but little used.
+- **Database**: PostgreSQL on Neon + Prisma 7 (config in `prisma/prisma.config.ts`)
+- **Auth**: Auth.js v5 (`src/lib/auth.ts`): password, magic link (`src/lib/magic-link.ts`) and Google
+- **AI Stories**: Claude via @anthropic-ai/sdk in `src/lib/ai/story-generator.ts`. Model `claude-fable-5-1` (override with env `STORY_MODEL`), effort "medium", structured outputs against a JSON schema. Fallback `claude-opus-5`: server-side on a refusal, a second call on a technical error.
 - **AI Images**: fal.ai. Portret via FLUX.2 Pro; bij goedkeuring wordt een karakterblad (close-up + driekwart) afgeleid (`src/lib/ai/character-sheet.ts`, `Child.referenceSheetUrls`). Verhaalillustraties: FLUX.2 Pro edit met portret + karakterblad als referenties (env `ILLUSTRATION_ENGINE`: `flux2` default | `nano-banana-2` | `flux1` = kill-switch). Zonder portret: FLUX Pro 1.1 tekst+seed. Getrainde LoRA gaat voor. Backfill oude profielen: `scripts/backfill-reference-sheets.ts`.
+- **Read-aloud audio**: ElevenLabs (`src/app/api/stories/[storyId]/audio`)
 - **Storage**: Scaleway Object Storage (S3-compatible, nl-ams)
-- **i18n**: next-intl (Dutch primary, English for AI generation)
+- **Payments**: Mollie. **Email**: Brevo. **Monitoring**: Sentry, BetterStack on `/api/health`.
+- Installed but not used in `src/`: next-intl, Zustand, TanStack Query. There is no job queue.
 
-## Key Architecture Decisions
-- **Translation pipeline**: NL input → translate to EN → generate story in EN → translate back to NL (best AI quality)
-- **Age groups**: 2-4, 5-7, 8-10 (different language complexity per group)
-- **Story structure**: 6 pages, 50-150 words per page, structured JSON output from Claude
-- **Illustration prompts**: Generated alongside story text by Claude, then sent to Flux 2
+## How story generation works
+- Claude writes the story **directly in Dutch**; the illustration prompts come back **in English** in the same JSON. There is no translation step.
+- Exactly 4 pages, each with its own text and illustration prompt, plus a separate closing illustration.
+- Length "kort" or "lang"; word counts per age in `wordCountRange()`. Age instructions per group (0-1, 1-2, 3-4, 5-7, 8+) and some other prompt fragments are admin-editable snippets (`/admin/ai-prompts`, `src/lib/ai/prompts/store.ts`).
+- Setting: a key from `STORY_SETTINGS` (`src/lib/ai/prompts/story-request.ts`) or free text from the parent ("Eigen plek" in the wizard).
+- Every free-text field from a parent passes `src/lib/ai/sanitize.ts` before it enters a prompt. Request bodies are validated with zod in `src/lib/validation.ts`.
+
+## House rules for story content
+- **No Zwarte Piet, always Roetveegpiet.** `toRoetveegpiet()` in `sanitize.ts` is applied to parent input, the stored setting, the previous story in a sequel, and everything the model returns. The prompt rule lives in code, not in an admin snippet, so an override cannot remove it.
+- Pets and friends only appear when chosen as companion; the child's listed fears are avoided.
 
 ## Project Structure
 ```
 src/
   app/
-    (auth)/          # Login, register (public routes)
-    (app)/           # Authenticated app shell
-      dashboard/     # Story library, child profiles
-      profile/[childId]/  # Child profile management
-      generate/[childId]/ # Story generation wizard
-      story/[storyId]/    # Story reader view
-      book/          # Book bundling (Phase 3)
-    api/             # API routes
-  components/
-    ui/              # Base UI components
-    story/           # Story reader, page turner
-    profile/         # Child profile forms
-    generation/      # Generation wizard, progress
+    (auth)/             login, register, password reset, login error
+    (app)/              dashboard, profile/[childId], generate/[childId], story/[storyId], book, credits, account
+    (admin)/admin/      users, ai-prompts, email-templates, faq, inbox, pricing, audit, jobs, ...
+    api/                stories, payments/mollie, cron/*, auth, health, ...
+    auth/magic/         landing page of the magic link from the login email
+    s/[token]/          public shared story
+  components/v2/        current UI (generation wizard, story reader, landing, admin)
   lib/
-    ai/              # Claude API + Flux integration
-      prompts/       # System prompts, templates
-    pdf/             # PDF generation (Phase 3)
-    storage/         # S3/R2 file storage
-    queue/           # BullMQ job queue
-    utils/           # Utility functions
-  messages/          # i18n translation files (nl.json, en.json)
-prisma/
-  schema.prisma      # Database schema
+    ai/                 story-generator, character sheet, prompts, sanitize, pricing
+    pdf/  storage/  payments/  email/  auth/  rate-limit/  reader/  ...
+prisma/schema.prisma
+scripts/                one-off maintenance and comparison scripts (run with tsx)
+docs/                   roadmap.md (status per phase), architecture.md (May 2026, partly dated)
 ```
+`src/components/ui`, `story` and `generation` are no longer imported; `profile` is still used in two places. Build new UI in `components/v2`.
 
 ## Conventions
 - Use `pnpm` as package manager
-- UI language is Dutch, AI generation pipeline uses English internally
-- Color palette: warm, child-friendly (primary: #e8734a, secondary: #2a9d8f, accent: #e9c46a)
-- All components use Tailwind CSS classes
+- UI language is Dutch; illustration prompts are English
+- Colors and fonts come from the V2 tokens, not hard-coded hex values
 - API routes in `src/app/api/`
 - Database models use snake_case table/column names, TypeScript uses camelCase
+- Production schema change: run `pnpm db:push:prod` **before** pushing the code that needs it, otherwise production queries columns that don't exist yet
 
 ## Commands
 - `pnpm dev` - Start dev server
 - `pnpm build` - Production build
 - `pnpm lint` - Run ESLint
-- `npx prisma generate` - Generate Prisma client
-- `npx prisma db push` - Push schema to database
-- `npx prisma studio` - Open Prisma Studio
+- `pnpm db:generate` - Generate Prisma client
+- `pnpm db:push` - Push schema to the dev database
+- `pnpm db:push:prod` - Push schema to production (reads `.env.production.local`)
+- `pnpm db:studio` - Open Prisma Studio
+- `npx tsx scripts/<name>.ts` - Run a maintenance script
 
 ## graphify
 
