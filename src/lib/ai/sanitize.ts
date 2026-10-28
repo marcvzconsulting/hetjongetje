@@ -12,6 +12,9 @@
  * We deliberately do NOT pattern-match phrases like "ignore previous"
  * because that yields false-negatives. The newline strip + length cap
  * defeats the most common practical attacks.
+ *
+ * Every sanitized field also gets the Roetveegpiet house rule (see
+ * toRoetveegpiet), so it holds for whatever free text a parent types.
  */
 
 const MAX_SHORT_LEN = 80; // single-word-ish: name, type, color
@@ -23,11 +26,24 @@ const MAX_DESC_LEN = 280; // descriptions, interests
 const CONTROL_CHARS = /[\x00-\x1F\x7F]/g;
 
 function clean(value: string, maxLen: number): string {
+  return toRoetveegpiet(
+    value.replace(CONTROL_CHARS, " ").replace(/\s+/g, " ").trim(),
+  ).slice(0, maxLen);
+}
+
+/**
+ * Huisregel: in onze verhalen komt geen Zwarte Piet voor. Schrijft een
+ * ouder het toch, dan wordt het Roetveegpiet (meervoud en verkleinwoord
+ * lopen mee: "Zwarte Pieten" → "Roetveegpieten"). Ook de Engelse vorm in
+ * illustratieprompts wordt vervangen. Wordt toegepast op invoer én op wat
+ * het model teruggeeft.
+ */
+export function toRoetveegpiet(value: string): string {
   return value
-    .replace(CONTROL_CHARS, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLen);
+    .replace(/\bzwarte[\s-]*piet/gi, "Roetveegpiet")
+    .replace(/\bblack[\s-]*peter?(s)?\b/gi, (_m, plural?: string) =>
+      plural ? "soot-smudged Pete helpers" : "soot-smudged Pete helper",
+    );
 }
 
 /** Sanitize a short identifier-like field (name, color, type, etc.). */

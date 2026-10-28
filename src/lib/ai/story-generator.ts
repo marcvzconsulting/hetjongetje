@@ -12,6 +12,7 @@ import { calculateAge } from "@/lib/utils/age";
 import {
   sanitizePromptShort,
   sanitizePromptDescription,
+  toRoetveegpiet,
 } from "./sanitize";
 
 const anthropic = new Anthropic();
@@ -341,6 +342,9 @@ function sanitizeBible(bible: CharacterBible): CharacterBible {
 function sanitizeRequest(request: StoryRequest): StoryRequest {
   return {
     ...request,
+    // Een sleutel uit STORY_SETTINGS komt hier ongewijzigd doorheen; een
+    // eigen plek is vrije ouder-invoer en krijgt de beschrijvingsbehandeling.
+    setting: sanitizePromptDescription(request.setting),
     companion: request.companion
       ? sanitizePromptShort(request.companion)
       : undefined,
@@ -360,7 +364,9 @@ function sanitizeRequest(request: StoryRequest): StoryRequest {
       typeof request.sequel.text === "string"
         ? {
             title: sanitizePromptShort(request.sequel.title),
-            text: request.sequel.text.slice(0, 6000),
+            // Verhalen van vóór de Roetveegpiet-regel kunnen nog
+            // "Zwarte Piet" bevatten; dat nemen we niet mee in het vervolg.
+            text: toRoetveegpiet(request.sequel.text.slice(0, 6000)),
           }
         : undefined,
     regenerationFeedback: request.regenerationFeedback
@@ -463,12 +469,21 @@ export async function generateStory(
   const snippets = opts.snippets ?? (await loadAiPromptSnippets());
   const styleHint = buildIllustrationStyle(characterBible, snippets);
 
-  const settingInfo = STORY_SETTINGS[request.setting as StorySetting];
+  // Geen sleutel uit STORY_SETTINGS = een eigen plek die de ouder intypte.
+  const settingInfo = Object.keys(STORY_SETTINGS).includes(request.setting)
+    ? STORY_SETTINGS[request.setting as StorySetting]
+    : undefined;
   const adventureInfo = ADVENTURE_TYPES[request.adventureType];
   const moodInfo = STORY_MOODS[request.mood];
   const occasionInfo = request.occasion && request.occasion !== "none" ? OCCASIONS[request.occasion] : null;
 
   const settingLabel = settingInfo?.label ?? request.setting;
+  const settingLine = settingInfo
+    ? `- Setting: ${settingLabel}`
+    : `- Setting (zelf gekozen door de ouder; laat het verhaal echt hier spelen): ${settingLabel}`;
+  // De tag wordt de ondertitel in de lezer; een lange eigen plek inkorten.
+  const tagSetting =
+    settingLabel.length > 40 ? `${settingLabel.slice(0, 39).trimEnd()}…` : settingLabel;
   const adventureLabel = adventureInfo?.label ?? request.adventureType;
 
   // Character description
@@ -535,7 +550,7 @@ ${sequelStr}
 ${prevStr}
 
 VERHAALINSTELLINGEN:
-- Setting: ${settingLabel}
+${settingLine}
 - Type avontuur: ${adventureLabel}
 - Sfeer: ${moodInfo?.label ?? request.mood}
 ${occasionInfo ? `- Aanleiding/feestdag: ${occasionInfo.label} — ${occasionInfo.description}` : ""}
@@ -598,6 +613,7 @@ Regels:
 - BELANGRIJK: huisdieren en vriendjes mogen ALLEEN in het verhaal voorkomen als ze expliciet als metgezel zijn gekozen bij "Metgezel op het avontuur". Als er geen metgezel is gekozen, komen ze NIET voor in het verhaal.
 - Schrijf warm en verhalend Nederlands — gebruik ${characterBible.childName} regelmatig bij de naam
 - ${pronounRule(characterBible.childName, characterBible.gender)}
+- Komen er Pieten (de helpers van Sinterklaas) in het verhaal voor, noem ze dan Pieten of Roetveegpieten, nooit Zwarte Piet of Zwarte Pieten, ook niet als de ouder dat zo heeft geschreven. In illustratiebeschrijvingen staat een Piet als: "Sinterklaas helper (Piet) with a natural skin tone and a few small soot smudges on the cheeks, colorful page costume with a feathered cap". Nooit een zwart geschminkt gezicht, rode lippen, gouden oorringen of een karikatuur.
 - Bijpersonages (vriendjes, familie, huisdieren): leid hun geslacht ALLEEN af uit hun relatie of omschrijving (broer, zus, vriendin, opa, oma, kater, poes). Weet je het niet zeker, gebruik dan steeds hun naam in plaats van hij of zij.
 - Controleer na het schrijven ELK voornaamwoord (hij/zij, hem/haar, zijn/haar) in de tekst, titel, endingText en endingSign: het moet kloppen met het personage waar het naar verwijst.
 - Precies 4 pagina's, elke pagina heeft tekst EN een bijpassende illustratiebeschrijving
@@ -694,16 +710,20 @@ Regels:
   }
   const { message, parsed } = result;
 
+  // Vangnet voor de Roetveegpiet-regel: ook als het model zich niet aan de
+  // promptregel houdt, komt "Zwarte Piet" niet in tekst of illustratie.
   return {
-    title: parsed.title,
-    tag: `${settingLabel} · ${adventureLabel}`,
-    endingText: parsed.endingText,
-    endingSign: parsed.endingSign,
-    endingIllustrationPrompt: parsed.endingIllustrationPrompt || "",
-    characterBibleUpdate: parsed.characterBibleUpdate,
+    title: toRoetveegpiet(parsed.title),
+    tag: `${tagSetting} · ${adventureLabel}`,
+    endingText: toRoetveegpiet(parsed.endingText),
+    endingSign: toRoetveegpiet(parsed.endingSign),
+    endingIllustrationPrompt: toRoetveegpiet(parsed.endingIllustrationPrompt || ""),
+    characterBibleUpdate: parsed.characterBibleUpdate
+      ? toRoetveegpiet(parsed.characterBibleUpdate)
+      : parsed.characterBibleUpdate,
     pages: parsed.pages.map((p) => ({
-      text: p.text,
-      illustrationPrompt: p.illustrationPrompt,
+      text: toRoetveegpiet(p.text),
+      illustrationPrompt: toRoetveegpiet(p.illustrationPrompt),
     })),
     textUsage: {
       inputTokens: message.usage.input_tokens,
