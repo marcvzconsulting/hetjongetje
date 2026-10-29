@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
 import type { WordTiming } from "@/lib/ai/tts";
+import { isTtsEnabled } from "@/lib/ai/tts-config";
 import { amsterdamMinutes } from "@/lib/reader/night";
 import { loadReaderSettings } from "@/lib/reader/settings";
 import {
@@ -130,12 +131,19 @@ export default async function SharedStoryPage({
       childName={story.childProfile.name}
       storyTitle={story.title}
       spreads={spreads}
-      audios={story.audio.map((a) => ({
-        voiceKey: a.voiceKey,
-        pageNumber: a.pageNumber,
-        url: a.url,
-        wordTimings: (a.wordTimings as unknown as WordTiming[] | null) ?? null,
-      }))}
+      // Voorleesfunctie uit: geen audio meegeven, dan toont de lezer ook
+      // geen luisterknop.
+      audios={
+        isTtsEnabled()
+          ? story.audio.map((a) => ({
+              voiceKey: a.voiceKey,
+              pageNumber: a.pageNumber,
+              url: a.url,
+              wordTimings:
+                (a.wordTimings as unknown as WordTiming[] | null) ?? null,
+            }))
+          : []
+      }
       readerVersion={resolveReaderVersion(query.lezer)}
       overflowMode={resolveOverflowMode(query.tekst)}
       readerSettings={readerSettings}
