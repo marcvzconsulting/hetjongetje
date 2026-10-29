@@ -6,6 +6,11 @@ import { requireAdmin } from "@/lib/admin";
 import { prisma } from "@/lib/db";
 import { logAdminAction } from "@/lib/admin/audit-log";
 import { trim } from "@/lib/form";
+import {
+  isValidStarterCredits,
+  loadStarterCredits,
+  saveStarterCredits,
+} from "@/lib/starter-credits";
 
 /**
  * Server actions for /admin/pricing — CRUD on the credit-pack and
@@ -356,4 +361,31 @@ export async function deleteSubscriptionPlanAction(formData: FormData) {
   revalidatePath("/subscribe");
   revalidatePath("/credits");
   redirect("/admin/pricing?saved=deleted");
+}
+
+// ── Gratis verhalen bij registratie ─────────────────────────────
+
+export async function updateStarterCreditsAction(formData: FormData) {
+  const audit = await captureAdmin();
+  const value = asInt(formData.get("starterCredits"), -1);
+  if (!isValidStarterCredits(value)) {
+    redirect("/admin/pricing?error=starter_credits");
+  }
+
+  const before = await loadStarterCredits();
+  await saveStarterCredits(value, audit.adminId);
+  await logAdminAction({
+    ...audit,
+    action: "pricing.starter_credits.update",
+    targetType: "app_setting",
+    targetId: "signup.starterCredits",
+    metadata: { before, after: value },
+  });
+
+  revalidatePath("/admin/pricing");
+  // Publieke pagina's noemen het aantal gratis verhalen in hun copy.
+  revalidatePath("/");
+  revalidatePath("/over-ons");
+  revalidatePath("/veelgestelde-vragen");
+  redirect("/admin/pricing?saved=updated");
 }

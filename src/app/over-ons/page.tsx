@@ -6,6 +6,10 @@ import {
 import { EBtn } from "@/components/v2";
 import { V2 } from "@/components/v2/tokens";
 import { headers } from "next/headers";
+import {
+  firstStoriesFreeLabel,
+  loadStarterCredits,
+} from "@/lib/starter-credits";
 
 export const metadata = {
   title: "Over ons",
@@ -16,6 +20,7 @@ export const metadata = {
 
 export default async function OverOnsPage() {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const starterCredits = await loadStarterCredits();
   return (
     <ContentPage
       eyebrow="Over ons"
@@ -169,8 +174,10 @@ export default async function OverOnsPage() {
             lineHeight: 1.5,
           }}
         >
-          Maak zelf zo&rsquo;n herinnering voor je kind &mdash; de eerste
-          vijf verhalen zijn gratis.
+          Maak zelf zo&rsquo;n herinnering voor je kind
+          {starterCredits > 0
+            ? ` — ${firstStoriesFreeLabel(starterCredits)}.`
+            : "."}
         </p>
         <EBtn kind="primary" size="lg" href="/register">
           Probeer het
