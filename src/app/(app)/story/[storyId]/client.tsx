@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Spread } from "@/lib/story/spread-types";
 import {
@@ -80,6 +80,7 @@ export function StoryPageClient({
   const v4 = readerVersion === "v4";
   const [listenSlot, setListenSlot] = useState<HTMLElement | null>(null);
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
+  const [favoriteError, setFavoriteError] = useState<string>("");
   const [feedbackKind, setFeedbackKind] = useState<"up" | "down" | null>(
     initialFeedbackKind,
   );
@@ -87,6 +88,7 @@ export function StoryPageClient({
   const [feedbackSavedAt, setFeedbackSavedAt] = useState<Date | null>(
     initialFeedbackKind ? new Date() : null,
   );
+  const [feedbackError, setFeedbackError] = useState<string>("");
   const [regenError, setRegenError] = useState<string>("");
   const [regenInFlight, setRegenInFlight] = useState(false);
   const [regenFeedback, setRegenFeedback] = useState<string>("");
@@ -96,6 +98,7 @@ export function StoryPageClient({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(initialShareToken);
   const [shareInFlight, setShareInFlight] = useState(false);
+  const [shareError, setShareError] = useState<string>("");
   const [copyConfirmed, setCopyConfirmed] = useState(false);
   const [listenOpen, setListenOpen] = useState(false);
   const [audios, setAudios] = useState<StoryAudioEntry[]>(initialAudios);
@@ -141,23 +144,34 @@ export function StoryPageClient({
     : null;
 
   async function enableShare() {
+    const failMsg = "Deellink maken lukte niet. Probeer het nog eens.";
+    setShareError("");
     setShareInFlight(true);
     try {
       const res = await fetch(`/api/stories/${storyId}/share`, { method: "POST" });
-      if (res.ok) {
-        const data = (await res.json()) as { shareToken: string };
-        setShareToken(data.shareToken);
+      if (!res.ok) {
+        setShareError(failMsg);
+        return;
       }
+      const data = (await res.json()) as { shareToken: string };
+      setShareToken(data.shareToken);
+    } catch {
+      setShareError(failMsg);
     } finally {
       setShareInFlight(false);
     }
   }
 
   async function disableShare() {
+    const failMsg = "Delen stoppen lukte niet. Probeer het nog eens.";
+    setShareError("");
     setShareInFlight(true);
     try {
       const res = await fetch(`/api/stories/${storyId}/share`, { method: "DELETE" });
       if (res.ok) setShareToken(null);
+      else setShareError(failMsg);
+    } catch {
+      setShareError(failMsg);
     } finally {
       setShareInFlight(false);
     }
@@ -193,17 +207,31 @@ export function StoryPageClient({
     );
   }
 
+  // Melding bij een mislukt hartje verdwijnt vanzelf na een paar seconden.
+  useEffect(() => {
+    if (!favoriteError) return;
+    const t = setTimeout(() => setFavoriteError(""), 4000);
+    return () => clearTimeout(t);
+  }, [favoriteError]);
+
   async function toggleFavorite() {
     const newValue = !isFavorite;
+    const failMsg = "Favoriet opslaan lukte niet. Probeer het nog eens.";
     setIsFavorite(newValue);
+    setFavoriteError("");
     try {
-      await fetch(`/api/stories/${storyId}`, {
+      const res = await fetch(`/api/stories/${storyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isFavorite: newValue }),
       });
+      if (!res.ok) {
+        setIsFavorite(!newValue);
+        setFavoriteError(failMsg);
+      }
     } catch {
       setIsFavorite(!newValue);
+      setFavoriteError(failMsg);
     }
   }
 
@@ -211,10 +239,13 @@ export function StoryPageClient({
     kind: "up" | "down" | null,
     note?: string,
   ) {
+    const prevKind = feedbackKind;
+    const failMsg = "Opslaan lukte niet. Probeer het nog eens.";
     setFeedbackKind(kind);
+    setFeedbackError("");
     if (note !== undefined) setFeedbackNote(note);
     try {
-      await fetch(`/api/stories/${storyId}`, {
+      const res = await fetch(`/api/stories/${storyId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -222,9 +253,16 @@ export function StoryPageClient({
           ...(note !== undefined ? { feedbackNote: note } : {}),
         }),
       });
+      if (!res.ok) {
+        // Terug naar de vorige keuze; een getypte notitie blijft staan.
+        setFeedbackKind(prevKind);
+        setFeedbackError(failMsg);
+        return;
+      }
       setFeedbackSavedAt(new Date());
     } catch {
-      // Best-effort — keep optimistic state.
+      setFeedbackKind(prevKind);
+      setFeedbackError(failMsg);
     }
   }
 
@@ -346,7 +384,13 @@ export function StoryPageClient({
       {/* Modal — slides up from bottom on mobile, centered card on
           desktop. Click outside or press Esc closes. */}
       {reactOpen && (
-        <ReactModal d={d} onClose={() => setReactOpen(false)}>
+        <ReactModal
+          d={d}
+          onClose={() => {
+            setReactOpen(false);
+            setFeedbackError("");
+          }}
+        >
           <div style={{ display: "grid", gap: 28 }}>
             {/* Feedback */}
             <div>
@@ -392,7 +436,7 @@ export function StoryPageClient({
                     submitFeedback(feedbackKind === "down" ? null : "down")
                   }
                 />
-                {feedbackSavedAt && feedbackKind && (
+                {feedbackSavedAt && feedbackKind && !feedbackError && (
                   <span
                     style={{
                       fontFamily: V2.mono,
@@ -406,6 +450,22 @@ export function StoryPageClient({
                   </span>
                 )}
               </div>
+              {feedbackError && (
+                <div
+                  role="alert"
+                  style={{
+                    marginTop: 12,
+                    padding: "10px 14px",
+                    background: "rgba(176,74,65,0.12)",
+                    borderLeft: `3px solid ${d.heart}`,
+                    fontFamily: V2.body,
+                    fontSize: 13,
+                    color: d.ink,
+                  }}
+                >
+                  {feedbackError}
+                </div>
+              )}
               {feedbackKind && (
                 <textarea
                   placeholder={
@@ -598,7 +658,13 @@ export function StoryPageClient({
 
       {/* Share modal — toon link wanneer aan, knop wanneer uit. */}
       {shareOpen && (
-        <ReactModal d={d} onClose={() => setShareOpen(false)}>
+        <ReactModal
+          d={d}
+          onClose={() => {
+            setShareOpen(false);
+            setShareError("");
+          }}
+        >
           <div style={{ display: "grid", gap: 18 }}>
             <div>
               <h2
@@ -734,8 +800,48 @@ export function StoryPageClient({
                 {shareInFlight ? "Bezig…" : "Genereer deellink →"}
               </button>
             )}
+            {shareError && (
+              <div
+                role="alert"
+                style={{
+                  padding: "10px 14px",
+                  background: "rgba(176,74,65,0.12)",
+                  borderLeft: `3px solid ${d.heart}`,
+                  fontFamily: V2.body,
+                  fontSize: 13,
+                  color: d.ink,
+                }}
+              >
+                {shareError}
+              </div>
+            )}
           </div>
         </ReactModal>
+      )}
+
+      {/* Hartje mislukt: korte melding onderin, verdwijnt vanzelf. */}
+      {favoriteError && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+            transform: "translateX(-50%)",
+            zIndex: 110,
+            width: "max-content",
+            maxWidth: "calc(100% - 32px)",
+            padding: "10px 14px",
+            background: `linear-gradient(rgba(176,74,65,0.12), rgba(176,74,65,0.12)), ${d.paper}`,
+            borderLeft: `3px solid ${d.heart}`,
+            boxShadow: d.shadow,
+            fontFamily: V2.body,
+            fontSize: 13,
+            color: d.ink,
+          }}
+        >
+          {favoriteError}
+        </div>
       )}
     </>
   );

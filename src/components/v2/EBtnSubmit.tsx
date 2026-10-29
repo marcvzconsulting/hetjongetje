@@ -17,6 +17,9 @@ type Props = {
   disabled?: boolean;
   style?: CSSProperties;
   className?: string;
+  /** Vraag eerst om bevestiging (window.confirm); bij "Annuleren" wordt
+   *  er niets verstuurd. Voor verwijderen, refunds en opschorten. */
+  confirm?: string;
 };
 
 /**
@@ -37,6 +40,7 @@ export function EBtnSubmit({
   disabled,
   style,
   className,
+  confirm,
 }: Props) {
   const { pending } = useFormStatus();
   const isDisabled = pending || disabled;
@@ -95,6 +99,13 @@ export function EBtnSubmit({
       disabled={isDisabled}
       className={className}
       style={base}
+      onClick={
+        confirm
+          ? (e) => {
+              if (!window.confirm(confirm)) e.preventDefault();
+            }
+          : undefined
+      }
     >
       {pending && (
         <Spinner
