@@ -245,7 +245,11 @@ function SnippetCard({
       {isOverridden && (
         <form action={resetAiPromptAction} style={{ marginTop: 8 }}>
           <input type="hidden" name="code" value={code} />
-          <PendingButton variant="danger" pendingLabel="Resetten…">
+          <PendingButton
+            variant="danger"
+            pendingLabel="Resetten…"
+            confirm="Terug naar de standaardtekst? Jouw aangepaste tekst wordt verwijderd en is daarna niet terug te halen."
+          >
             Reset naar default
           </PendingButton>
         </form>

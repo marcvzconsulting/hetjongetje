@@ -21,6 +21,7 @@ import { buildAppUrl } from "@/lib/url";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, IconV2 } from "@/components/v2";
 import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
+import { PendingButton } from "@/components/v2/PendingButton";
 
 function formatDateTime(date: Date | null | undefined): string {
   if (!date) return "-";
@@ -80,6 +81,7 @@ async function deleteNoteAction(formData: FormData) {
     metadata: { noteId },
   });
   revalidatePath(`/admin/users/${userId}`);
+  redirect(`/admin/users/${userId}?saved=note_deleted#notities`);
 }
 
 async function saveSubscriptionAction(formData: FormData) {
@@ -105,6 +107,7 @@ async function saveSubscriptionAction(formData: FormData) {
     metadata: { plan, status, endsAt: endsAt?.toISOString() ?? null },
   });
   revalidatePath(`/admin/users/${userId}`);
+  redirect(`/admin/users/${userId}?saved=subscription#abonnement`);
 }
 
 async function deleteSubscriptionAction(formData: FormData) {
@@ -120,6 +123,7 @@ async function deleteSubscriptionAction(formData: FormData) {
     targetId: userId,
   });
   revalidatePath(`/admin/users/${userId}`);
+  redirect(`/admin/users/${userId}?saved=subscription_deleted#abonnement`);
 }
 
 /**
@@ -383,6 +387,17 @@ async function updateApprovalAction(formData: FormData) {
   // invalideren, scheelt een if. updateTag (i.p.v. revalidateTag) is
   // Next 16's read-your-own-writes-variant voor server actions.
   updateTag(ADMIN_DASHBOARD_TAG);
+
+  const savedKey: Record<string, string> = {
+    approve: "approved",
+    suspend: "suspended",
+    unsuspend: "unsuspended",
+    setCredits: "credits_set",
+    addCredits: "credits_added",
+  };
+  if (savedKey[action]) {
+    redirect(`/admin/users/${userId}?saved=${savedKey[action]}#tegoed`);
+  }
 }
 
 async function setLandingPreviewSlotAction(formData: FormData) {
@@ -419,6 +434,7 @@ async function setLandingPreviewSlotAction(formData: FormData) {
 
   revalidatePath(`/admin/users/${userId}`);
   revalidatePath("/");
+  redirect(`/admin/users/${userId}?saved=preview#kindprofielen`);
 }
 
 async function deleteUserAction(formData: FormData) {
@@ -567,9 +583,33 @@ const fieldLabelStyle: React.CSSProperties = {
   marginBottom: 4,
 };
 
+/** Meldingen na opslaan. `section` is het anker waar de action naar
+ *  terugstuurt, zodat de melding in beeld staat bij wat je net deed. */
+const SAVED_FLASH: Record<string, { section: string; text: string }> = {
+  approved: { section: "tegoed", text: "Account goedgekeurd." },
+  suspended: { section: "tegoed", text: "Account opgeschort." },
+  unsuspended: { section: "tegoed", text: "Opschorting opgeheven." },
+  credits_set: { section: "tegoed", text: "Tegoed ingesteld." },
+  credits_added: { section: "tegoed", text: "Tegoed toegevoegd." },
+  subscription: { section: "abonnement", text: "Abonnement opgeslagen." },
+  subscription_deleted: { section: "abonnement", text: "Abonnement verwijderd." },
+  preview: {
+    section: "kindprofielen",
+    text: "Voorbeeldplek op de homepage bijgewerkt.",
+  },
+  note_deleted: { section: "notities", text: "Notitie verwijderd." },
+};
+
+function SectionSaved({ saved, section }: { saved?: string; section: string }) {
+  const flash = saved ? SAVED_FLASH[saved] : undefined;
+  if (!flash || flash.section !== section) return null;
+  return <FlashSaved>{flash.text}</FlashSaved>;
+}
+
 function FlashSaved({ children }: { children: React.ReactNode }) {
   return (
     <div
+      role="status"
       style={{
         marginBottom: 20,
         padding: "14px 20px",
@@ -699,6 +739,7 @@ export default async function AdminUserDetailPage({
     delError?: string;
     refunded?: string;
     refundError?: string;
+    saved?: string;
   }>;
 }) {
   const { id } = await params;
@@ -903,7 +944,8 @@ export default async function AdminUserDetailPage({
 
       {/* Goedkeuring & tegoed */}
       {user.role !== "admin" && (
-        <section style={sectionStyle}>
+        <section id="tegoed" style={{ ...sectionStyle, scrollMarginTop: 24 }}>
+          <SectionSaved saved={query.saved} section="tegoed" />
           <div style={{ marginBottom: 24 }}>
             <h2 style={sectionTitleStyle}>
               Goedkeuring & <span style={{ fontStyle: "italic" }}>tegoed</span>
@@ -1063,6 +1105,7 @@ export default async function AdminUserDetailPage({
                   kind="ghost"
                   size="sm"
                   pendingLabel="Bezig…"
+                  confirm={`${user.email} opschorten? De klant kan dan niet meer inloggen tot je de opschorting opheft.`}
                   style={{
                     color: V2.heart,
                     border: `1px solid ${V2.heart}`,
@@ -1259,7 +1302,8 @@ export default async function AdminUserDetailPage({
       </section>
 
       {/* Abonnement */}
-      <section style={sectionStyle}>
+      <section id="abonnement" style={{ ...sectionStyle, scrollMarginTop: 24 }}>
+        <SectionSaved saved={query.saved} section="abonnement" />
         <div
           style={{
             marginBottom: 24,
@@ -1343,6 +1387,7 @@ export default async function AdminUserDetailPage({
               kind="ghost"
               size="sm"
               pendingLabel="Bezig…"
+              confirm="Abonnement van deze klant verwijderen? Dit loopt niet via Mollie en kan niet ongedaan worden gemaakt."
               style={{
                 background: "transparent",
                 border: "none",
@@ -1606,6 +1651,7 @@ export default async function AdminUserDetailPage({
                                 kind="ghost"
                                 size="sm"
                                 pendingLabel="Bezig…"
+                                confirm="Deze betaling terugboeken via Mollie? Het geld gaat terug naar de klant en dit kan niet ongedaan worden gemaakt."
                               >
                                 Refund
                               </EBtnSubmit>
@@ -1780,7 +1826,8 @@ export default async function AdminUserDetailPage({
       </section>
 
       {/* Kindprofielen */}
-      <section style={sectionStyle}>
+      <section id="kindprofielen" style={{ ...sectionStyle, scrollMarginTop: 24 }}>
+        <SectionSaved saved={query.saved} section="kindprofielen" />
         <div style={{ marginBottom: 24 }}>
           <h2 style={sectionTitleStyle}>
             Kindprofielen{" "}
@@ -1984,21 +2031,13 @@ export default async function AdminUserDetailPage({
                                 <option value="boy-2">Landing · jongen 2</option>
                                 <option value="boy-4">Landing · jongen 4</option>
                               </select>
-                              <button
-                                type="submit"
-                                style={{
-                                  fontFamily: V2.ui,
-                                  fontSize: 11,
-                                  padding: "5px 10px",
-                                  background: V2.ink,
-                                  color: V2.paper,
-                                  border: "none",
-                                  cursor: "pointer",
-                                  letterSpacing: "0.04em",
-                                }}
+                              <PendingButton
+                                size="sm"
+                                pendingLabel="…"
+                                style={{ fontSize: 11, padding: "5px 10px" }}
                               >
                                 Zet
-                              </button>
+                              </PendingButton>
                             </form>
                           )}
                         </li>
@@ -2013,7 +2052,8 @@ export default async function AdminUserDetailPage({
       </section>
 
       {/* Admin-notities */}
-      <section style={sectionStyle}>
+      <section id="notities" style={{ ...sectionStyle, scrollMarginTop: 24 }}>
+        <SectionSaved saved={query.saved} section="notities" />
         <div style={{ marginBottom: 24 }}>
           <h2 style={sectionTitleStyle}>
             Admin-notities{" "}
@@ -2115,22 +2155,22 @@ export default async function AdminUserDetailPage({
                 <form action={deleteNoteAction}>
                   <input type="hidden" name="noteId" value={note.id} />
                   <input type="hidden" name="userId" value={user.id} />
-                  <button
-                    type="submit"
+                  <PendingButton
+                    variant="ghost"
+                    size="sm"
+                    pendingLabel="…"
+                    confirm="Deze notitie verwijderen?"
                     style={{
                       background: "transparent",
                       border: "none",
                       padding: 0,
-                      fontFamily: V2.ui,
-                      fontSize: 12,
                       color: V2.inkMute,
-                      cursor: "pointer",
                       textDecoration: "underline",
                       textUnderlineOffset: 3,
                     }}
                   >
                     verwijder
-                  </button>
+                  </PendingButton>
                 </form>
               </li>
             ))}

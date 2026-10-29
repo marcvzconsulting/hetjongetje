@@ -22,7 +22,7 @@ export async function createFaqAction(formData: FormData) {
     orderBy: { sortOrder: "desc" },
     select: { sortOrder: true },
   });
-  await prisma.faqEntry.create({
+  const entry = await prisma.faqEntry.create({
     data: {
       question,
       answer,
@@ -32,6 +32,8 @@ export async function createFaqAction(formData: FormData) {
   });
   revalidatePath("/admin/faq");
   revalidatePath("/veelgestelde-vragen");
+  // Melding bij het nieuwe item zelf; het anker scrollt ernaartoe.
+  redirect(`/admin/faq?saved=created&id=${entry.id}#faq-${entry.id}`);
 }
 
 export async function updateFaqAction(formData: FormData) {
@@ -56,13 +58,15 @@ export async function updateFaqAction(formData: FormData) {
   });
   revalidatePath("/admin/faq");
   revalidatePath("/veelgestelde-vragen");
+  redirect(`/admin/faq?saved=updated&id=${id}#faq-${id}`);
 }
 
 export async function deleteFaqAction(formData: FormData) {
   await requireAdmin();
   const id = getString(formData, "id");
-  if (!id) return;
+  if (!id) redirect("/admin/faq?error=invalid");
   await prisma.faqEntry.delete({ where: { id } });
   revalidatePath("/admin/faq");
   revalidatePath("/veelgestelde-vragen");
+  redirect("/admin/faq?saved=deleted");
 }

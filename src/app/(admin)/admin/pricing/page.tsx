@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker } from "@/components/v2";
 import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
+import { PendingButton } from "@/components/v2/PendingButton";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import {
   createCreditPackAction,
@@ -628,27 +629,27 @@ function DeleteInline({
   // (illegal HTML). formNoValidate skips the parent's required-field
   // checks since deleting doesn't need a valid edit-form.
   return (
-    <button
-      type="submit"
+    <PendingButton
+      variant="danger"
+      size="sm"
       formAction={deleteAction}
       formNoValidate
       title={`Verwijder ${label}`}
+      confirm={`"${label}" definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`}
+      pendingLabel="Bezig…"
       style={{
         background: "transparent",
         border: "none",
         padding: 0,
-        color: V2.heart,
-        fontFamily: V2.ui,
         fontSize: 12,
         letterSpacing: "0.06em",
         textTransform: "uppercase",
-        cursor: "pointer",
         textDecoration: "underline",
         textUnderlineOffset: 3,
       }}
     >
       Verwijderen
-    </button>
+    </PendingButton>
   );
 }
 

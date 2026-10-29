@@ -49,7 +49,9 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
 
   async function approvePreview() {
     if (!previewUrl || !characterPrompt) return;
+    const failMsg = "Goedkeuren lukte niet. Probeer het nog eens.";
     setSaving(true);
+    setError("");
 
     try {
       const res = await fetch(`/api/children/${childId}/preview`, {
@@ -63,8 +65,15 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
 
       if (res.ok) {
         setApproved(true);
+      } else {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setError(data.error || failMsg);
       }
-    } catch { /* ignore */ }
+    } catch {
+      setError(failMsg);
+    }
     setSaving(false);
   }
 
@@ -103,22 +112,6 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
         fotoherkenning over verhalen heen: gebruik de character-training
         hieronder.
       </p>
-
-      {error && (
-        <div
-          style={{
-            marginBottom: 20,
-            padding: "10px 14px",
-            background: "rgba(196,165,168,0.2)",
-            borderLeft: `2px solid ${V2.rose}`,
-            fontFamily: V2.body,
-            fontSize: 13,
-            color: V2.ink,
-          }}
-        >
-          {error}
-        </div>
-      )}
 
       {/* Preview image */}
       {previewUrl ? (
@@ -199,6 +192,25 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
           >
             Nog geen portret. Genereer er een vanuit het profiel.
           </p>
+        </div>
+      )}
+
+      {/* Foutmelding direct boven de knoppen, zodat die bij goedkeuren
+          in beeld blijft. */}
+      {error && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 20,
+            padding: "10px 14px",
+            background: "rgba(196,165,168,0.2)",
+            borderLeft: `2px solid ${V2.rose}`,
+            fontFamily: V2.body,
+            fontSize: 13,
+            color: V2.ink,
+          }}
+        >
+          {error}
         </div>
       )}
 

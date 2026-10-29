@@ -169,7 +169,9 @@ export function LoraTrainer({
     ) {
       return;
     }
+    const failMsg = "Verwijderen lukte niet. Probeer het nog eens.";
     setSubmitting(true);
+    setError(null);
     try {
       const res = await fetch(`/api/children/${childId}/lora`, {
         method: "DELETE",
@@ -179,7 +181,11 @@ export function LoraTrainer({
         setTrainedAt(null);
         setFailureReason(null);
         setTransient("idle");
+      } else {
+        setError(failMsg);
       }
+    } catch {
+      setError(failMsg);
     } finally {
       setSubmitting(false);
     }
@@ -270,10 +276,12 @@ export function LoraTrainer({
           trainedAt={trainedAt}
           onRemove={removeLora}
           onRetrain={() => {
+            setError(null);
             setStatus("none");
             setTransient("consent");
           }}
           busy={submitting}
+          error={error}
         />
       )}
 
@@ -281,11 +289,13 @@ export function LoraTrainer({
         <FailedState
           reason={failureReason}
           onRetry={() => {
+            setError(null);
             setStatus("none");
             setTransient("consent");
           }}
           onRemove={removeLora}
           busy={submitting}
+          error={error}
         />
       )}
     </section>
@@ -572,11 +582,13 @@ function ReadyState({
   onRemove,
   onRetrain,
   busy,
+  error,
 }: {
   trainedAt: string | null;
   onRemove: () => void;
   onRetrain: () => void;
   busy: boolean;
+  error: string | null;
 }) {
   const date = trainedAt
     ? new Date(trainedAt).toLocaleDateString("nl-NL", {
@@ -635,9 +647,30 @@ function ReadyState({
             padding: "10px 0",
           }}
         >
-          Verwijder training &amp; toestemming intrekken
+          {busy ? "Bezig…" : "Verwijder training & toestemming intrekken"}
         </button>
       </div>
+      {error && <RemoveError message={error} />}
+    </div>
+  );
+}
+
+// Melding als verwijderen mislukt, onder de knoppen van Ready/Failed.
+function RemoveError({ message }: { message: string }) {
+  return (
+    <div
+      role="alert"
+      style={{
+        background: "rgba(176,74,65,0.12)",
+        borderLeft: `2px solid ${V2.heart}`,
+        padding: "10px 14px",
+        fontFamily: V2.body,
+        fontSize: 14,
+        color: V2.ink,
+        marginTop: 16,
+      }}
+    >
+      {message}
     </div>
   );
 }
@@ -647,11 +680,13 @@ function FailedState({
   onRetry,
   onRemove,
   busy,
+  error,
 }: {
   reason: string | null;
   onRetry: () => void;
   onRemove: () => void;
   busy: boolean;
+  error: string | null;
 }) {
   return (
     <div>
@@ -689,9 +724,10 @@ function FailedState({
             padding: "10px 0",
           }}
         >
-          Alles opruimen
+          {busy ? "Bezig…" : "Alles opruimen"}
         </button>
       </div>
+      {error && <RemoveError message={error} />}
     </div>
   );
 }
