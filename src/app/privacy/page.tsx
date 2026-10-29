@@ -141,10 +141,6 @@ export default function PrivacyPage() {
         &middot; <em>fal.ai</em>: illustraties genereren en eventuele LoRA
         trainen (VS)
         <br />
-        &middot; <em>ElevenLabs</em>: de tekst van een verhaal (inclusief de
-        voornaam van je kind) omzetten naar voorlees-audio, als je die
-        functie gebruikt (VS)
-        <br />
         &middot; <em>Mollie</em>: betalingen en abonnementen verwerken
         (Nederland)
         <br />
@@ -155,8 +151,8 @@ export default function PrivacyPage() {
         welkom, nieuwsbrief); EU-servers, Frans bedrijf
       </P>
       <P>
-        Verwerkers buiten de EU (Anthropic, fal.ai, ElevenLabs — alle in de
-        VS) verwerken gegevens onder een verwerkersovereenkomst met
+        Verwerkers buiten de EU (Anthropic en fal.ai, beide in de VS)
+        verwerken gegevens onder een verwerkersovereenkomst met
         passende waarborgen voor internationale doorgifte.
       </P>
       <P>
@@ -266,7 +262,7 @@ export default function PrivacyPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: juli 2026.
+        Laatst bijgewerkt: oktober 2026.
       </p>
     </ContentPage>
   );

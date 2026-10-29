@@ -4,9 +4,10 @@
  * waarheid; wijzigingen die via /admin/faq zijn gedaan gaan bij een
  * reseed dus verloren.
  *
- * Teksten geactualiseerd 21 aug 2026 (o.a. verhalen direct in het
- * Nederlands, vier leeftijdsniveaus, credit-model, voorlezen,
- * AI-transparantie).
+ * Teksten gelijkgetrokken met de live FAQ op 29 okt 2026: voorleesfunctie
+ * uit (geen voorleesstemmen of -audio meer), plus de tekstwijzigingen die
+ * sinds 21 aug via /admin/faq zijn gedaan. Pas je de FAQ in /admin/faq
+ * aan, werk deze lijst dan ook bij.
  *
  * Usage:
  *   npx tsx scripts/reseed-faq.ts          # lokale dev-DB (.env)
@@ -54,12 +55,12 @@ const ENTRIES: { question: string; answer: string }[] = [
   {
     question: "Worden de verhalen echt met AI gemaakt?",
     answer:
-      "Ja. De verhalen worden geschreven door een AI-taalmodel, de illustraties worden gemaakt door een AI-beeldmodel en de voorleesstemmen zijn AI-stemmen. Jij bepaalt de ingrediënten — het profiel van je kind en de aanleiding — en leest het resultaat altijd eerst zelf. Zoals de Europese AI-verordening vraagt, vermelden we bij elk verhaal zichtbaar dat het met AI gemaakt is, en krijgen illustraties, voorleesaudio en PDF-downloads een machineleesbaar metadata-merkje met die herkomst. Dat merkje verandert niets aan hoe het verhaal eruitziet of klinkt. En: jouw gegevens worden niet gebruikt om AI-modellen te trainen.",
+      "Ja. De verhalen worden geschreven door een AI-taalmodel, de illustraties worden gemaakt door een AI-beeldmodel. Jij bepaalt de ingrediënten, het profiel van je kind en de aanleiding, en leest het resultaat altijd eerst zelf. Zoals de Europese AI-verordening vraagt, vermelden we bij elk verhaal zichtbaar dat het met AI gemaakt is, en krijgen illustraties en PDF-downloads een machineleesbaar metadata-merkje met die herkomst. Dat merkje verandert niets aan hoe het verhaal eruitziet of klinkt. En: jouw gegevens worden niet gebruikt om AI-modellen te trainen.",
   },
   {
     question: "Wat gebeurt er met de gegevens van mijn kind?",
     answer:
-      "Profielgegevens staan alleen in jouw account en zijn niet zichtbaar voor andere klanten. We delen niets met derden voor reclame-doeleinden. Onze AI-leveranciers (zoals Anthropic voor de tekst) krijgen tijdelijk alleen te zien wat nodig is om jouw verhaal te maken — die gegevens worden niet gebruikt om hun modellen te trainen. Alles staat op Europese servers. Verwijder je je account, dan worden na een bedenktijd van 30 dagen alle profielen, verhalen, illustraties en audio definitief gewist. De details staan op onze privacy-pagina.",
+      "Profielgegevens staan alleen in jouw account en zijn niet zichtbaar voor andere klanten. We delen niets met derden voor reclame-doeleinden. Onze AI-leveranciers (zoals Anthropic voor de tekst) krijgen tijdelijk alleen te zien wat nodig is om jouw verhaal te maken, die gegevens worden niet gebruikt om hun modellen te trainen. Alles staat op Europese servers. Verwijder je je account, dan worden na een bedenktijd van 30 dagen alle profielen, verhalen, illustraties en audio definitief gewist. De details staan op onze privacy-pagina.",
   },
   {
     question: "Hoe vaak kan ik een nieuw verhaal maken?",
@@ -69,7 +70,7 @@ const ENTRIES: { question: string; answer: string }[] = [
   {
     question: "Kan de app het verhaal ook voorlezen?",
     answer:
-      "Ja! Bij elk verhaal kun je een voorleesstem kiezen — rustige Nederlandse en Vlaamse AI-stemmen. Het verhaal wordt per bladzijde voorgelezen, en de woorden lichten op terwijl ze klinken, zodat meelezen vanzelf gaat. Ook opa's en oma's die een gedeeld verhaal openen kunnen de voorleesstem afspelen.",
+      "Nee op dit moment niet. Ons verhaaltje is bedacht om zelf de verhalen voor te lezen aan je kind. \r\nWellicht dat dit later komt als er veel vraag naar is.",
   },
   {
     question: "Hoe zeg ik mijn abonnement op?",
@@ -79,17 +80,17 @@ const ENTRIES: { question: string; answer: string }[] = [
   {
     question: "Kan ik de verhalen ook als gedrukt boek bestellen?",
     answer:
-      "Daar werken we aan. Je kunt elk verhaal nu al als mooie PDF downloaden en zelf printen. Binnenkort koppelen we een drukker, zodat je je mooiste verhalen kunt bundelen tot een echt boek met harde kaft — tot die tijd zie je 'Binnenkort' op die plek in je bibliotheek.",
+      "Daar werken we aan. Je kunt elk verhaal nu al als mooie PDF downloaden en zelf printen. Binnenkort koppelen we een drukker, zodat je je mooiste verhalen kunt bundelen tot een echt boek met harde kaft, tot die tijd zie je 'Binnenkort' op die plek in je bibliotheek.",
   },
   {
     question: "In welke taal worden de verhalen geschreven?",
     answer:
-      "Gewoon in het Nederlands — de verhalen worden direct in het Nederlands geschreven, met taalgebruik dat past bij de leeftijd van je kind. Alleen achter de schermen, voor de illustraties, gebruiken we Engelstalige beschrijvingen omdat beeldmodellen daar het beste op reageren. Daar merk je niets van.",
+      "Gewoon in het Nederlands, de verhalen worden direct in het Nederlands geschreven, met taalgebruik dat past bij de leeftijd van je kind. Alleen achter de schermen, voor de illustraties, gebruiken we Engelstalige beschrijvingen omdat beeldmodellen daar het beste op reageren. Daar merk je niets van.",
   },
   {
     question: "Wat als een verhaal niet helemaal goed is?",
     answer:
-      "Per verhaal kun je het één keer gratis opnieuw laten maken. In de lezer kies je 'Opnieuw maken' en geef je aan wat er anders moet — korter, langer, grappiger of rustiger, of in je eigen woorden (te eng, voeg de oma toe…). Let op: het oude verhaal vervalt dan, dus geef je feedback in één keer mee. Kom je er niet uit, mail ons gerust.",
+      "Per verhaal kun je het één keer gratis opnieuw laten maken. In de lezer kies je 'Opnieuw maken' en geef je aan wat er anders moet: korter, langer, grappiger of rustiger, of in je eigen woorden (te eng, voeg de oma toe…). Let op: het oude verhaal vervalt dan, dus geef je feedback in één keer mee. Kom je er niet uit, mail ons gerust.",
   },
 ];
 

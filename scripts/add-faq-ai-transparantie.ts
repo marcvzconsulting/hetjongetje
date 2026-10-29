@@ -40,14 +40,13 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 const QUESTION = "Worden de verhalen echt met AI gemaakt?";
 const ANSWER =
   "Ja. De verhalen worden geschreven door een AI-taalmodel, de illustraties " +
-  "worden gemaakt door een AI-beeldmodel en de voorleesstemmen zijn AI-stemmen. " +
-  "Jij bepaalt de ingrediënten — het profiel van je kind en de aanleiding — en " +
-  "leest het resultaat altijd eerst zelf. Zoals de Europese AI-verordening " +
-  "vraagt, vermelden we bij elk verhaal zichtbaar dat het met AI gemaakt is, en " +
-  "krijgen illustraties, voorleesaudio en PDF-downloads een machineleesbaar " +
-  "metadata-merkje met die herkomst. Dat merkje verandert niets aan hoe het " +
-  "verhaal eruitziet of klinkt. En zoals hierboven staat: jouw gegevens worden " +
-  "niet gebruikt om AI-modellen te trainen.";
+  "worden gemaakt door een AI-beeldmodel. Jij bepaalt de ingrediënten, het " +
+  "profiel van je kind en de aanleiding, en leest het resultaat altijd eerst " +
+  "zelf. Zoals de Europese AI-verordening vraagt, vermelden we bij elk " +
+  "verhaal zichtbaar dat het met AI gemaakt is, en krijgen illustraties en " +
+  "PDF-downloads een machineleesbaar metadata-merkje met die herkomst. Dat " +
+  "merkje verandert niets aan hoe het verhaal eruitziet of klinkt. En: jouw " +
+  "gegevens worden niet gebruikt om AI-modellen te trainen.";
 
 async function main() {
   const existing = await prisma.faqEntry.findFirst({
