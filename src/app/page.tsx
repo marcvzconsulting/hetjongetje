@@ -418,7 +418,7 @@ function HowItGoes() {
     },
     {
       n: "III",
-      t: "Voorlezen, of laten voorlezen",
+      t: "Voorlezen, vanavond en later",
       b: "Op de tablet, of op papier. Aan het einde van het jaar bundel je de mooiste verhalen in een echt gedrukt boekje.",
       img: "/images/spots/voorlezen.webp",
       alt: "Aquarel van een slapend kind met een boek en een teddybeer",

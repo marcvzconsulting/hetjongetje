@@ -131,7 +131,7 @@ export function LandingFooter() {
           fontSize: 12,
         }}
       >
-        Verhalen, illustraties en voorleesstemmen worden gemaakt met AI —
+        Verhalen en illustraties worden gemaakt met AI —
         persoonlijk voor jouw kind, en altijd door jou zelf eerst te lezen.
       </p>
     </footer>
