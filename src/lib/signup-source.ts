@@ -84,7 +84,15 @@ export function parseSignupSource(
   value: string | null | undefined,
 ): SignupSource | null {
   if (!value) return null;
-  const [source, medium, campaign] = value.split("|");
+  // Next zet de cookie URL-gecodeerd ("|" → "%7C"); meestal decodeert
+  // het lezen dat al, maar niet overal.
+  let raw = value;
+  try {
+    raw = decodeURIComponent(value);
+  } catch {
+    // ongeldige codering: neem de waarde zoals hij is
+  }
+  const [source, medium, campaign] = raw.split("|");
   const s = clean(source);
   if (!s) return null;
   return { source: s, medium: clean(medium), campaign: clean(campaign) };

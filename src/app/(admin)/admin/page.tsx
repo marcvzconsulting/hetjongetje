@@ -1294,6 +1294,16 @@ function NewsletterReasons({
  * direct binnengekomen of aangemeld vóór de herkomst-cookie bestond.
  */
 async function loadSignupSources(since: Date | undefined) {
+  // Fail-safe: dit blok mag het dashboard nooit laten omvallen.
+  try {
+    return await querySignupSources(since);
+  } catch (err) {
+    console.error("[admin] aanmeldingen per bron laden mislukt", err);
+    return [];
+  }
+}
+
+async function querySignupSources(since: Date | undefined) {
   const where = {
     role: "user",
     ...(since ? { createdAt: { gte: since } } : {}),
