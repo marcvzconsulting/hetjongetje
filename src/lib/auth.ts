@@ -12,6 +12,24 @@ import { buildWelcomeMail } from "@/lib/email/templates/welcome";
 import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
 import { buildAppUrl } from "@/lib/url";
 import { consumeMagicLinkToken } from "@/lib/magic-link";
+import { cookies } from "next/headers";
+import { SIGNUP_SOURCE_COOKIE, signupSourceFields } from "@/lib/signup-source";
+
+/**
+ * Herkomst voor een nieuwe Google-gebruiker: de callback is een gewoon
+ * route-request, dus de ov_src-cookie van de bezoeker is leesbaar. Daarna
+ * wissen, net als bij het wachtwoordpad. Mag het inloggen nooit breken.
+ */
+async function readSignupSourceOnce() {
+  try {
+    const jar = await cookies();
+    const fields = signupSourceFields(jar.get(SIGNUP_SOURCE_COOKIE)?.value);
+    if (jar.has(SIGNUP_SOURCE_COOKIE)) jar.delete(SIGNUP_SOURCE_COOKIE);
+    return fields;
+  } catch {
+    return {};
+  }
+}
 
 // Constant-time decoy hash for the "user not found" path. Without this,
 // an unknown email returns immediately while a known email triggers a
@@ -253,6 +271,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               // akkoord met de voorwaarden betekent (AuthTermsNotice) —
               // dit legt dat moment vast, net als bij credentials.
               termsAcceptedAt: new Date(),
+              ...(await readSignupSourceOnce()),
             },
           });
           // Fire welcome + admin notification mails. Don't await — auth

@@ -14,6 +14,7 @@ import {
   REFERRAL_COOKIE,
   resolveReferralCode,
 } from "@/lib/referral";
+import { SIGNUP_SOURCE_COOKIE, signupSourceFields } from "@/lib/signup-source";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { z } from "zod";
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
         storyCredits: 5 + refBonus,
         status: "approved",
         referredByUserId: inviterId,
+        ...signupSourceFields(request.cookies.get(SIGNUP_SOURCE_COOKIE)?.value),
         termsAcceptedAt: new Date(),
         // Retention-reminders zijn opt-IN: wie de checkbox niet aanvinkt,
         // wordt meteen als afgemeld gemarkeerd (de reminder-crons filteren
@@ -188,6 +190,9 @@ export async function POST(request: NextRequest) {
     // ontstaat als deze browser later een ander account aanmaakt.
     if (refCookie) {
       response.cookies.delete(REFERRAL_COOKIE);
+    }
+    if (request.cookies.has(SIGNUP_SOURCE_COOKIE)) {
+      response.cookies.delete(SIGNUP_SOURCE_COOKIE);
     }
     return response;
   } catch (error) {

@@ -146,6 +146,7 @@ export default async function AdminDashboardPage({
     newsletterReasonsThisMonth,
     recentNewsletterNotes,
     reminderEffect,
+    signupSources,
   ] = await Promise.all([
     loadDashboardStats(),
     loadRevenueTimeSeries({
@@ -188,6 +189,7 @@ export default async function AdminDashboardPage({
       select: { createdAt: true, reason: true, note: true },
     }),
     loadReminderEffect(),
+    loadSignupSources(funnelSince),
   ]);
   const nav = ADMIN_NAV.map((n) => ({
     ...n,
@@ -450,6 +452,66 @@ export default async function AdminDashboardPage({
           })}
         </div>
         <Funnel steps={funnel} />
+      </Section>
+
+      {/* ── Aanmeldingen per bron ───────────────────────── */}
+      <Section title="Aanmeldingen per bron">
+        <p
+          style={{
+            fontFamily: V2.body,
+            fontStyle: "italic",
+            fontSize: 13,
+            color: V2.inkMute,
+            margin: "0 0 14px",
+            lineHeight: 1.5,
+          }}
+        >
+          Zelfde periode als de funnel hierboven. Bron komt uit de link
+          waarmee iemand voor het eerst binnenkwam (bv. onsverhaaltje.nl/ig
+          of /ig/sinterklaas) of de site waar die vandaan kwam. Aanmeldingen
+          van vóór 30 oktober 2026 staan onder Direct / onbekend.
+        </p>
+        {signupSources.length === 0 ? (
+          <EmptyState>Nog geen aanmeldingen in deze periode.</EmptyState>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontFamily: V2.body,
+                fontSize: 14,
+                background: V2.paper,
+                border: `1px solid ${V2.paperShade}`,
+              }}
+            >
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${V2.paperShade}` }}>
+                  <Th>Bron</Th>
+                  <Th>Campagne</Th>
+                  <Th align="right">Aanmeldingen</Th>
+                  <Th align="right">Betaald</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {signupSources.map((s) => (
+                  <tr
+                    key={`${s.source}|${s.medium}|${s.campaign}`}
+                    style={{ borderBottom: `1px solid ${V2.paperShade}` }}
+                  >
+                    <Td>{s.source ?? "Direct / onbekend"}</Td>
+                    <Td>
+                      {[s.medium, s.campaign].filter(Boolean).join(" · ") ||
+                        "–"}
+                    </Td>
+                    <Td align="right">{s.signups}</Td>
+                    <Td align="right">{s.paid}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Section>
 
       {/* ── Cohort-retentie ─────────────────────────────── */}
@@ -1225,6 +1287,52 @@ function NewsletterReasons({
 }
 
 // ── Tiny UI primitives (private to this page) ─────────────────────────
+
+/**
+ * Aanmeldingen van klanten (geen admins) per bron, medium en campagne,
+ * plus hoeveel daarvan ooit een betaalde bestelling deden. Null-bron =
+ * direct binnengekomen of aangemeld vóór de herkomst-cookie bestond.
+ */
+async function loadSignupSources(since: Date | undefined) {
+  // Fail-safe: dit blok mag het dashboard nooit laten omvallen.
+  try {
+    return await querySignupSources(since);
+  } catch (err) {
+    console.error("[admin] aanmeldingen per bron laden mislukt", err);
+    return [];
+  }
+}
+
+async function querySignupSources(since: Date | undefined) {
+  const where = {
+    role: "user",
+    ...(since ? { createdAt: { gte: since } } : {}),
+  };
+  const [all, paid] = await Promise.all([
+    prisma.user.groupBy({
+      by: ["signupSource", "signupMedium", "signupCampaign"],
+      where,
+      _count: { _all: true },
+    }),
+    prisma.user.groupBy({
+      by: ["signupSource", "signupMedium", "signupCampaign"],
+      where: { ...where, orders: { some: { status: "paid" } } },
+      _count: { _all: true },
+    }),
+  ]);
+  const key = (r: (typeof all)[number]) =>
+    `${r.signupSource}|${r.signupMedium}|${r.signupCampaign}`;
+  const paidByKey = new Map(paid.map((r) => [key(r), r._count._all]));
+  return all
+    .map((r) => ({
+      source: r.signupSource,
+      medium: r.signupMedium,
+      campaign: r.signupCampaign,
+      signups: r._count._all,
+      paid: paidByKey.get(key(r)) ?? 0,
+    }))
+    .sort((a, b) => b.signups - a.signups);
+}
 
 function Section({
   title,
