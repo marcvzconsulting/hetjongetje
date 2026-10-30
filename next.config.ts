@@ -131,6 +131,21 @@ const nextConfig: NextConfig = {
         destination: "https://www.onsverhaaltje.nl/:path*",
         permanent: true,
       },
+      // Korte links voor Instagram: /ig voor de bio, /ig/<woord> per post
+      // of story. Komt uit op de homepage met UTM-tags, zodat de bron in
+      // Vercel Analytics én bij een aanmelding (ov_src) terechtkomt.
+      // Tijdelijk (307), zodat we de bestemming later kunnen wijzigen.
+      {
+        source: "/ig",
+        destination: "/?utm_source=instagram&utm_medium=social&utm_campaign=bio",
+        permanent: false,
+      },
+      {
+        source: "/ig/:campaign",
+        destination:
+          "/?utm_source=instagram&utm_medium=social&utm_campaign=:campaign",
+        permanent: false,
+      },
     ];
   },
 };
