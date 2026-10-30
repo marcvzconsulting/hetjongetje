@@ -57,6 +57,14 @@ model User {
   /// Null = nog niet uitgekeerd. Zorgt dat een terugkerende klant niet
   /// telkens bonus-credits genereert.
   referralBonusGrantedAt   DateTime?   @map("referral_bonus_granted_at")
+  /// Herkomst bij aanmelding (cookie `ov_src`, zie lib/signup-source.ts):
+  /// utm_source of de externe site, bv. "instagram" of "google". Null =
+  /// direct binnengekomen of aangemeld vóór deze feature.
+  signupSource             String?     @map("signup_source")
+  /// utm_medium, of "referral" bij een externe site.
+  signupMedium             String?     @map("signup_medium")
+  /// utm_campaign, bv. "bio" of "sinterklaas".
+  signupCampaign           String?     @map("signup_campaign")
   /// AVG-bewijs: wanneer de gebruiker bij registratie akkoord ging met de
   /// algemene voorwaarden en privacyverklaring. Null bij accounts van vóór
   /// deze feature.

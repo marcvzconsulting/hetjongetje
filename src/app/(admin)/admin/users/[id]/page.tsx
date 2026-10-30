@@ -1145,6 +1145,14 @@ export default async function AdminUserDetailPage({
           <InfoRow label="Rol" value={user.role} capitalize />
           <InfoRow label="Taal" value={user.locale} />
           <InfoRow label="Aangemaakt" value={formatDateTime(user.createdAt)} mono />
+          <InfoRow
+            label="Bron aanmelding"
+            value={
+              [user.signupSource, user.signupMedium, user.signupCampaign]
+                .filter(Boolean)
+                .join(" · ") || "Direct / onbekend"
+            }
+          />
           <InfoRow label="Laatste update" value={formatDateTime(user.updatedAt)} mono />
           <InfoRow label="Laatste login" value={formatDateTime(user.lastLoginAt)} mono />
           <InfoRow label="Kindprofielen" value={user.children.length} mono />

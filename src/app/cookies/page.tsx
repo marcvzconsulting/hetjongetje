@@ -36,9 +36,12 @@ export default function CookiesPage() {
 
       <H2>Welke cookies gebruiken we?</H2>
       <P>
-        Alle cookies hieronder zijn <strong>strikt noodzakelijk</strong>:
-        zonder deze werkt inloggen simpelweg niet, of niet veilig. Ze zijn
-        allemaal first-party — ze komen van ons, niet van derden.
+        De drie <em>authjs</em>-cookies zijn{" "}
+        <strong>strikt noodzakelijk</strong>: zonder deze werkt inloggen
+        simpelweg niet, of niet veilig. <em>ov_ref</em> en <em>ov_src</em>{" "}
+        zijn kleine hulpcookies voor uitnodigingen en de herkomst van een
+        aanmelding. Ze zijn allemaal first-party — ze komen van ons, niet
+        van derden.
       </P>
       <P>
         &middot; <em>authjs.session-token</em> — houdt je ingelogd nadat
@@ -57,6 +60,13 @@ export default function CookiesPage() {
         uitnodigingslink van een andere ouder binnenkomt, zodat jullie
         allebei een gratis verhaal krijgen. Verloopt na 30 dagen en wordt
         direct gewist zodra je een account aanmaakt.
+        <br />
+        &middot; <em>ov_src</em> — onthoudt via welk kanaal je voor het
+        eerst bij ons kwam, bijvoorbeeld &ldquo;instagram&rdquo; of
+        &ldquo;google&rdquo;. Alleen dat kanaal, geen andere gegevens. Maak
+        je een account aan, dan bewaren we het kanaal bij je account en
+        wissen we de cookie; anders verloopt hij na 30 dagen. Zo zien we
+        welke kanalen werken, zonder trackers van derden.
       </P>
 
       <H2>En localStorage?</H2>
@@ -111,7 +121,7 @@ export default function CookiesPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: juli 2026.
+        Laatst bijgewerkt: oktober 2026.
       </p>
     </ContentPage>
   );

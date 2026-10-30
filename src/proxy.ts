@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  SIGNUP_SOURCE_COOKIE,
+  SIGNUP_SOURCE_MAX_AGE_DAYS,
+  encodeSignupSource,
+  sourceFromRequest,
+} from "@/lib/signup-source";
 
 /**
- * Proxy = Next 16's hernoemde middleware. Twee taken:
+ * Proxy = Next 16's hernoemde middleware. Drie taken (de derde, herkomst
+ * van aanmeldingen, staat onderaan bij de cookie):
  *
  *   1. Auth-gate: stuur niet-ingelogde bezoekers van de app-routes door
  *      naar /login. De pagina's checken zelf ook server-side; dit is puur
@@ -68,6 +75,29 @@ export function proxy(request: NextRequest) {
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set("Content-Security-Policy", csp);
+
+  // 3. Herkomst onthouden voor een latere aanmelding (zie signup-source.ts).
+  // Alleen bij een echte paginanavigatie en alleen als er nog geen bron
+  // is: de eerste bron telt.
+  if (
+    !request.cookies.has(SIGNUP_SOURCE_COOKIE) &&
+    request.headers.get("sec-fetch-dest") !== "empty"
+  ) {
+    const source = sourceFromRequest(
+      request.nextUrl,
+      request.headers.get("referer"),
+    );
+    if (source) {
+      response.cookies.set(SIGNUP_SOURCE_COOKIE, encodeSignupSource(source), {
+        maxAge: SIGNUP_SOURCE_MAX_AGE_DAYS * 24 * 60 * 60,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: !isDev,
+        path: "/",
+      });
+    }
+  }
+
   return response;
 }
 

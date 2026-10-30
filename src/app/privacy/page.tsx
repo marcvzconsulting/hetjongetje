@@ -54,7 +54,9 @@ export default function PrivacyPage() {
       <P>
         Van de <strong>ouder/accounthouder</strong>: naam, e-mailadres,
         wachtwoord (gehasht), optioneel telefoonnummer en adres (nodig voor
-        boekje-verzending), en login-geschiedenis.
+        boekje-verzending), en login-geschiedenis. Ook bewaren we via welk
+        kanaal je je aanmeldde, bijvoorbeeld &ldquo;instagram&rdquo; of
+        &ldquo;google&rdquo;, zodat we zien welke kanalen werken.
       </P>
       <P>
         Van het <strong>kind</strong>, voor zover ingevuld: naam, geboortedatum,
@@ -170,10 +172,10 @@ export default function PrivacyPage() {
 
       <H2>Cookies</H2>
       <P>
-        We gebruiken alleen <strong>strikt noodzakelijke cookies</strong>:
-        voor inloggen, beveiliging en — als je via een uitnodigingslink
-        binnenkwam — het onthouden daarvan. Geen tracking- of
-        advertentiecookies. Het volledige overzicht, per cookie, staat op
+        We gebruiken alleen eigen cookies: voor inloggen en beveiliging,
+        het onthouden van een uitnodigingslink, en via welk kanaal je voor
+        het eerst bij ons kwam. Geen tracking- of advertentiecookies, en
+        niets van derden. Het volledige overzicht, per cookie, staat op
         de{" "}
         <a href="/cookies" style={{ color: "inherit" }}>
           cookie-pagina
