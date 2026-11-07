@@ -141,6 +141,12 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        source: "/ig/sinterklaas",
+        destination:
+          "/sinterklaas?utm_source=instagram&utm_medium=social&utm_campaign=sinterklaas",
+        permanent: false,
+      },
+      {
         source: "/ig/:campaign",
         destination:
           "/?utm_source=instagram&utm_medium=social&utm_campaign=:campaign",
