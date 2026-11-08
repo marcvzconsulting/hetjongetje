@@ -576,20 +576,6 @@ export async function sendPaymentFailedMails(
 }
 
 /**
- * Heeft deze gebruiker een actief betaald abonnement? Gebruikt door de
- * TTS-premium-gate: past_due of cancelled telt niet als actief.
- */
-export async function hasActivePaidSubscription(
-  userId: string,
-): Promise<boolean> {
-  const sub = await prisma.subscription.findUnique({
-    where: { userId },
-    select: { status: true, plan: true },
-  });
-  return !!sub && sub.status === "active" && sub.plan !== "free";
-}
-
-/**
  * Add an interval (Mollie's "1 month", "12 months", "14 days"…) to a
  * starting date. Used to compute the local `endsAt` so we can show the
  * user when their access expires after a cancellation.

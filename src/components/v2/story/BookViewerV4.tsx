@@ -3,13 +3,11 @@
 import {
   useCallback,
   useEffect,
-  useImperativeHandle,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
-  type Ref,
 } from "react";
 import { preload } from "react-dom";
 import Image, { getImageProps } from "next/image";
@@ -34,7 +32,6 @@ import {
 import type { OverflowMode } from "@/lib/reader/version";
 import type { WordHighlight } from "@/components/v2/story/BookViewerV3";
 import {
-  useHasChildren,
   useMediaQuery,
   useMinuteClock,
   useNightOverride,
@@ -52,18 +49,6 @@ import {
 import { ReaderMenu } from "./v4/ReaderMenu";
 
 export type { WordHighlight };
-
-/** Handvat voor de pagina om de lezer aan te sturen vanuit de speler. */
-export type ReaderHandle = {
-  /** Voorlezen: de audio van de zichtbare pagina is uitgespeeld. Geeft
-   *  true als de lezer zelf doorgaat naar de volgende pagina (doorlopend
-   *  scrollen); anders blijft het aan de lezer om te bladeren. */
-  continueReading: () => boolean;
-};
-
-/** Adempauze tussen de laatste zin en het doorscrollen naar de volgende
- *  pagina. */
-const READ_ON_DELAY_MS = 700;
 
 type Props = {
   spreads: Spread[];
@@ -83,14 +68,6 @@ type Props = {
   isShared?: boolean;
   onReactClick?: () => void;
   hasFeedback?: boolean;
-  /** Opent het voorlezen. Op de deelpagina alleen tonen als er audio
-   *  bestaat (`hasAudio`): daar wordt nooit gegenereerd. */
-  onListenClick?: () => void;
-  hasAudio?: boolean;
-  /** Het voorlezen staat open (stemkeuze of speler). */
-  listenOpen?: boolean;
-  /** Het element in de onderbalk waar de speler z'n paneel in zet. */
-  onListenSlot?: (el: HTMLElement | null) => void;
   /** Meldt de spread-index van de zichtbare pagina. */
   onSpreadChange?: (spreadIdx: number) => void;
   wordHighlight?: WordHighlight | null;
@@ -99,10 +76,9 @@ type Props = {
    *  voor de eerste weergave vóór de klok van het toestel bekend is. */
   serverMinutes: number;
   overflowMode: OverflowMode;
-  /** Meldt de nachtstand, zodat vensters buiten de lezer (stemkiezer,
-   *  delen, reageren) meekleuren. */
+  /** Meldt de nachtstand, zodat vensters buiten de lezer (delen,
+   *  reageren) meekleuren. */
   onNightChange?: (night: boolean) => void;
-  ref?: Ref<ReaderHandle>;
 };
 
 type Flip = { id: number; unit: DisplayUnit; index: number; dir: 1 | -1 };
@@ -170,34 +146,18 @@ export function BookViewerV4({
   isShared = false,
   onReactClick,
   hasFeedback = false,
-  onListenClick,
-  hasAudio = false,
-  listenOpen = false,
-  onListenSlot,
   onSpreadChange,
   wordHighlight = null,
   readerSettings,
   serverMinutes,
   overflowMode,
   onNightChange,
-  ref,
 }: Props) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const baseUnits = useMemo(() => buildBaseUnits(spreads), [spreads]);
 
-  // ── Voorleespaneel in de onderbalk ───────────────────────────
-  const [slotEl, setSlotEl] = useState<HTMLDivElement | null>(null);
-  const pillOpen = useHasChildren(slotEl);
-  const slotRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      setSlotEl(el);
-      onListenSlot?.(el);
-    },
-    [onListenSlot],
-  );
-
   // ── Lay-out en pagina's ──────────────────────────────────────
-  const view = useReaderView(rootRef, baseUnits, pillOpen);
+  const view = useReaderView(rootRef, baseUnits);
   const layout = view?.layout ?? null;
   const imageShare = view?.imageShare ?? 0;
 
@@ -420,34 +380,6 @@ export function BookViewerV4({
     queueMicrotask(() => navigate(followTo));
   }, [followTo, navigate]);
 
-  // Doorlopend scrollen: is de pagina uitgelezen, dan scrolt de lezer na
-  // een adempauze zelf naar de volgende. Bij bladeren blijft het omslaan
-  // aan de lezer (de speler toont dan "Sla de bladzijde om").
-  const navigateRef = useRef(navigate);
-  useEffect(() => {
-    navigateRef.current = navigate;
-  }, [navigate]);
-  const readOn = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (readOn.current) clearTimeout(readOn.current);
-  }, []);
-  useImperativeHandle(
-    ref,
-    () => ({
-      continueReading: () => {
-        if (!flow || !units || index >= units.length - 1) return false;
-        const next = index + 1;
-        if (readOn.current) clearTimeout(readOn.current);
-        readOn.current = setTimeout(() => {
-          readOn.current = null;
-          navigateRef.current(next);
-        }, READ_ON_DELAY_MS);
-        return true;
-      },
-    }),
-    [flow, units, index],
-  );
-
   // ── Tikken en vegen ──────────────────────────────────────────
   const pointer = useRef<{ id: number; x: number; y: number } | null>(null);
 
@@ -566,8 +498,6 @@ export function BookViewerV4({
             all.indexOf(url) === i,
         )
     : [];
-
-  const canListen = !!onListenClick && (!readOnly || hasAudio);
 
   return (
     <div
@@ -734,15 +664,6 @@ export function BookViewerV4({
               bump();
               setNightOverride(!night);
             }}
-            onListen={
-              canListen
-                ? () => {
-                    bump();
-                    onListenClick?.();
-                  }
-                : undefined
-            }
-            listening={listenOpen}
             onShare={() => {
               bump();
               if (onShareClick) onShareClick();
@@ -771,8 +692,6 @@ export function BookViewerV4({
             onNext={() => navigate(index + 1)}
             onGoTo={navigate}
             onCover={() => navigate(0)}
-            listenSlotRef={slotRef}
-            listening={pillOpen}
           />
 
           {menuOpen && (

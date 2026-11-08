@@ -40,11 +40,6 @@ type Props = {
   isShared?: boolean;
   onReactClick?: () => void;
   hasFeedback?: boolean;
-  /** Opent het "Voorlezen"-paneel. In readOnly-modus wordt de knop alleen
-   *  getoond als er al audio bestaat (`hasAudio`) — de deelpagina mag
-   *  nooit genereren. */
-  onListenClick?: () => void;
-  hasAudio?: boolean;
   /** Gemeld bij elke navigatie (én bij init/herstel uit localStorage):
    *  de index van de zichtbare spread. Op mobiel (losse pagina's) is dat
    *  de spread waar de zichtbare pagina bij hoort. */
@@ -87,8 +82,6 @@ export function BookViewerV3({
   isShared = false,
   onReactClick,
   hasFeedback = false,
-  onListenClick,
-  hasAudio = false,
   onSpreadChange,
   wordHighlight = null,
 }: Props) {
@@ -409,16 +402,6 @@ export function BookViewerV3({
             color: V2.inkMute,
           }}
         >
-          {onListenClick && (!readOnly || hasAudio) && (
-            <ChromeButton
-              label="Voorlezen"
-              iconName="speaker"
-              active={hasAudio}
-              activeColor={V2.goldDeep}
-              onClick={onListenClick}
-              compact={compactLabels}
-            />
-          )}
           {!readOnly && onShareClick && (
             <ChromeButton
               label="Delen"

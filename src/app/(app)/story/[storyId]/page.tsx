@@ -2,9 +2,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect, notFound } from "next/navigation";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
-import type { WordTiming } from "@/lib/ai/tts";
-import { isTtsEnabled, isTtsPremiumOnly } from "@/lib/ai/tts-config";
-import { hasActivePaidSubscription } from "@/lib/payments/subscriptions";
 import { amsterdamMinutes } from "@/lib/reader/night";
 import { loadReaderSettings } from "@/lib/reader/settings";
 import {
@@ -33,31 +30,10 @@ export default async function StoryPage({ params, searchParams }: Props) {
     include: {
       pages: { orderBy: { pageNumber: "asc" } },
       childProfile: { select: { name: true, id: true } },
-      audio: {
-        select: {
-          voiceKey: true,
-          url: true,
-          pageNumber: true,
-          wordTimings: true,
-        },
-      },
     },
   });
 
   if (!story) notFound();
-
-  // TTS-premium-gate: nieuwe voorlees-audio genereren mag alleen door
-  // de eigenaar, en (wanneer de schakelaar aan staat) alleen met een
-  // actief betaald abonnement of als admin. Bestaande audio afspelen
-  // blijft altijd werken — dat regelt de speler zelf.
-  // Staat de voorleesfunctie helemaal uit, dan geen luisterknop en geen
-  // speler, ook niet voor audio die al bestaat.
-  const audioEnabled = isTtsEnabled();
-  const canGenerateAudio =
-    audioEnabled &&
-    (!isTtsPremiumOnly() ||
-      session.user.role === "admin" ||
-      (await hasActivePaidSubscription(session.user.id)));
 
   const readerSettings = await loadReaderSettings();
 
@@ -89,14 +65,6 @@ export default async function StoryPage({ params, searchParams }: Props) {
       initialFeedbackKind={story.feedbackKind as "up" | "down" | null}
       initialFeedbackNote={story.feedbackNote}
       initialShareToken={story.shareToken}
-      audioEnabled={audioEnabled}
-      canGenerateAudio={canGenerateAudio}
-      initialAudios={story.audio.map((a) => ({
-        voiceKey: a.voiceKey,
-        pageNumber: a.pageNumber,
-        url: a.url,
-        wordTimings: (a.wordTimings as unknown as WordTiming[] | null) ?? null,
-      }))}
       readerVersion={resolveReaderVersion(query.lezer)}
       overflowMode={resolveOverflowMode(query.tekst)}
       readerSettings={readerSettings}

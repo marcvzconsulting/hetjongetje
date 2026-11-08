@@ -5,8 +5,6 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
-import type { WordTiming } from "@/lib/ai/tts";
-import { isTtsEnabled } from "@/lib/ai/tts-config";
 import { amsterdamMinutes } from "@/lib/reader/night";
 import { loadReaderSettings } from "@/lib/reader/settings";
 import {
@@ -30,8 +28,8 @@ async function getClientIp(): Promise<string> {
 }
 
 // Wrapped in React.cache so generateMetadata and the page body share one
-// DB round-trip per request instead of loading the full story (pages +
-// audio + timings) twice.
+// DB round-trip per request instead of loading the full story (pages)
+// twice.
 const loadSharedStory = cache(async (token: string) => {
   if (!TOKEN_PATTERN.test(token)) return null;
   return prisma.story.findFirst({
@@ -39,14 +37,6 @@ const loadSharedStory = cache(async (token: string) => {
     include: {
       pages: { orderBy: { pageNumber: "asc" } },
       childProfile: { select: { name: true } },
-      audio: {
-        select: {
-          voiceKey: true,
-          url: true,
-          pageNumber: true,
-          wordTimings: true,
-        },
-      },
     },
   });
 });
@@ -131,19 +121,6 @@ export default async function SharedStoryPage({
       childName={story.childProfile.name}
       storyTitle={story.title}
       spreads={spreads}
-      // Voorleesfunctie uit: geen audio meegeven, dan toont de lezer ook
-      // geen luisterknop.
-      audios={
-        isTtsEnabled()
-          ? story.audio.map((a) => ({
-              voiceKey: a.voiceKey,
-              pageNumber: a.pageNumber,
-              url: a.url,
-              wordTimings:
-                (a.wordTimings as unknown as WordTiming[] | null) ?? null,
-            }))
-          : []
-      }
       readerVersion={resolveReaderVersion(query.lezer)}
       overflowMode={resolveOverflowMode(query.tekst)}
       readerSettings={readerSettings}

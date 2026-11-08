@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode, Ref } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { toRoman } from "@/lib/story/reader-units";
@@ -141,9 +141,6 @@ type TopBarProps = {
   readOnly: boolean;
   night: boolean;
   onToggleNight: () => void;
-  /** Undefined = geen voorleesknop (deelpagina zonder audio). */
-  onListen?: () => void;
-  listening: boolean;
   onShare: () => void;
   isShared: boolean;
   onCover: () => void;
@@ -160,8 +157,6 @@ export function ReaderTopBar({
   readOnly,
   night,
   onToggleNight,
-  onListen,
-  listening,
   onShare,
   isShared,
   onCover,
@@ -296,16 +291,6 @@ export function ReaderTopBar({
           background={night ? "rgba(201,169,97,0.18)" : "none"}
           color={night ? V2.gold : c.mute}
         />
-        {onListen && (
-          <RoundButton
-            label="Voorlezen"
-            icon="speaker"
-            onClick={onListen}
-            pressed={listening}
-            background={listening ? V2.gold : "none"}
-            color={listening ? V2.night : c.mute}
-          />
-        )}
         <RoundButton
           label="Delen"
           icon="share"
@@ -346,10 +331,6 @@ type BottomBarProps = {
   onNext: () => void;
   onGoTo: (index: number) => void;
   onCover: () => void;
-  /** Hier zet de voorleesspeler z'n paneel in. */
-  listenSlotRef: Ref<HTMLDivElement>;
-  /** Het voorleespaneel staat in het slot. */
-  listening: boolean;
 };
 
 export function ReaderBottomBar({
@@ -366,8 +347,6 @@ export function ReaderBottomBar({
   onNext,
   onGoTo,
   onCover,
-  listenSlotRef,
-  listening,
 }: BottomBarProps) {
   const isFirst = index === 0;
   const isLast = index === total - 1;
@@ -424,18 +403,6 @@ export function ReaderBottomBar({
           {autoNote}
         </div>
       )}
-
-      {/* Leeg (en uit de lay-out) tot de voorleesspeler z'n paneel
-          hierin zet. */}
-      <div
-        ref={listenSlotRef}
-        data-ovr-ui
-        style={{
-          maxWidth: "100%",
-          display: listening ? "flex" : "none",
-          justifyContent: "center",
-        }}
-      />
 
       <div
         style={{

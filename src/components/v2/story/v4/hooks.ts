@@ -111,7 +111,6 @@ export type ReaderView = {
 export function useReaderView(
   rootRef: RefObject<HTMLElement | null>,
   baseUnits: BaseUnit[],
-  listening: boolean,
 ): ReaderView | null {
   const [view, setView] = useState<ReaderView | null>(null);
 
@@ -125,7 +124,7 @@ export function useReaderView(
       if (disposed) return;
       const rect = root.getBoundingClientRect();
       if (rect.width < 1 || rect.height < 1) return;
-      const layout = computeLayout(rect.width, rect.height, listening);
+      const layout = computeLayout(rect.width, rect.height);
       const { layouts, imageShare } = measureStory(root, baseUnits, layout);
       setView({
         layout,
@@ -150,25 +149,7 @@ export function useReaderView(
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [rootRef, baseUnits, listening]);
+  }, [rootRef, baseUnits]);
 
   return view;
-}
-
-/**
- * True zodra het element kinderen heeft (het voorleespaneel is erin
- * gezet). Kijkt naar de DOM zelf, zodat het ook werkt terwijl het
- * element nog verborgen is.
- */
-export function useHasChildren(el: HTMLElement | null): boolean {
-  const [has, setHas] = useState(false);
-  useEffect(() => {
-    if (!el) return;
-    const observer = new MutationObserver(() => {
-      setHas(el.childElementCount > 0);
-    });
-    observer.observe(el, { childList: true });
-    return () => observer.disconnect();
-  }, [el]);
-  return has;
 }

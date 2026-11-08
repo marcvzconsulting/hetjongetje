@@ -1,24 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Spread } from "@/lib/story/spread-types";
-import {
-  endingNarrationPageNumber,
-  spreadsToPageNumbers,
-} from "@/lib/story/spread-audio";
-import {
-  BookViewerV3,
-  type WordHighlight,
-} from "@/components/v2/story/BookViewerV3";
-import {
-  BookViewerV4,
-  type ReaderHandle,
-} from "@/components/v2/story/BookViewerV4";
-import {
-  StoryAudioPlayer,
-  type StoryAudioEntry,
-} from "@/components/v2/story/StoryAudioPlayer";
+import { BookViewerV3 } from "@/components/v2/story/BookViewerV3";
+import { BookViewerV4 } from "@/components/v2/story/BookViewerV4";
 import { V2 } from "@/components/v2/tokens";
 import {
   dialogPalette,
@@ -40,15 +26,6 @@ interface Props {
   initialFeedbackNote: string | null;
   /** Bestaande share-token uit DB; null = nog niet gedeeld. */
   initialShareToken: string | null;
-  /** Staat de voorleesfunctie aan (env TTS_ENABLED)? Uit = geen
-   *  luisterknop en geen speler. */
-  audioEnabled: boolean;
-  /** Mag deze gebruiker nieuwe voorlees-audio genereren? False wanneer
-   *  de TTS-premium-schakelaar aan staat en er geen actief betaald
-   *  abonnement is — bestaande audio afspelen blijft wel werken. */
-  canGenerateAudio: boolean;
-  /** Al gegenereerde voorlees-audio's (per stem één). */
-  initialAudios: StoryAudioEntry[];
   /** "v3" = de vorige lezer (terugvaloptie). */
   readerVersion: ReaderVersion;
   overflowMode: OverflowMode;
@@ -68,9 +45,6 @@ export function StoryPageClient({
   initialFeedbackKind,
   initialFeedbackNote,
   initialShareToken,
-  audioEnabled,
-  canGenerateAudio,
-  initialAudios,
   readerVersion,
   overflowMode,
   readerSettings,
@@ -78,7 +52,6 @@ export function StoryPageClient({
 }: Props) {
   const router = useRouter();
   const v4 = readerVersion === "v4";
-  const [listenSlot, setListenSlot] = useState<HTMLElement | null>(null);
   const [isFavorite, setIsFavorite] = useState(initialFavorite);
   const [favoriteError, setFavoriteError] = useState<string>("");
   const [feedbackKind, setFeedbackKind] = useState<"up" | "down" | null>(
@@ -100,42 +73,10 @@ export function StoryPageClient({
   const [shareInFlight, setShareInFlight] = useState(false);
   const [shareError, setShareError] = useState<string>("");
   const [copyConfirmed, setCopyConfirmed] = useState(false);
-  const [listenOpen, setListenOpen] = useState(false);
-  const [audios, setAudios] = useState<StoryAudioEntry[]>(initialAudios);
   // Nachtstand van de lezer (alleen V4 meldt die); de vensters hieronder
   // kleuren mee.
   const [night, setNight] = useState(false);
-  const readerRef = useRef<ReaderHandle>(null);
   const d = dialogPalette(night);
-
-  // ── Voorlezen: spread ↔ pagina-koppeling + woord-markering ──────
-  const [currentSpreadIdx, setCurrentSpreadIdx] = useState(0);
-  const [wordHighlight, setWordHighlight] = useState<WordHighlight | null>(
-    null,
-  );
-  // Per spread het voorlees-item: 0 = titel, daarna de tekstpagina's,
-  // als laatste de eindpagina (null = spread zonder audio).
-  const spreadPageNumbers = useMemo(
-    () => spreadsToPageNumbers(spreads),
-    [spreads],
-  );
-  const pageNumbers = useMemo(
-    () => spreadPageNumbers.filter((p): p is number => p !== null),
-    [spreadPageNumbers],
-  );
-  const endingPageNumber = useMemo(
-    () => endingNarrationPageNumber(spreads),
-    [spreads],
-  );
-  const currentPageNumber = spreadPageNumbers[currentSpreadIdx] ?? null;
-  // Zit de zichtbare spread ná het laatste voorleesbare item? (alleen
-  // relevant wanneer de eindspread zelf geen audio heeft)
-  const afterLastPage =
-    currentPageNumber === null &&
-    spreadPageNumbers
-      .slice(currentSpreadIdx + 1)
-      .every((p) => p === null) &&
-    pageNumbers.length > 0;
 
   const shareUrl = shareToken
     ? typeof window !== "undefined"
@@ -315,17 +256,10 @@ export function StoryPageClient({
           isShared={!!shareToken}
           onReactClick={() => setReactOpen(true)}
           hasFeedback={hasFeedback}
-          onListenClick={audioEnabled ? () => setListenOpen(true) : undefined}
-          hasAudio={audios.length > 0}
-          listenOpen={listenOpen}
-          onListenSlot={setListenSlot}
-          onSpreadChange={setCurrentSpreadIdx}
-          wordHighlight={listenOpen ? wordHighlight : null}
           readerSettings={readerSettings}
           serverMinutes={serverMinutes}
           overflowMode={overflowMode}
           onNightChange={setNight}
-          ref={readerRef}
         />
       ) : (
         <BookViewerV3
@@ -340,44 +274,6 @@ export function StoryPageClient({
           isShared={!!shareToken}
           onReactClick={() => setReactOpen(true)}
           hasFeedback={hasFeedback}
-          onListenClick={audioEnabled ? () => setListenOpen(true) : undefined}
-          hasAudio={audios.length > 0}
-          onSpreadChange={setCurrentSpreadIdx}
-          wordHighlight={listenOpen ? wordHighlight : null}
-        />
-      )}
-
-      {/* Voorlezen — stemkeuze + paginagestuurde speler. */}
-      {audioEnabled && listenOpen && (
-        <StoryAudioPlayer
-          variant={v4 ? "pill" : "bar"}
-          portalTarget={v4 ? listenSlot : null}
-          night={night}
-          storyId={storyId}
-          audios={audios}
-          canGenerate={canGenerateAudio}
-          premiumGated={!canGenerateAudio}
-          currentPageNumber={currentPageNumber}
-          pageNumbers={pageNumbers}
-          endingPageNumber={endingPageNumber}
-          afterLastPage={afterLastPage}
-          onClose={() => {
-            setListenOpen(false);
-            setWordHighlight(null);
-          }}
-          onGenerated={(entry) =>
-            setAudios((prev) =>
-              prev.some(
-                (a) =>
-                  a.voiceKey === entry.voiceKey &&
-                  a.pageNumber === entry.pageNumber,
-              )
-                ? prev
-                : [...prev, entry],
-            )
-          }
-          onHighlightChange={setWordHighlight}
-          onPageEnded={() => readerRef.current?.continueReading() ?? false}
         />
       )}
 
