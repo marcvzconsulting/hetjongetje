@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, EBtn, IconV2 } from "@/components/v2";
 import { LoraConsentForm } from "./LoraConsentForm";
+import {
+  compressPhotosForUpload,
+  PhotoDecodeError,
+} from "@/lib/utils/compress-photo";
 
 const MIN_PHOTOS = 5;
 const MAX_PHOTOS = 15;
@@ -90,8 +94,10 @@ export function LoraTrainer({
   function onPickFiles(fileList: FileList | null) {
     if (!fileList) return;
     setError(null);
-    const incoming = Array.from(fileList).filter((f) =>
-      f.type.startsWith("image/")
+    // iOS geeft HEIC-foto's soms een lege MIME-type; accepteer die op
+    // extensie, ze worden bij het versturen in de browser naar JPEG gezet.
+    const incoming = Array.from(fileList).filter(
+      (f) => f.type.startsWith("image/") || /\.(heic|heif)$/i.test(f.name)
     );
     const merged = [...photos, ...incoming].slice(0, MAX_PHOTOS);
     setPhotos(merged);
@@ -110,32 +116,53 @@ export function LoraTrainer({
       setError(`Upload minimaal ${MIN_PHOTOS} foto's`);
       return;
     }
-    // iOS-detectie: HEIC-foto's hebben soms een lege MIME-type. Safari
-    // doet de conversie pas bij submit, maar oudere iOS-versies struikelen
-    // hier. Geef een duidelijke melding i.p.v. een cryptische error.
-    const heicLikely = photos.some(
-      (f) => f.type === "" || f.type === "image/heic" || f.type === "image/heif",
-    );
-    if (heicLikely) {
-      setError(
-        "Eén of meer foto's lijken HEIC (iPhone-formaat). Open de foto in 'Bestanden' en exporteer als JPG, of zet in iPhone-instellingen Camera → Indelingen op 'Meest compatibel'.",
-      );
-      return;
-    }
     setSubmitting(true);
     setError(null);
     try {
+      // Verklein in de browser: originele iPhone-foto's (2-5 MB per stuk)
+      // samen zijn groter dan de upload-limiet van de server (4,5 MB) en
+      // dan faalt het request nog voor onze route draait. Zet ook HEIC om
+      // naar JPEG.
+      let upload: File[];
+      try {
+        upload = await compressPhotosForUpload(photos);
+      } catch (err) {
+        if (err instanceof PhotoDecodeError) {
+          setError(
+            "Eén van de foto's kunnen we niet openen (mogelijk HEIC op een oudere iPhone). Kies een andere foto, of zet in iPhone-instellingen Camera → Indelingen op 'Meest compatibel'.",
+          );
+          return;
+        }
+        throw err;
+      }
+
       const form = new FormData();
       form.append("consent", "1");
-      for (const f of photos) form.append("photos", f);
+      for (const f of upload) form.append("photos", f);
 
       const res = await fetch(`/api/children/${childId}/lora`, {
         method: "POST",
         body: form,
       });
       const data = await res.json().catch(() => ({}) as { error?: string });
+      if (res.status === 413) {
+        setError(
+          "De foto's zijn samen te groot om te versturen. Probeer het met minder foto's.",
+        );
+        return;
+      }
       if (!res.ok) {
-        setError(data.error ?? "Training starten mislukt");
+        // Zonder JSON-body (bv. een platformfout vóór onze route) tonen we
+        // de statuscode, zodat een klantmelding meteen te herleiden is.
+        setError(data.error ?? `Training starten mislukt (fout ${res.status})`);
+        void import("@sentry/nextjs")
+          .then((Sentry) =>
+            Sentry.captureMessage(`lora-submit HTTP ${res.status}`, {
+              tags: { area: "lora-submit" },
+              extra: { error: data.error, sizes: upload.map((f) => f.size) },
+            }),
+          )
+          .catch(() => {});
         return;
       }
       setStatus("training");
