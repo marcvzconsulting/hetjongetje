@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { ContentPage, Lead, P } from "@/components/v2/landing/ContentPage";
 import { V2 } from "@/components/v2/tokens";
+import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { prisma } from "@/lib/db";
 import {
   verifyUnsubscribeToken,
@@ -337,23 +338,9 @@ export default async function UnsubscribePage({
         </div>
 
         <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <button
-            type="submit"
-            style={{
-              padding: "12px 24px",
-              background: V2.ink,
-              color: V2.paper,
-              border: "none",
-              fontFamily: V2.ui,
-              fontSize: 14,
-              fontWeight: 500,
-              letterSpacing: 0.2,
-              cursor: "pointer",
-              borderRadius: 2,
-            }}
-          >
+          <EBtnSubmit kind="primary" pendingLabel="Versturen…">
             Verstuur →
-          </button>
+          </EBtnSubmit>
           <a
             href="https://onsverhaaltje.nl"
             style={{

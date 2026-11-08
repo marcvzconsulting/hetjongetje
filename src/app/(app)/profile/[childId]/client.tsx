@@ -228,6 +228,7 @@ export function ProfileEditor({ child }: Props) {
   });
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   // Lokale invoer-state voor het toevoegen van huisdier/vriend/angst
   // in edit-mode. Idem als in de wizard-stap.
@@ -355,12 +356,15 @@ export function ProfileEditor({ child }: Props) {
   }
 
   async function handleDelete() {
+    const failMsg = "Verwijderen lukte niet. Probeer het nog eens.";
+    setDeleteError("");
     setDeleting(true);
     try {
       const res = await fetch(`/api/children/${child.id}`, { method: "DELETE" });
       if (res.ok) router.push("/dashboard");
+      else setDeleteError(failMsg);
     } catch {
-      /* ignore */
+      setDeleteError(failMsg);
     }
     setDeleting(false);
   }
@@ -1250,9 +1254,33 @@ export function ProfileEditor({ child }: Props) {
               >
                 {deleting ? "Verwijderen..." : "Ja, verwijder alles"}
               </button>
-              <EBtn kind="ghost" size="sm" onClick={() => setDeleteConfirm(false)}>
+              <EBtn
+                kind="ghost"
+                size="sm"
+                onClick={() => {
+                  setDeleteConfirm(false);
+                  setDeleteError("");
+                }}
+              >
                 Annuleren
               </EBtn>
+              {deleteError && (
+                <div
+                  role="alert"
+                  style={{
+                    flexBasis: "100%",
+                    marginTop: 4,
+                    padding: "12px 16px",
+                    background: "rgba(196,165,168,0.2)",
+                    borderLeft: `2px solid ${V2.rose}`,
+                    fontFamily: V2.body,
+                    fontSize: 14,
+                    color: V2.ink,
+                  }}
+                >
+                  {deleteError}
+                </div>
+              )}
             </div>
           ) : (
             <button

@@ -48,11 +48,29 @@ interface Params {
   specialDetail: string;
   mainCharacterType: string;
   mainCharacterDescription: string;
+  /** Sleutel uit STORY_SETTINGS, of CUSTOM_SETTING bij een eigen plek. */
   setting: string;
+  /** Vrije tekst van de ouder; alleen gebruikt als setting === CUSTOM_SETTING. */
+  customSetting: string;
   adventureType: string;
   mood: string;
   occasion: string;
   length: "kort" | "lang";
+}
+
+/** Tegel "Eigen plek": de ouder typt zelf waar het verhaal speelt. */
+const CUSTOM_SETTING = "custom";
+/** Gelijk aan de shortText-grens op storyRequest.setting in validation.ts. */
+const CUSTOM_SETTING_MAX = 120;
+
+function initialSetting(
+  setting: string | undefined,
+): Pick<Params, "setting" | "customSetting"> {
+  if (!setting) return { setting: "", customSetting: "" };
+  if (Object.keys(STORY_SETTINGS).includes(setting)) {
+    return { setting, customSetting: "" };
+  }
+  return { setting: CUSTOM_SETTING, customSetting: setting };
 }
 
 /** Vervolg-verhaal-context, door de server-page meegegeven wanneer de
@@ -131,7 +149,9 @@ export function GenerateWizardV2({
       sequel?.params.mainCharacterDescription ??
       child.mainCharacterDescription ??
       "",
-    setting: sequel?.params.setting ?? "",
+    // Een vervolg op een verhaal met een eigen plek heeft die tekst als
+    // setting; die zetten we terug in het vrije veld.
+    ...initialSetting(sequel?.params.setting),
     adventureType: sequel?.params.adventureType ?? "",
     mood: sequel?.params.mood ?? "",
     occasion: sequel?.params.occasion ?? "none",
@@ -178,7 +198,10 @@ export function GenerateWizardV2({
             sequelActive && sequel ? sequel.storyId : undefined,
           characterBible,
           storyRequest: {
-            setting: params.setting,
+            setting:
+              params.setting === CUSTOM_SETTING
+                ? params.customSetting.trim()
+                : params.setting,
             adventureType: params.adventureType,
             mood: params.mood,
             occasion:
@@ -215,7 +238,9 @@ export function GenerateWizardV2({
         (params.mainCharacterType === "self" ||
           params.mainCharacterDescription.trim().length > 0)
       : step === 2
-        ? Boolean(params.setting)
+        ? Boolean(params.setting) &&
+          (params.setting !== CUSTOM_SETTING ||
+            params.customSetting.trim().length >= 2)
         : step === 3
           ? Boolean(params.adventureType) && Boolean(params.mood)
           : true;
@@ -628,18 +653,45 @@ function Step2({
           lineHeight: 1.55,
         }}
       >
-        Kies een wereld. Jullie eigen thuissituatie blijft altijd het
-        vertrekpunt. Dit bepaalt waar het avontuur heen gaat.
+        Kies een wereld, of vul zelf een plek in. Jullie eigen thuissituatie
+        blijft altijd het vertrekpunt. Dit bepaalt waar het avontuur heen
+        gaat.
       </p>
       <TileGrid
-        options={Object.entries(STORY_SETTINGS).map(([key, s]) => ({
-          value: key,
-          label: s.label,
-        }))}
+        options={[
+          ...Object.entries(STORY_SETTINGS).map(([key, s]) => ({
+            value: key,
+            label: s.label,
+          })),
+          { value: CUSTOM_SETTING, label: "Eigen plek" },
+        ]}
         active={params.setting}
         onPick={(v) => update({ setting: v })}
         cols={3}
       />
+      {params.setting === CUSTOM_SETTING && (
+        <input
+          type="text"
+          value={params.customSetting}
+          onChange={(e) => update({ customSetting: e.target.value })}
+          maxLength={CUSTOM_SETTING_MAX}
+          autoFocus
+          aria-label="Waar speelt het verhaal zich af?"
+          placeholder="Bijv. de haven waar Sinterklaas aankomt, of bij opa en oma op de boerderij"
+          style={{
+            width: "100%",
+            marginTop: 14,
+            padding: "12px 0",
+            border: "none",
+            borderBottom: `1px solid ${V2.ink}`,
+            background: "transparent",
+            fontSize: 16,
+            fontFamily: V2.body,
+            color: V2.ink,
+            outline: "none",
+          }}
+        />
+      )}
     </>
   );
 }

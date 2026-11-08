@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { isTtsVoiceKey } from "@/lib/ai/tts-voices";
-import { isTtsPremiumOnly } from "@/lib/ai/tts-config";
+import { isTtsEnabled, isTtsPremiumOnly } from "@/lib/ai/tts-config";
 import { hasActivePaidSubscription } from "@/lib/payments/subscriptions";
 import {
   ENDING_NARRATION,
@@ -53,6 +53,14 @@ function toSpokenSentence(raw: string): string {
  *   blijven een 422 geven.
  */
 export async function POST(request: NextRequest, { params }: Props) {
+  // Voorleesfunctie uit: geen ElevenLabs-calls, ook niet via een oude tab
+  // of een losse request.
+  if (!isTtsEnabled()) {
+    return NextResponse.json(
+      { error: "Voorlezen staat op dit moment uit" },
+      { status: 404 },
+    );
+  }
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });

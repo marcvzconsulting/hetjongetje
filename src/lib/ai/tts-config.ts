@@ -5,6 +5,17 @@
  */
 
 /**
+ * Staat de voorleesfunctie aan? Sinds 28-10-2026 standaard UIT: geen
+ * luisterknop in de lezer of op gedeelde verhalen, geen nieuwe audio via
+ * ElevenLabs en geen quotum-cron. Weer aanzetten: env `TTS_ENABLED=1` in
+ * Vercel en opnieuw deployen. Al gegenereerde audio blijft in de database
+ * en opslag staan en is dan meteen weer bruikbaar.
+ */
+export function isTtsEnabled(): boolean {
+  return process.env.TTS_ENABLED === "1";
+}
+
+/**
  * Is het GENEREREN van nieuwe voorlees-audio voorbehouden aan
  * abonnees (en admins)? Gestuurd via env `TTS_PREMIUM_ONLY=1`;
  * standaard uit. Afspelen van al gegenereerde audio blijft altijd

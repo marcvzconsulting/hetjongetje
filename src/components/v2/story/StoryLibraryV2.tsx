@@ -50,6 +50,7 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
   const [filter, setFilter] = useState<FilterOption>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const usedSettings = useMemo(
     () => Array.from(new Set(stories.map((s) => s.setting))),
@@ -86,15 +87,19 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
   }, [filtered, sort]);
 
   async function handleDelete(storyId: string) {
+    const failMsg = "Verwijderen lukte niet. Probeer het nog eens.";
+    setDeleteError("");
     setDeleting(true);
     try {
       const res = await fetch(`/api/stories/${storyId}`, { method: "DELETE" });
       if (res.ok) {
         setStories((prev) => prev.filter((s) => s.id !== storyId));
         setDeleteConfirm(null);
+      } else {
+        setDeleteError(failMsg);
       }
     } catch {
-      /* ignore */
+      setDeleteError(failMsg);
     }
     setDeleting(false);
   }
@@ -227,9 +232,16 @@ export function StoryLibraryV2({ stories: initial, childName, childId }: Props) 
               nr={leadingNumber(sorted.length, i)}
               confirming={deleteConfirm === story.id}
               deleting={deleting}
-              onAskDelete={() => setDeleteConfirm(story.id)}
+              deleteError={deleteConfirm === story.id ? deleteError : ""}
+              onAskDelete={() => {
+                setDeleteConfirm(story.id);
+                setDeleteError("");
+              }}
               onConfirmDelete={() => handleDelete(story.id)}
-              onCancelDelete={() => setDeleteConfirm(null)}
+              onCancelDelete={() => {
+                setDeleteConfirm(null);
+                setDeleteError("");
+              }}
             />
           ))}
         </div>
@@ -291,6 +303,7 @@ function StoryCard({
   nr,
   confirming,
   deleting,
+  deleteError,
   onAskDelete,
   onConfirmDelete,
   onCancelDelete,
@@ -299,6 +312,7 @@ function StoryCard({
   nr: string;
   confirming: boolean;
   deleting: boolean;
+  deleteError: string;
   onAskDelete: () => void;
   onConfirmDelete: () => void;
   onCancelDelete: () => void;
@@ -371,6 +385,20 @@ function StoryCard({
               Annuleren
             </button>
           </div>
+          {deleteError && (
+            <p
+              role="alert"
+              style={{
+                fontFamily: V2.body,
+                fontSize: 13,
+                lineHeight: 1.45,
+                margin: "14px 0 0",
+                color: V2.heart,
+              }}
+            >
+              {deleteError}
+            </p>
+          )}
         </div>
       )}
 

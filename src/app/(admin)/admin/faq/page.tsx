@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
+import { PendingButton } from "@/components/v2/PendingButton";
 import {
   createFaqAction,
   deleteFaqAction,
@@ -9,6 +10,23 @@ import {
 } from "./actions";
 
 export const dynamic = "force-dynamic";
+
+type SearchParams = Promise<{ saved?: string; error?: string; id?: string }>;
+
+/** Bovenaan de pagina. Opslaan en toevoegen melden we bij het item zelf. */
+const FLASH_LABELS: Record<string, { kind: "success" | "error"; text: string }> = {
+  deleted: { kind: "success", text: "Vraag verwijderd." },
+  empty: { kind: "error", text: "Vul zowel een vraag als een antwoord in." },
+  invalid: {
+    kind: "error",
+    text: "Opslaan lukte niet: vraag en antwoord mogen niet leeg zijn.",
+  },
+};
+
+const ITEM_SAVED: Record<string, string> = {
+  created: "Toegevoegd ✓",
+  updated: "Opgeslagen ✓",
+};
 
 const inputBase: React.CSSProperties = {
   width: "100%",
@@ -33,33 +51,18 @@ const labelBase: React.CSSProperties = {
   marginBottom: 6,
 };
 
-const btnPrimary: React.CSSProperties = {
-  padding: "10px 22px",
-  background: V2.ink,
-  color: V2.paper,
-  border: "none",
-  fontFamily: V2.ui,
-  fontSize: 13,
-  fontWeight: 500,
-  letterSpacing: 0.2,
-  cursor: "pointer",
-  borderRadius: 2,
-};
-
-const btnGhost: React.CSSProperties = {
-  padding: "8px 14px",
-  background: "transparent",
-  color: V2.ink,
-  border: `1px solid ${V2.paperShade}`,
-  fontFamily: V2.ui,
-  fontSize: 12,
-  fontWeight: 500,
-  cursor: "pointer",
-  borderRadius: 2,
-};
-
-export default async function AdminFaqPage() {
+export default async function AdminFaqPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const session = await auth();
+  const sp = await searchParams;
+  const flash =
+    (sp.saved && FLASH_LABELS[sp.saved]) ||
+    (sp.error && FLASH_LABELS[sp.error]) ||
+    null;
+  const itemSaved = sp.saved ? ITEM_SAVED[sp.saved] : undefined;
   const entries = await prisma.faqEntry.findMany({
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
@@ -100,6 +103,26 @@ export default async function AdminFaqPage() {
         Onuitgegeven items verschijnen niet op de publieke pagina noch in
         de FAQ JSON-LD voor zoekmachines.
       </p>
+
+      {flash && (
+        <div
+          role={flash.kind === "error" ? "alert" : "status"}
+          style={{
+            marginBottom: 24,
+            padding: "12px 18px",
+            background:
+              flash.kind === "success"
+                ? "rgba(201,169,97,0.18)"
+                : "rgba(176,74,65,0.14)",
+            borderLeft: `3px solid ${flash.kind === "success" ? V2.goldDeep : V2.heart}`,
+            fontFamily: V2.body,
+            fontSize: 14,
+            color: V2.ink,
+          }}
+        >
+          {flash.text}
+        </div>
+      )}
 
       {/* ── Nieuwe vraag ─────────────────────────────────── */}
       <section style={{ marginBottom: 48 }}>
@@ -146,9 +169,9 @@ export default async function AdminFaqPage() {
               placeholder="Eerlijk en bondig. Gebruik dubbele enter voor een nieuwe alinea."
             />
           </div>
-          <button type="submit" style={btnPrimary}>
-            Toevoegen →
-          </button>
+          <div>
+            <PendingButton pendingLabel="Toevoegen…">Toevoegen →</PendingButton>
+          </div>
         </form>
       </section>
 
@@ -190,7 +213,9 @@ export default async function AdminFaqPage() {
             {entries.map((e) => (
               <li
                 key={e.id}
+                id={`faq-${e.id}`}
                 style={{
+                  scrollMarginTop: 24,
                   background: V2.paper,
                   border: `1px solid ${V2.paperShade}`,
                   padding: 18,
@@ -271,10 +296,22 @@ export default async function AdminFaqPage() {
                       />
                       Gepubliceerd
                     </label>
-                    <div style={{ display: "flex", gap: 10 }}>
-                      <button type="submit" style={btnPrimary}>
-                        Opslaan
-                      </button>
+                    <div
+                      style={{ display: "flex", gap: 12, alignItems: "center" }}
+                    >
+                      {itemSaved && sp.id === e.id && (
+                        <span
+                          role="status"
+                          style={{
+                            fontFamily: V2.ui,
+                            fontSize: 13,
+                            color: V2.goldDeep,
+                          }}
+                        >
+                          {itemSaved}
+                        </span>
+                      )}
+                      <PendingButton pendingLabel="Opslaan…">Opslaan</PendingButton>
                     </div>
                   </div>
                 </form>
@@ -284,12 +321,14 @@ export default async function AdminFaqPage() {
                   style={{ marginTop: 12 }}
                 >
                   <input type="hidden" name="id" value={e.id} />
-                  <button
-                    type="submit"
-                    style={{ ...btnGhost, color: V2.heart }}
+                  <PendingButton
+                    variant="danger"
+                    size="sm"
+                    pendingLabel="Verwijderen…"
+                    confirm={`"${e.question}" definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`}
                   >
                     Verwijderen
-                  </button>
+                  </PendingButton>
                 </form>
               </li>
             ))}

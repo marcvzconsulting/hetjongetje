@@ -7,7 +7,7 @@ import {
 import { COMPANY } from "@/lib/legal";
 
 export const metadata = {
-  title: "Privacy · Ons Verhaaltje",
+  title: "Privacy",
   description:
     "Wat Ons Verhaaltje bewaart aan gegevens van ouder en kind, en hoe we daarmee omgaan.",
 };
@@ -54,7 +54,9 @@ export default function PrivacyPage() {
       <P>
         Van de <strong>ouder/accounthouder</strong>: naam, e-mailadres,
         wachtwoord (gehasht), optioneel telefoonnummer en adres (nodig voor
-        boekje-verzending), en login-geschiedenis.
+        boekje-verzending), en login-geschiedenis. Ook bewaren we via welk
+        kanaal je je aanmeldde, bijvoorbeeld &ldquo;instagram&rdquo; of
+        &ldquo;google&rdquo;, zodat we zien welke kanalen werken.
       </P>
       <P>
         Van het <strong>kind</strong>, voor zover ingevuld: naam, geboortedatum,
@@ -141,10 +143,6 @@ export default function PrivacyPage() {
         &middot; <em>fal.ai</em>: illustraties genereren en eventuele LoRA
         trainen (VS)
         <br />
-        &middot; <em>ElevenLabs</em>: de tekst van een verhaal (inclusief de
-        voornaam van je kind) omzetten naar voorlees-audio, als je die
-        functie gebruikt (VS)
-        <br />
         &middot; <em>Mollie</em>: betalingen en abonnementen verwerken
         (Nederland)
         <br />
@@ -155,8 +153,8 @@ export default function PrivacyPage() {
         welkom, nieuwsbrief); EU-servers, Frans bedrijf
       </P>
       <P>
-        Verwerkers buiten de EU (Anthropic, fal.ai, ElevenLabs — alle in de
-        VS) verwerken gegevens onder een verwerkersovereenkomst met
+        Verwerkers buiten de EU (Anthropic en fal.ai, beide in de VS)
+        verwerken gegevens onder een verwerkersovereenkomst met
         passende waarborgen voor internationale doorgifte.
       </P>
       <P>
@@ -174,10 +172,10 @@ export default function PrivacyPage() {
 
       <H2>Cookies</H2>
       <P>
-        We gebruiken alleen <strong>strikt noodzakelijke cookies</strong>:
-        voor inloggen, beveiliging en — als je via een uitnodigingslink
-        binnenkwam — het onthouden daarvan. Geen tracking- of
-        advertentiecookies. Het volledige overzicht, per cookie, staat op
+        We gebruiken alleen eigen cookies: voor inloggen en beveiliging,
+        het onthouden van een uitnodigingslink, en via welk kanaal je voor
+        het eerst bij ons kwam. Geen tracking- of advertentiecookies, en
+        niets van derden. Het volledige overzicht, per cookie, staat op
         de{" "}
         <a href="/cookies" style={{ color: "inherit" }}>
           cookie-pagina
@@ -266,7 +264,7 @@ export default function PrivacyPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: juli 2026.
+        Laatst bijgewerkt: oktober 2026.
       </p>
     </ContentPage>
   );

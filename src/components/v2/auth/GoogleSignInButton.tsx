@@ -1,8 +1,10 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { V2 } from "@/components/v2/tokens";
+import { isAndroidAppBrowser } from "@/lib/in-app-browser";
 
 type Props = {
   /** Where NextAuth should redirect after successful sign-in. Optional —
@@ -22,6 +24,31 @@ export function GoogleSignInButton({
   callbackUrl = "/dashboard",
   label = "Verder met Google",
 }: Props) {
+  const googleBlocked = useSyncExternalStore(
+    () => () => {},
+    () => isAndroidAppBrowser(navigator.userAgent),
+    () => false,
+  );
+
+  if (googleBlocked) {
+    return (
+      <p
+        style={{
+          margin: 0,
+          padding: 12,
+          background: V2.paperDeep,
+          fontFamily: V2.body,
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: V2.ink,
+        }}
+      >
+        Google werkt niet in de browser van deze app. Gebruik hieronder je
+        e-mailadres, of open deze pagina in Chrome.
+      </p>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -82,7 +109,8 @@ export function AuthTermsNotice() {
         textAlign: "center",
       }}
     >
-      Door verder te gaan ga je akkoord met onze{" "}
+      Door verder te gaan bevestig je dat je 18 jaar of ouder bent en ga je
+      akkoord met onze{" "}
       <Link href="/voorwaarden" target="_blank" rel="noopener" style={linkStyle}>
         algemene voorwaarden
       </Link>{" "}

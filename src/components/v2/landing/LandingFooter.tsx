@@ -106,6 +106,14 @@ export function LandingFooter() {
             Contact
           </Link>
           <a
+            href="https://www.instagram.com/onsverhaaltje/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "inherit", textDecoration: "none" }}
+          >
+            Instagram
+          </a>
+          <a
             href="mailto:info@onsverhaaltje.nl"
             style={{ color: "inherit", textDecoration: "none" }}
           >
@@ -123,7 +131,7 @@ export function LandingFooter() {
           fontSize: 12,
         }}
       >
-        Verhalen, illustraties en voorleesstemmen worden gemaakt met AI —
+        Verhalen en illustraties worden gemaakt met AI —
         persoonlijk voor jouw kind, en altijd door jou zelf eerst te lezen.
       </p>
     </footer>

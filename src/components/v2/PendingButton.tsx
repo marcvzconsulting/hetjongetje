@@ -20,6 +20,15 @@ type Props = {
   disabled?: boolean;
   className?: string;
   fullWidth?: boolean;
+  /** Vraag eerst om bevestiging (window.confirm); bij "Annuleren" wordt
+   *  er niets verstuurd. Voor verwijderen, refunds en resets. */
+  confirm?: string;
+  /** Andere server action dan die van het formulier, bv. een
+   *  verwijderknop binnen een bewerkformulier. */
+  formAction?: (formData: FormData) => void | Promise<void>;
+  /** Sla de required-checks van het formulier over (bij verwijderen). */
+  formNoValidate?: boolean;
+  title?: string;
 };
 
 /**
@@ -41,6 +50,10 @@ export function PendingButton({
   disabled,
   className,
   fullWidth,
+  confirm,
+  formAction,
+  formNoValidate,
+  title,
 }: Props) {
   const { pending } = useFormStatus();
   const isDisabled = !!(pending || disabled);
@@ -63,7 +76,22 @@ export function PendingButton({
   };
 
   return (
-    <button type="submit" disabled={isDisabled} className={className} style={base}>
+    <button
+      type="submit"
+      disabled={isDisabled}
+      className={className}
+      style={base}
+      title={title}
+      formAction={formAction}
+      formNoValidate={formNoValidate}
+      onClick={
+        confirm
+          ? (e) => {
+              if (!window.confirm(confirm)) e.preventDefault();
+            }
+          : undefined
+      }
+    >
       {pending && <Spinner color={spinnerColor(variant)} />}
       <span>{pending ? (pendingLabel ?? "Bezig…") : children}</span>
     </button>

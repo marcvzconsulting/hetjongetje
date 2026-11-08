@@ -15,6 +15,8 @@ import { freeStoriesLabel, loadStarterCredits } from "@/lib/starter-credits";
 // Vaste voorbeeldnaam voor copy die over de pagina heen gebruikt wordt.
 const SAMPLE_NAME = "Noor";
 
+const SINTERKLAAS_STRIP_UNTIL = Date.parse("2026-12-06T00:00:00+01:00");
+
 export const metadata = {
   alternates: { canonical: "/" },
 };
@@ -35,6 +37,7 @@ export default async function Home() {
     >
       <LandingJsonLd />
       <ResponsiveStyles />
+      <SinterklaasStrip />
       <Nav />
       <main>
         <Hero starterCredits={starterCredits} />
@@ -240,6 +243,35 @@ function Nav() {
   );
 }
 
+// ── Sinterklaas ────────────────────────────────────────────────────
+
+function isSinterklaasSeason() {
+  return Date.now() < SINTERKLAAS_STRIP_UNTIL;
+}
+
+/** Strookje naar /sinterklaas; verdwijnt vanzelf na pakjesavond. */
+function SinterklaasStrip() {
+  if (!isSinterklaasSeason()) return null;
+  return (
+    <Link
+      href="/sinterklaas"
+      style={{
+        display: "block",
+        padding: "10px 20px",
+        background: V2.night,
+        color: V2.paper,
+        fontFamily: V2.ui,
+        fontSize: 14,
+        textAlign: "center",
+        textDecoration: "none",
+      }}
+    >
+      Sinterklaas komt eraan. Maak een verhaal met jouw kind in de hoofdrol{" "}
+      <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
 // ── Hero ───────────────────────────────────────────────────────────
 
 function Hero({ starterCredits }: { starterCredits: number }) {
@@ -431,7 +463,7 @@ function HowItGoes() {
     },
     {
       n: "III",
-      t: "Voorlezen, of laten voorlezen",
+      t: "Voorlezen, vanavond en later",
       b: "Op de tablet, of op papier. Aan het einde van het jaar bundel je de mooiste verhalen in een echt gedrukt boekje.",
       img: "/images/spots/voorlezen.webp",
       alt: "Aquarel van een slapend kind met een boek en een teddybeer",
