@@ -6,32 +6,49 @@ import { StarField } from "@/components/v2/StarField";
 import { LandingNav } from "@/components/v2/landing/LandingNav";
 import { LandingFooter } from "@/components/v2/landing/LandingFooter";
 import { StickyMobileCta } from "@/components/v2/landing/StickyMobileCta";
+import {
+  firstStoriesFreeLabel,
+  freeStoriesLabel,
+  loadStarterCredits,
+} from "@/lib/starter-credits";
 
 const TITLE = "Sinterklaasverhaal met je kind in de hoofdrol";
-const DESCRIPTION =
-  "Maak in een paar minuten een persoonlijk Sinterklaasverhaal om voor te lezen, met je eigen kind als held. De eerste vijf verhalen zijn gratis.";
+const BASE_DESCRIPTION =
+  "Maak in een paar minuten een persoonlijk Sinterklaasverhaal om voor te lezen, met je eigen kind als held.";
 const OG_IMAGE = "/images/sinterklaas/marie-schoen.jpg";
 
-export const metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: "/sinterklaas" },
-  openGraph: {
-    type: "website",
-    locale: "nl_NL",
-    url: "/sinterklaas",
-    siteName: "Ons Verhaaltje",
+// Aantal gratis verhalen is instelbaar via /admin/pricing; de copy volgt.
+function ctaLabel(n: number): string {
+  return n > 0 ? `Begin met ${freeStoriesLabel(n)}` : "Maak het eerste verhaal";
+}
+
+export async function generateMetadata() {
+  const starterCredits = await loadStarterCredits();
+  const DESCRIPTION =
+    starterCredits > 0
+      ? `${BASE_DESCRIPTION} ${firstStoriesFreeLabel(starterCredits, { capital: true })}.`
+      : BASE_DESCRIPTION;
+  return {
     title: TITLE,
     description: DESCRIPTION,
-    images: [OG_IMAGE],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: TITLE,
-    description: DESCRIPTION,
-    images: [OG_IMAGE],
-  },
-};
+    alternates: { canonical: "/sinterklaas" },
+    openGraph: {
+      type: "website",
+      locale: "nl_NL",
+      url: "/sinterklaas",
+      siteName: "Ons Verhaaltje",
+      title: TITLE,
+      description: DESCRIPTION,
+      images: [OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: TITLE,
+      description: DESCRIPTION,
+      images: [OG_IMAGE],
+    },
+  };
+}
 
 const STEPS = [
   {
@@ -73,7 +90,8 @@ const MOMENTS = [
   { title: "Pakjesavond", line: "Morgen is het pakjesavond en hij kan niet wachten." },
 ];
 
-export default function SinterklaasPage() {
+export default async function SinterklaasPage() {
+  const starterCredits = await loadStarterCredits();
   return (
     <div
       className="v2-root"
@@ -82,18 +100,21 @@ export default function SinterklaasPage() {
       <ResponsiveStyles />
       <LandingNav />
       <main>
-        <Hero />
+        <Hero starterCredits={starterCredits} />
         <HowItGoes />
         <Example />
         <Moments />
-        <GoodToKnow />
-        <ClosingCta />
+        <GoodToKnow starterCredits={starterCredits} />
+        <ClosingCta starterCredits={starterCredits} />
       </main>
       {/* Footer heeft eigen aanmeldknop: sticky CTA verbergt zich zolang hij in beeld is */}
       <div data-sticky-cta-hide>
         <LandingFooter />
       </div>
-      <StickyMobileCta note="Klaar in 3 minuten, geen abonnement nodig" />
+      <StickyMobileCta
+        label={ctaLabel(starterCredits)}
+        note="Klaar in 3 minuten, geen abonnement nodig"
+      />
     </div>
   );
 }
@@ -131,7 +152,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Hero() {
+function Hero({ starterCredits }: { starterCredits: number }) {
   return (
     <section className="sk-section" style={{ padding: "80px 48px" }}>
       <div
@@ -178,7 +199,7 @@ function Hero() {
           </p>
           <div style={{ marginTop: 32 }} data-sticky-cta-anchor>
             <EBtn kind="primary" size="lg" href="/register">
-              Begin met vijf gratis verhalen{" "}
+              {ctaLabel(starterCredits)}{" "}
               <IconV2 name="arrow" size={16} color={V2.paper} />
             </EBtn>
             <div
@@ -388,7 +409,7 @@ function Moments() {
   );
 }
 
-function GoodToKnow() {
+function GoodToKnow({ starterCredits }: { starterCredits: number }) {
   const linkStyle = {
     color: V2.ink,
     textDecoration: "underline",
@@ -409,8 +430,10 @@ function GoodToKnow() {
       question: "Wat kost het?",
       answer: (
         <>
-          De eerste vijf verhalen zijn gratis, zonder abonnement. Daarna kies je
-          zelf: losse verhalen of een abonnement.{" "}
+          {starterCredits > 0
+            ? `${firstStoriesFreeLabel(starterCredits, { capital: true })}, zonder abonnement. `
+            : "Geen abonnement nodig. "}
+          Daarna kies je zelf: losse verhalen of een abonnement.{" "}
           <Link href="/losse-verhalen" style={linkStyle}>
             Bekijk de prijzen
           </Link>
@@ -467,7 +490,7 @@ function GoodToKnow() {
   );
 }
 
-function ClosingCta() {
+function ClosingCta({ starterCredits }: { starterCredits: number }) {
   return (
     <section
       data-sticky-cta-hide
@@ -508,10 +531,12 @@ function ClosingCta() {
             margin: "20px 0 32px",
           }}
         >
-          Vijf gratis verhalen om te proberen. Klaar in drie minuten.
+          {starterCredits > 0 &&
+            `${freeStoriesLabel(starterCredits, { capital: true })} om te proberen. `}
+          Klaar in drie minuten.
         </p>
         <EBtn kind="on-dark" size="lg" href="/register">
-          Begin met vijf gratis verhalen{" "}
+          {ctaLabel(starterCredits)}{" "}
           <IconV2 name="arrow" size={16} color={V2.ink} />
         </EBtn>
       </div>

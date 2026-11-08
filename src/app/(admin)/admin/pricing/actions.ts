@@ -387,5 +387,6 @@ export async function updateStarterCreditsAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/over-ons");
   revalidatePath("/veelgestelde-vragen");
+  revalidatePath("/sinterklaas");
   redirect("/admin/pricing?saved=updated");
 }
