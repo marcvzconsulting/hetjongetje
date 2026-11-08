@@ -38,39 +38,6 @@ export default async function OverOnsPage() {
         ogen vanzelf dichtvielen.
       </P>
 
-      <figure style={{ margin: "48px 0" }}>
-        <div
-          style={{
-            aspectRatio: "4 / 3",
-            background: V2.paperDeep,
-            border: `1px solid ${V2.paperShade}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: V2.mono,
-            fontSize: 11,
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: V2.inkMute,
-          }}
-        >
-          FOTO VOLGT
-        </div>
-        <figcaption
-          style={{
-            marginTop: 14,
-            fontFamily: V2.display,
-            fontStyle: "italic",
-            fontSize: 14,
-            color: V2.inkMute,
-            lineHeight: 1.5,
-          }}
-        >
-          Ik, ergens rond mijn vierde, luisterend naar de avonturen van het
-          jongetje.
-        </figcaption>
-      </figure>
-
       <P>
         Pas toen ik ouder werd, viel het kwartje. De avonturen van het
         jongetje leken opvallend veel op dingen die ik zelf meemaakte. En
