@@ -109,7 +109,8 @@ export function AuthTermsNotice() {
         textAlign: "center",
       }}
     >
-      Door verder te gaan ga je akkoord met onze{" "}
+      Door verder te gaan bevestig je dat je 18 jaar of ouder bent en ga je
+      akkoord met onze{" "}
       <Link href="/voorwaarden" target="_blank" rel="noopener" style={linkStyle}>
         algemene voorwaarden
       </Link>{" "}

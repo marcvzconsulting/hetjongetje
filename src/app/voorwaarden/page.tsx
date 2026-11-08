@@ -68,6 +68,12 @@ export default function VoorwaardenPage() {
 
       <H2>Account en gebruik</H2>
       <P>
+        <strong>Je moet 18 jaar of ouder zijn</strong> om een account aan te
+        maken. Ons Verhaaltje is bedoeld voor ouders, grootouders en andere
+        volwassenen die verhalen maken voor een kind. Kinderen maken zelf
+        geen account aan; zij luisteren mee als jij voorleest.
+      </P>
+      <P>
         Een account is bedoeld voor één huishouden. Je bent zelf
         verantwoordelijk voor het geheim houden van je wachtwoord. We
         vragen je om alleen profielen aan te maken voor kinderen waarvoor
@@ -255,7 +261,7 @@ export default function VoorwaardenPage() {
           opacity: 0.7,
         }}
       >
-        Laatst bijgewerkt: oktober 2026.
+        Laatst bijgewerkt: november 2026.
       </p>
     </ContentPage>
   );
