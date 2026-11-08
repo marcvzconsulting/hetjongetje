@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
     if (!termsAccepted) {
       setError(
-        "Vink eerst aan dat je akkoord gaat met de algemene voorwaarden."
+        "Vink eerst aan dat je 18 jaar of ouder bent en akkoord gaat met de algemene voorwaarden."
       );
       return;
     }
@@ -200,7 +200,7 @@ export default function RegisterPage() {
             onChange={setTermsAccepted}
             label={
               <>
-                Ik ga akkoord met de{" "}
+                Ik ben 18 jaar of ouder, ga akkoord met de{" "}
                 <Link
                   href="/voorwaarden"
                   target="_blank"
