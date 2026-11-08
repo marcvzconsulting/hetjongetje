@@ -3,6 +3,10 @@ import { EBtn } from "@/components/v2";
 import { V2 } from "@/components/v2/tokens";
 import { loadPublishedFaq } from "@/lib/faq";
 import { headers } from "next/headers";
+import {
+  firstStoriesFreeLabel,
+  loadStarterCredits,
+} from "@/lib/starter-credits";
 
 export const metadata = {
   title: "Veelgestelde vragen",
@@ -16,7 +20,10 @@ export const dynamic = "force-dynamic";
 
 export default async function VeelgesteldeVragenPage() {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
-  const entries = await loadPublishedFaq();
+  const [entries, starterCredits] = await Promise.all([
+    loadPublishedFaq(),
+    loadStarterCredits(),
+  ]);
 
   return (
     <ContentPage
@@ -101,8 +108,9 @@ export default async function VeelgesteldeVragenPage() {
             lineHeight: 1.5,
           }}
         >
-          Vraag beantwoord? De eerste vijf verhalen zijn gratis, dus je kunt
-          het gewoon proberen.
+          {starterCredits > 0
+            ? `Vraag beantwoord? ${firstStoriesFreeLabel(starterCredits, { capital: true })}, dus je kunt het gewoon proberen.`
+            : "Vraag beantwoord? Maak gewoon je eerste verhaal."}
         </p>
         <EBtn kind="primary" size="lg" href="/register">
           Probeer het

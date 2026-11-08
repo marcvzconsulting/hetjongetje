@@ -24,7 +24,7 @@ type Props = {
 
 export function StickyMobileCta({
   href = "/register",
-  label = "Begin met vijf gratis verhalen",
+  label = "Maak het eerste verhaal",
   note = "Klaar in 3 minuten",
 }: Props) {
   const [pastAnchor, setPastAnchor] = useState(false);
