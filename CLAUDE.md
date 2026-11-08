@@ -14,7 +14,7 @@ Hosting is Vercel: `master` on GitHub (`marcvzconsulting/hetjongetje`) deploys t
 - **Auth**: Auth.js v5 (`src/lib/auth.ts`): password, magic link (`src/lib/magic-link.ts`) and Google
 - **AI Stories**: Claude via @anthropic-ai/sdk in `src/lib/ai/story-generator.ts`. Model `claude-fable-5-1` (override with env `STORY_MODEL`), effort "medium", structured outputs against a JSON schema. Fallback `claude-opus-5`: server-side on a refusal, a second call on a technical error.
 - **AI Images**: fal.ai. Portret via FLUX.2 Pro; bij goedkeuring wordt een karakterblad (close-up + driekwart) afgeleid (`src/lib/ai/character-sheet.ts`, `Child.referenceSheetUrls`). Verhaalillustraties: FLUX.2 Pro edit met portret + karakterblad als referenties (env `ILLUSTRATION_ENGINE`: `flux2` default | `nano-banana-2` | `flux1` = kill-switch). Zonder portret: FLUX Pro 1.1 tekst+seed. Getrainde LoRA gaat voor. Backfill oude profielen: `scripts/backfill-reference-sheets.ts`.
-- **Read-aloud audio**: ElevenLabs (`src/app/api/stories/[storyId]/audio`)
+- **Read-aloud audio**: removed (Nov 2026); parents read aloud themselves. The `story_audio` table and the cleanup of old audio files on story/account deletion are still in place.
 - **Storage**: Scaleway Object Storage (S3-compatible, nl-ams)
 - **Payments**: Mollie. **Email**: Brevo. **Monitoring**: Sentry, BetterStack on `/api/health`.
 - Installed but not used in `src/`: next-intl, Zustand, TanStack Query. There is no job queue.

@@ -25,7 +25,6 @@ import {
   type TextLayout,
 } from "../src/lib/story/reader-units";
 import { storyToSpreads } from "../src/lib/story/storyToSpreads";
-import { spreadsToPageNumbers } from "../src/lib/story/spread-audio";
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -149,16 +148,6 @@ check("dropcap alleen op de eerste verhaalpagina", () => {
     texts.map((u) => u.pageNumber),
     [1, 2, 3, 4],
   );
-});
-
-check("spread-index sluit aan op de voorlees-koppeling", () => {
-  const pageNumbers = spreadsToPageNumbers(spreads);
-  for (const u of base) {
-    if (u.kind === "text") {
-      assert.equal(pageNumbers[u.spreadIdx], u.pageNumber);
-    }
-  }
-  assert.equal(pageNumbers[0], 0);
 });
 
 check("einde zonder illustratie geeft geen beeld", () => {

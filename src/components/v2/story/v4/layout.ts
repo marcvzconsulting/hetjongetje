@@ -24,7 +24,6 @@ export type ReaderLayout = {
   scale: number;
   /** Basisgroottes in px vóór de schaal, groot → klein. */
   sizes: readonly number[];
-  listening: boolean;
 
   // Bediening
   topPad: string;
@@ -119,10 +118,9 @@ export function landscapeImageBox(layout: ReaderLayout): {
   };
 }
 
-/** Ruimte onder de kaart voor de bediening; meer als het voorleespaneel
- *  open is of als de laatste pagina extra knoppen toont. */
+/** Ruimte onder de kaart voor de bediening; meer als de laatste pagina
+ *  extra knoppen toont. */
 const INSET = 118;
-const INSET_LISTENING = 58;
 const INSET_ENDING = 48;
 const INSET_ENDING_WRAP = 46;
 
@@ -131,11 +129,7 @@ const SAFE_TOP_LOW = "max(8px, calc(env(safe-area-inset-top, 0px) + 6px))";
 const safeBottom = (px: number) =>
   `max(${px}px, calc(env(safe-area-inset-bottom, 0px) + 10px))`;
 
-export function computeLayout(
-  width: number,
-  height: number,
-  listening: boolean,
-): ReaderLayout {
+export function computeLayout(width: number, height: number): ReaderLayout {
   const orientation: Orientation = width >= height ? "landscape" : "portrait";
   const shortSide = Math.min(width, height);
   const device: Device =
@@ -167,7 +161,6 @@ export function computeLayout(
     device,
     scale,
     sizes: landscape ? LANDSCAPE_SIZES : PORTRAIT_SIZES,
-    listening,
 
     topPad: phone
       ? landscape
@@ -190,7 +183,7 @@ export function computeLayout(
 
     imageCol: landscape ? landscapeImageCol(width, height) : 0,
     colPadTop: phone ? 56 : 72,
-    colPadBottom: (phone ? 62 : 104) + (listening ? INSET_LISTENING : 0),
+    colPadBottom: phone ? 62 : 104,
     colPadOuter: 30,
     colPadInner: 26,
   };
@@ -202,7 +195,7 @@ export function insetFor(
   kind: DisplayUnit["kind"],
   showCta: boolean,
 ): number {
-  let inset = INSET + (layout.listening ? INSET_LISTENING : 0);
+  let inset = INSET;
   if (kind === "ending") {
     inset += INSET_ENDING;
     // Twee knoppen passen op een smal scherm niet naast elkaar.

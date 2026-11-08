@@ -26,10 +26,6 @@
       "schedule": "0 7 * * *"
     },
     {
-      "path": "/api/cron/elevenlabs-quota",
-      "schedule": "15 7 * * *"
-    },
-    {
       "path": "/api/cron/subscription-health",
       "schedule": "45 7 * * *"
     },
