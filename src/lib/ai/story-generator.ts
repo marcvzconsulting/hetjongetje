@@ -320,9 +320,10 @@ function sanitizeBible(bible: CharacterBible): CharacterBible {
     mainCharacterDescription: bible.mainCharacterDescription
       ? sanitizePromptDescription(bible.mainCharacterDescription)
       : undefined,
-    // approvedCharacterPrompt is reviewed by an admin before use, so it
-    // gets the long-text treatment but stays editable. Still strip control
-    // chars to harden against accidental newlines or copy-paste artefacts.
+    // approvedCharacterPrompt wordt bij het goedkeuren van het portret
+    // server-side uit het profiel opgebouwd (preview-route) en hier uit de
+    // database gelezen; er kijkt geen admin naar. Daarom dezelfde
+    // sanitizing als de andere vrije tekst.
     approvedCharacterPrompt: bible.approvedCharacterPrompt
       ? sanitizePromptDescription(bible.approvedCharacterPrompt)
       : undefined,
