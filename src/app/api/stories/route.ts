@@ -18,7 +18,11 @@ import {
 } from "@/lib/storage/scaleway";
 import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
-import { reserveStoryCredit, refundStoryCredit } from "@/lib/user-gate";
+import {
+  loadUserGate,
+  reserveStoryCredit,
+  refundStoryCredit,
+} from "@/lib/user-gate";
 import { sendMail } from "@/lib/email/client";
 import { buildFirstStoryMail } from "@/lib/email/templates/first-story";
 import { buildAdminStoryIncompleteMail } from "@/lib/email/templates/admin-story-incomplete";
@@ -138,6 +142,17 @@ export async function POST(request: NextRequest) {
         );
       }
       if (reserved.reason === "no_credits") {
+        const gate = await loadUserGate(session.user.id);
+        if (gate && gate.pendingStarterCredits > 0) {
+          return NextResponse.json(
+            {
+              error:
+                "Bevestig eerst je e-mailadres via de link in je mail. Daarna staan je gratis verhalen klaar.",
+              code: "email_not_verified",
+            },
+            { status: 402 }
+          );
+        }
         return NextResponse.json(
           {
             error:

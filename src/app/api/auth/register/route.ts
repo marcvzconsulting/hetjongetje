@@ -18,6 +18,7 @@ import { SIGNUP_SOURCE_COOKIE, signupSourceFields } from "@/lib/signup-source";
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 import { rateLimit } from "@/lib/rate-limit/rate-limit";
 import { loadStarterCredits } from "@/lib/starter-credits";
+import { sendVerifyEmailMail } from "@/lib/auth/verify-email-mail";
 import { z } from "zod";
 
 function clientIp(request: NextRequest): string {
@@ -125,7 +126,11 @@ export async function POST(request: NextRequest) {
         name: nameStr,
         email: normalizedEmail,
         passwordHash,
-        storyCredits: starterCredits + refBonus,
+        // Het gratis tegoed staat klaar tot het e-mailadres is bevestigd
+        // (zie lib/auth/email-verification.ts). Zonder die stap leverde
+        // elk wegwerpadres direct gratis AI-kosten op.
+        storyCredits: 0,
+        pendingStarterCredits: starterCredits + refBonus,
         status: "approved",
         referredByUserId: inviterId,
         ...signupSourceFields(request.cookies.get(SIGNUP_SOURCE_COOKIE)?.value),
@@ -136,6 +141,13 @@ export async function POST(request: NextRequest) {
         // huidige gedrag; dit geldt alleen voor nieuwe registraties.
         remindersOptOutAt: remindersOptIn === true ? null : new Date(),
       },
+    });
+
+    await sendVerifyEmailMail({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      credits: user.pendingStarterCredits,
     });
 
     try {

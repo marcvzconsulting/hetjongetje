@@ -44,8 +44,47 @@ export async function markEmailVerified(user: {
     },
     select: { sessionVersion: true },
   });
+  await releasePendingStarterCredits(user.id);
   console.warn(
     `[auth] eerste verificatie van account ${user.id}: wachtwoord vervangen en sessies ingetrokken`,
   );
   return { sessionVersion: updated.sessionVersion, passwordReplaced: true };
+}
+
+/**
+ * Schuif klaarstaande startcredits door naar het tegoed. Atomair en
+ * idempotent: de voorwaarde op het gelezen aantal zorgt dat twee
+ * gelijktijdige bevestigingen het tegoed maar één keer bijschrijven.
+ */
+export async function releasePendingStarterCredits(
+  userId: string,
+): Promise<number> {
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { pendingStarterCredits: true },
+  });
+  const pending = row?.pendingStarterCredits ?? 0;
+  if (pending <= 0) return 0;
+  const res = await prisma.user.updateMany({
+    where: { id: userId, pendingStarterCredits: pending },
+    data: {
+      storyCredits: { increment: pending },
+      pendingStarterCredits: 0,
+    },
+  });
+  return res.count === 1 ? pending : 0;
+}
+
+/**
+ * Bevestiging via de link uit de bevestigingsmail, aangeklikt terwijl de
+ * gebruiker zelf is ingelogd (zie app/auth/verify/route.ts). Dat bewijst
+ * zowel kennis van het wachtwoord als toegang tot de mailbox, dus het
+ * wachtwoord blijft staan.
+ */
+export async function confirmEmailForSession(userId: string): Promise<void> {
+  await prisma.user.updateMany({
+    where: { id: userId, emailVerifiedAt: null },
+    data: { emailVerifiedAt: new Date() },
+  });
+  await releasePendingStarterCredits(userId);
 }

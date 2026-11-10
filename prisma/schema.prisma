@@ -27,6 +27,12 @@ model User {
   /// sessies van deze gebruiker ongeldig (wachtwoordreset,
   /// eerste verificatie van een vooraf geregistreerd adres).
   sessionVersion     Int            @default(0) @map("session_version")
+  /// Startcredits (plus eventuele referral-bonus) die klaarstaan tot het
+  /// e-mailadres is bevestigd. Bij registratie met een wachtwoord begint
+  /// storyCredits op 0 en staat het tegoed hier; bij bevestiging schuift
+  /// het door. Zo levert een wegwerpadres geen gratis AI-kosten op.
+  /// Aanmelden met Google is meteen bevestigd en slaat deze stap over.
+  pendingStarterCredits Int         @default(0) @map("pending_starter_credits")
   phone              String?
   street             String?
   houseNumber        String?        @map("house_number")
