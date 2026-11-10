@@ -17,5 +17,9 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: string;
+    /** User.sessionVersion op het moment van inloggen. */
+    sv?: number;
+    /** Laatste controle tegen de database (ms sinds epoch). */
+    checkedAt?: number;
   }
 }

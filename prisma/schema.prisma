@@ -16,6 +16,17 @@ model User {
   status             String         @default("pending") // "pending" | "approved" | "suspended"
   storyCredits       Int            @default(0) @map("story_credits")
   lastLoginAt        DateTime?      @map("last_login_at")
+  /// Wanneer is aangetoond dat de gebruiker bij deze mailbox kan: eerste
+  /// login via Google of een magic link, of een voltooide wachtwoordreset.
+  /// Registreren met een wachtwoord bewijst dat niet. Zolang dit null is,
+  /// vervangt de eerste bewezen login het wachtwoord (zie
+  /// lib/auth/email-verification.ts), zodat iemand die het adres van een
+  /// ander vooraf registreert niet kan blijven meelezen.
+  emailVerifiedAt    DateTime?      @map("email_verified_at")
+  /// Teller die in de sessie-JWT staat. Ophogen maakt alle bestaande
+  /// sessies van deze gebruiker ongeldig (wachtwoordreset,
+  /// eerste verificatie van een vooraf geregistreerd adres).
+  sessionVersion     Int            @default(0) @map("session_version")
   phone              String?
   street             String?
   houseNumber        String?        @map("house_number")

@@ -13,6 +13,7 @@ import { buildWelcomeMail } from "@/lib/email/templates/welcome";
 import { buildAdminNewSignupMail } from "@/lib/email/templates/admin-new-signup";
 import { buildAppUrl } from "@/lib/url";
 import { consumeMagicLinkToken } from "@/lib/magic-link";
+import { markEmailVerified } from "@/lib/auth/email-verification";
 import { cookies } from "next/headers";
 import { SIGNUP_SOURCE_COOKIE, signupSourceFields } from "@/lib/signup-source";
 
@@ -43,6 +44,10 @@ const DECOY_HASH =
 
 import { getAdminNotifyEmails } from "@/lib/admin/notify";
 import { isAdminPasswordLoginAllowed } from "@/lib/admin/password-login-allowlist";
+
+/** Hoe vaak een lopende sessie opnieuw tegen de database wordt gecontroleerd
+ *  (rol, blokkade, ingetrokken sessies). */
+const SESSION_RECHECK_MS = 5 * 60 * 1000;
 
 /** Send the welcome + admin notification mails for a brand-new account.
  *  Fire-and-forget — never blocks the auth flow. */
@@ -116,10 +121,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   providers: [
     // Google OAuth — picks up AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET from env
-    // automatically. allowDangerousEmailAccountLinking is acceptable here:
-    // Google-issued emails are verified by Google itself, so we can safely
-    // merge a Google sign-in into an existing credentials account that
-    // shares the address.
+    // automatically. allowDangerousEmailAccountLinking: Google heeft het
+    // adres geverifieerd, maar het bestaande wachtwoordaccount niet. Daarom
+    // vervangt de jwt-callback bij de eerste Google-login op een
+    // ongeverifieerd account het wachtwoord (markEmailVerified).
     Google({
       allowDangerousEmailAccountLinking: true,
     }),
@@ -210,6 +215,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) return null;
 
+        // De link kwam via de mailbox binnen: dat bewijst het adres. Bij
+        // een nog ongeverifieerd account vervalt het eerder gekozen
+        // wachtwoord (zie lib/auth/email-verification.ts).
+        await markEmailVerified(user);
+
         await prisma.user.update({
           where: { id: user.id },
           data: {
@@ -241,7 +251,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // First sign-in fires this with `user` populated. On subsequent
       // requests within the same session, `user` is undefined and the
       // token already has id+role.
-      if (!user) return token;
+      if (!user) {
+        // Lopende sessie: af en toe controleren of het account nog bestaat
+        // en of de sessies niet zijn ingetrokken (wachtwoordreset, eerste
+        // verificatie). De rol wordt meteen ververst, zodat ingetrokken
+        // adminrechten niet tot het einde van de sessie blijven gelden.
+        // Een geblokkeerd account blijft ingelogd: het dashboard toont dan
+        // de melding. Tokens van vóór deze controle hebben geen `sv`; dat
+        // telt als versie 0.
+        const userId = typeof token.id === "string" ? token.id : null;
+        if (!userId) return token;
+        const now = Date.now();
+        const checkedAt =
+          typeof token.checkedAt === "number" ? token.checkedAt : 0;
+        if (now - checkedAt < SESSION_RECHECK_MS) return token;
+        const current = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { role: true, sessionVersion: true },
+        });
+        const tokenVersion = typeof token.sv === "number" ? token.sv : 0;
+        if (!current || current.sessionVersion !== tokenVersion) {
+          // null = Auth.js wist de sessiecookie.
+          return null;
+        }
+        token.role = current.role;
+        token.checkedAt = now;
+        return token;
+      }
 
       if (account?.provider === "google" && user.email) {
         // Find or create the DB user that matches this Google account.
@@ -268,6 +304,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               // registratiepad zodat de welkomstervaring gelijk is.
               storyCredits: await loadStarterCredits(),
               lastLoginAt: new Date(),
+              emailVerifiedAt: new Date(),
               // Onder de Google-knop staat de kennisgeving dat doorgaan
               // akkoord met de voorwaarden betekent (AuthTermsNotice) —
               // dit legt dat moment vast, net als bij credentials.
@@ -284,6 +321,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             createdAt: dbUser.createdAt,
           });
         } else {
+          const verified = await markEmailVerified(dbUser);
+          dbUser.sessionVersion = verified.sessionVersion;
           await prisma.user.update({
             where: { id: dbUser.id },
             data: {
@@ -298,11 +337,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         token.id = dbUser.id;
         token.role = dbUser.role;
+        token.sv = dbUser.sessionVersion;
       } else {
         // Credentials path: authorize() already returned id+role.
         token.id = user.id;
         token.role = (user as { role?: string }).role ?? "user";
+        const row = user.id
+          ? await prisma.user.findUnique({
+              where: { id: user.id },
+              select: { sessionVersion: true },
+            })
+          : null;
+        token.sv = row?.sessionVersion ?? 0;
       }
+      token.checkedAt = Date.now();
       return token;
     },
     async session({ session, token }) {

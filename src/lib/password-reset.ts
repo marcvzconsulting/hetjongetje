@@ -91,7 +91,14 @@ export async function consumeTokenAndSetPassword(
   await prisma.$transaction([
     prisma.user.update({
       where: { id: validated.userId },
-      data: { passwordHash },
+      // De resetlink kwam via de mailbox binnen: dat bewijst het adres.
+      // sessionVersion ophogen logt elke bestaande sessie uit, zodat
+      // iemand die het oude wachtwoord kende niet ingelogd blijft.
+      data: {
+        passwordHash,
+        emailVerifiedAt: new Date(),
+        sessionVersion: { increment: 1 },
+      },
     }),
     prisma.passwordResetToken.updateMany({
       where: { userId: validated.userId, usedAt: null },
