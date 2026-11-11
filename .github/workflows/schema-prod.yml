@@ -1,0 +1,131 @@
+# Schemawijziging naar de productie-database, handmatig te starten.
+#
+# Waarom: `pnpm db:push:prod` vraagt een laptop met .env.production.local.
+# Deze Action doet hetzelfde vanuit GitHub, met de database-URL die al als
+# secret bestaat voor de nachtelijke backup (NEON_DATABASE_URL).
+#
+# Werkwijze (bewust in twee keer):
+#   1. Start met "toepassen" uit: de run toont alleen de SQL die nodig is om
+#      de productie-database gelijk te maken aan prisma/schema.prisma van de
+#      gekozen branch. Er wijzigt niets.
+#   2. Klopt de SQL, start dan opnieuw met "toepassen" aan.
+#
+# Veiligheid:
+#   - Alleen toevoegingen worden toegepast. Staat er iets in de SQL dat data
+#     kan weggooien of bestaande kolommen wijzigt (DROP, ALTER COLUMN, RENAME,
+#     TRUNCATE, DELETE), dan stopt de run vóór het toepassen. Zo'n wijziging
+#     doe je bewust met de hand.
+#   - `prisma db push` draait zonder --accept-data-loss.
+#   - Na het toepassen controleert de run dat er geen verschil meer is.
+#   - De hostnaam van de database wordt in het log gemaskeerd.
+
+name: Schema naar productie
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch of commit waarvan prisma/schema.prisma wordt gebruikt"
+        required: true
+        default: master
+      toepassen:
+        description: "Aanvinken om de wijziging uit te voeren (anders alleen tonen)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-prod
+  cancel-in-progress: false
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PRISMA_CONFIG: prisma/prisma.config.ts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Afhankelijkheden installeren
+        env:
+          # Alleen nodig zodat `prisma generate` in postinstall de config kan laden.
+          DATABASE_URL: postgresql://build:build@localhost:5432/build
+        run: pnpm install --frozen-lockfile
+
+      - name: Verschil met productie bepalen
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          SCHEMA_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NEON_DATABASE_URL:-}" ]; then
+            echo "Secret NEON_DATABASE_URL ontbreekt." >&2
+            exit 1
+          fi
+          # Hostnaam maskeren in alle verdere logregels.
+          HOST="$(printf '%s' "$NEON_DATABASE_URL" | sed -E 's#^[^@]*@([^/:?]+).*#\1#')"
+          echo "::add-mask::$HOST"
+          # De schema-engine van Prisma kent sslmode=verify-full niet overal;
+          # `require` versleutelt de verbinding evengoed.
+          export DATABASE_URL="${NEON_DATABASE_URL/sslmode=verify-full/sslmode=require}"
+          echo "::add-mask::$DATABASE_URL"
+          pnpm exec prisma migrate diff --config "$PRISMA_CONFIG" \
+            --from-config-datasource --to-schema prisma/schema.prisma \
+            --script --output diff.sql
+          touch diff.sql
+          if grep -qvE '^\s*(--.*)?$' diff.sql; then
+            echo "Nodig om productie gelijk te maken aan $SCHEMA_REF:"
+            echo "----------------------------------------"
+            cat diff.sql
+            echo "----------------------------------------"
+            echo "wijziging=ja" >> "$GITHUB_ENV"
+          else
+            echo "Geen verschil: de productie-database is al gelijk aan het schema."
+            echo "wijziging=nee" >> "$GITHUB_ENV"
+          fi
+
+      - name: Controleren dat het alleen toevoegingen zijn
+        if: env.wijziging == 'ja'
+        run: |
+          set -euo pipefail
+          if grep -iE '\b(DROP|TRUNCATE|DELETE|RENAME)\b|ALTER[[:space:]]+COLUMN' diff.sql; then
+            echo "De SQL bevat meer dan toevoegingen (zie de regels hierboven)." >&2
+            echo "Deze workflow past dat niet toe; doe zo'n wijziging bewust met de hand." >&2
+            exit 1
+          fi
+          echo "Alleen toevoegingen."
+
+      - name: Toepassen op productie
+        if: env.wijziging == 'ja' && inputs.toepassen
+        env:
+          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+          SCHEMA_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          HOST="$(printf '%s' "$NEON_DATABASE_URL" | sed -E 's#^[^@]*@([^/:?]+).*#\1#')"
+          echo "::add-mask::$HOST"
+          export DATABASE_URL="${NEON_DATABASE_URL/sslmode=verify-full/sslmode=require}"
+          echo "::add-mask::$DATABASE_URL"
+          pnpm exec prisma db push --config "$PRISMA_CONFIG"
+          # Nacontrole: er mag geen verschil meer zijn (exitcode 2 = nog verschil).
+          pnpm exec prisma migrate diff --config "$PRISMA_CONFIG" \
+            --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+          echo "Toegepast en gecontroleerd: productie is gelijk aan $SCHEMA_REF."
+
+      - name: Niet toegepast
+        if: env.wijziging == 'ja' && !inputs.toepassen
+        run: echo "Alleen getoond. Start de workflow opnieuw met 'toepassen' aangevinkt om dit uit te voeren."
