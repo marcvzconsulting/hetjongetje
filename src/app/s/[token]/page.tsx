@@ -12,6 +12,7 @@ import {
   resolveReaderVersion,
 } from "@/lib/reader/version";
 import { PublicStoryReader } from "./client";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 interface Props {
   params: Promise<{ token: string }>;
@@ -109,7 +110,9 @@ export default async function SharedStoryPage({
     pages: story.pages.map((p) => ({
       pageNumber: p.pageNumber,
       text: p.text,
-      illustrationUrl: p.illustrationUrl,
+      // Privé-opslag: het deeltoken gaat mee, zodat een bezoeker zonder
+      // account de plaatjes van dit gedeelde verhaal kan zien.
+      illustrationUrl: toDisplayUrl(p.illustrationUrl, { shareToken: token }),
       illustrationDescription: p.illustrationDescription,
       illustrationPrompt: p.illustrationPrompt,
     })),

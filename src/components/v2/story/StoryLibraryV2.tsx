@@ -6,6 +6,7 @@ import Link from "next/link";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker, IconV2 } from "@/components/v2";
 import { STORY_SETTINGS } from "@/lib/ai/prompts/story-request";
+import { isProtectedImageUrl } from "@/lib/storage/image-url";
 
 export type StoryData = {
   id: string;
@@ -450,6 +451,7 @@ function StoryCard({
           {story.coverUrl ? (
             <Image
               src={story.coverUrl}
+              unoptimized={isProtectedImageUrl(story.coverUrl)}
               alt={story.title}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { V2 } from "./tokens";
+import { isProtectedImageUrl } from "@/lib/storage/image-url";
 
 type Props = {
   name: string;
@@ -43,6 +44,7 @@ export function Avatar({
       >
         <Image
           src={src}
+          unoptimized={isProtectedImageUrl(src)}
           alt=""
           fill
           sizes={`${size}px`}

@@ -34,6 +34,7 @@ interface ChildData {
   mainCharacterDescription: string;
   storyCount: number;
   approvedPreviewUrl: string | null;
+  approvedPreviewDisplayUrl: string | null;
   hasApprovedPrompt: boolean;
 }
 
@@ -587,6 +588,7 @@ export function ProfileEditor({ child }: Props) {
             childId={child.id}
             childName={child.name}
             currentPreviewUrl={child.approvedPreviewUrl}
+            currentPreviewDisplayUrl={child.approvedPreviewDisplayUrl}
             isApproved={child.hasApprovedPrompt}
           />
 

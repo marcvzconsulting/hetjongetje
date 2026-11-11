@@ -47,6 +47,7 @@ import {
   ReaderTopBar,
 } from "./v4/ReaderChrome";
 import { ReaderMenu } from "./v4/ReaderMenu";
+import { isProtectedImageUrl } from "@/lib/storage/image-url";
 
 export type { WordHighlight };
 
@@ -475,6 +476,7 @@ export function BookViewerV4({
   if (coverUrl) {
     const { props: img } = getImageProps({
       src: coverUrl,
+      unoptimized: isProtectedImageUrl(coverUrl),
       alt: "",
       fill: true,
       sizes: IMG_SIZES,
@@ -645,6 +647,7 @@ export function BookViewerV4({
               <Image
                 key={url}
                 src={url}
+                unoptimized={isProtectedImageUrl(url)}
                 alt=""
                 fill
                 sizes={layout.orientation === "landscape" ? "60vw" : "100vw"}

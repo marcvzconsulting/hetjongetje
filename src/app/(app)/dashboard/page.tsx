@@ -18,6 +18,7 @@ import { ReferralCard } from "@/components/v2/app/ReferralCard";
 import { getOrCreateReferralCode } from "@/lib/referral";
 import { buildAppUrl } from "@/lib/url";
 import { markOnboardedAction, resendVerifyEmailAction } from "./actions";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 export default async function DashboardPage({
   searchParams,
@@ -271,7 +272,7 @@ export default async function DashboardPage({
               setting: s.setting,
               isFavorite: s.isFavorite,
               createdAt: s.createdAt.toISOString(),
-              coverUrl: s.pages[0]?.illustrationUrl ?? null,
+              coverUrl: toDisplayUrl(s.pages[0]?.illustrationUrl),
             }));
             return (
               // Elk kind een eigen "plank": zachte kaart zodat meerdere
@@ -292,7 +293,7 @@ export default async function DashboardPage({
                   gender={child.gender}
                   storyCount={child.stories.length}
                   childId={child.id}
-                  previewUrl={child.approvedPreviewUrl}
+                  previewUrl={toDisplayUrl(child.approvedPreviewUrl)}
                 />
                 <StoryLibraryV2
                   stories={serialized}
