@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,9 @@ export default async function AdminNewsletterPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const params = await searchParams;
   const presetKey = params.range && RANGE_PRESETS[params.range] ? params.range : "30d";
   const rangeStart = getRangeStart(presetKey);

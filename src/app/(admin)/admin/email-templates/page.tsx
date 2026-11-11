@@ -4,10 +4,14 @@ import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { EDITABLE_TEMPLATES } from "@/lib/email/template-store";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmailTemplatesIndexPage() {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const session = await auth();
   const overrides = await prisma.emailTemplate.findMany({
     select: { code: true, updatedAt: true, subject: true },

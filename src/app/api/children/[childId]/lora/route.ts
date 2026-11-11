@@ -20,6 +20,7 @@ import {
   photoRejectionMessage,
   type PhotoModerationVerdict,
 } from "@/lib/ai/photo-moderation";
+import { hasPaidOrder } from "@/lib/payments/paid-access";
 import { loadUserGate } from "@/lib/user-gate";
 import { sendMail } from "@/lib/email/client";
 import { buildLoraReadyMail } from "@/lib/email/templates/lora-ready";
@@ -177,6 +178,20 @@ export async function POST(req: NextRequest, { params }: Props) {
     return NextResponse.json(
       { error: "Je account moet eerst goedgekeurd worden" },
       { status: 403 }
+    );
+  }
+
+  // Training kost €2-3 per run en geen credit: alleen voor accounts die
+  // ooit betaald hebben (admins uitgezonderd). Zonder deze drempel kon
+  // elk gratis account de kosten opdrijven.
+  if (!gate.isAdmin && !(await hasPaidOrder(session.user.id))) {
+    return NextResponse.json(
+      {
+        error:
+          "Een persoonlijk model trainen kan na je eerste aankoop. Koop een verhalenbundel of neem een abonnement en probeer het daarna opnieuw.",
+        code: "payment_required",
+      },
+      { status: 402 }
     );
   }
 

@@ -17,6 +17,8 @@ type Props = {
   initialStatus: Status | "uploaded";
   initialTrainedAt: string | null;
   initialFailureReason: string | null;
+  /** Nog geen aankoop gedaan: trainen is dan niet beschikbaar. */
+  locked?: boolean;
 };
 
 type TransientStep = "idle" | "consent" | "upload";
@@ -27,6 +29,7 @@ export function LoraTrainer({
   initialStatus,
   initialTrainedAt,
   initialFailureReason,
+  locked = false,
 }: Props) {
   const normaliseStatus = (s: string): Status =>
     s === "ready" || s === "training" || s === "failed" ? s : "none";
@@ -237,7 +240,9 @@ export function LoraTrainer({
         </h2>
       </div>
 
-      {status === "none" && transient === "idle" && (
+      {status === "none" && transient === "idle" && locked && <LockedState />}
+
+      {status === "none" && transient === "idle" && !locked && (
         <IdleState
           childName={childName}
           onStart={() => setTransient("consent")}
@@ -303,6 +308,29 @@ export function LoraTrainer({
 }
 
 // ── State views ────────────────────────────────────────────────
+
+function LockedState() {
+  return (
+    <>
+      <p
+        style={{
+          fontFamily: V2.body,
+          fontSize: 15,
+          lineHeight: 1.6,
+          color: V2.inkSoft,
+          margin: "0 0 16px",
+        }}
+      >
+        Met een paar foto&rsquo;s trainen we een klein model, zodat je kind
+        er in elk verhaal hetzelfde uitziet. Dit kan na je eerste aankoop.
+        Tot die tijd gebruik je het gegenereerde portret hierboven.
+      </p>
+      <EBtn kind="primary" size="md" href="/credits">
+        Verhalen bijkopen →
+      </EBtn>
+    </>
+  );
+}
 
 function IdleState({
   childName,

@@ -16,6 +16,7 @@ interface Props {
 export function CharacterPreview({ childId, childName, currentPreviewUrl, currentPreviewDisplayUrl, isApproved }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentPreviewUrl);
   const [characterPrompt, setCharacterPrompt] = useState<string | null>(null);
+  const [previewToken, setPreviewToken] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [approved, setApproved] = useState(isApproved);
   const [saving, setSaving] = useState(false);
@@ -41,6 +42,7 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, curren
       const data = await res.json();
       setPreviewUrl(data.imageUrl);
       setCharacterPrompt(data.characterPrompt);
+      setPreviewToken(data.previewToken ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Er ging iets mis");
     } finally {
@@ -60,8 +62,8 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, curren
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          characterPrompt,
           imageUrl: previewUrl,
+          previewToken,
         }),
       });
 

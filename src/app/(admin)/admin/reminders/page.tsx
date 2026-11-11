@@ -8,6 +8,7 @@ import { day1ProfileReminderDefaults } from "@/lib/email/templates/day1-profile-
 import { day3StoryReminderDefaults } from "@/lib/email/templates/day3-story-reminder";
 import { day7LoginReminderDefaults } from "@/lib/email/templates/day7-login-reminder";
 import type { ReminderTrigger } from "./triggers";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,9 @@ export default async function RemindersPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const session = await auth();
   const sp = await searchParams;
 
