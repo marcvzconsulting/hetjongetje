@@ -20,6 +20,7 @@ import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 import { approvePreviewSchema, parseJsonBody } from "@/lib/validation";
 import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import { loadUserGate } from "@/lib/user-gate";
+import { createPreviewToken, verifyPreviewToken } from "@/lib/ai/preview-token";
 
 // Goedkeuren maakt sinds sept 2026 ook het karakterblad (2 x flux-2-pro/edit,
 // ~25 s) plus uploads; zonder expliciete limiet kapt Vercel dat af.
@@ -104,6 +105,10 @@ export async function POST(request: NextRequest, { params }: Props) {
     return NextResponse.json({
       imageUrl,
       characterPrompt: charDescription,
+      // Bewijs voor de goedkeurstap dat dit portret van ons komt.
+      previewToken: imageUrl
+        ? createPreviewToken(session.user.id, childId, imageUrl)
+        : null,
     });
   } catch (err) {
     console.error("Preview generation error:", err);
@@ -132,7 +137,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
   const parsed = await parseJsonBody(request, approvePreviewSchema);
   if (parsed instanceof NextResponse) return parsed;
-  const { characterPrompt } = parsed;
   const imageUrl = parsed.imageUrl ?? null;
 
   const { childId } = await params;
@@ -144,6 +148,29 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   if (!child) {
     return NextResponse.json({ error: "Profiel niet gevonden" }, { status: 404 });
   }
+
+  // SECURITY: vertrouw de client niet voor het beeld of de prompt.
+  // - Het beeld moet het portret zijn dat de POST hierboven voor dit kind
+  //   genereerde (handtekening), of het al goedgekeurde portret van dit
+  //   kind (opnieuw goedkeuren). Anders kon een client elke URL op een
+  //   toegestane host als referentie voor alle illustraties vastleggen.
+  // - De prompt wordt hier opnieuw uit het profiel opgebouwd; een door de
+  //   client ingestuurde tekst kwam anders ongefilterd in elke
+  //   illustratieprompt terecht.
+  if (
+    imageUrl &&
+    imageUrl !== child.approvedPreviewUrl &&
+    !verifyPreviewToken(parsed.previewToken, session.user.id, childId, imageUrl)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Dit portret is verlopen. Maak een nieuw portret en keur dat goed.",
+      },
+      { status: 400 },
+    );
+  }
+  const characterPrompt = buildCharacterDescription(bibleFromChild(child));
 
   // If the approved image came from fal.ai (temporary URL), copy it to
   // our own storage so the approved preview stays accessible long-term.

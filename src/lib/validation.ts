@@ -132,8 +132,13 @@ export type ChildProfileCreateInput = z.infer<typeof childProfileCreateSchema>;
  * teruggevoerd wordt in de AI-generatie, en eis een geldige image-URL.
  */
 export const approvePreviewSchema = z.object({
-  characterPrompt: z.string().trim().min(1).max(4000),
+  // Wordt niet meer gebruikt: de route bouwt de prompt zelf uit het profiel.
+  // Nog geaccepteerd zodat een openstaande oude pagina geen 400 krijgt.
+  characterPrompt: z.string().max(4000).optional(),
   imageUrl: z.string().url().max(2048).nullable().optional(),
+  /** Handtekening uit de POST-response; bewijst dat imageUrl het portret
+   *  is dat wij voor dit kind hebben gegenereerd. */
+  previewToken: z.string().max(200).optional(),
 });
 export type ApprovePreviewInput = z.infer<typeof approvePreviewSchema>;
 
@@ -144,15 +149,13 @@ export const createStorySchema = z
     /** Optioneel: id van het verhaal waar dit een vervolg op is. De route
      *  verifieert dat het verhaal bij hetzelfde kind hoort. */
     sequelOfStoryId: uuid.optional(),
-    characterBible: z
-      .object({
-        childName: shortText,
-        dateOfBirth: z.string(),
-        gender: shortText,
-        interests: z.array(shortText).max(20),
-        mainCharacterType: shortText,
-      })
-      .passthrough(), // accepteer ook overige velden zonder strict te zijn
+    // Alleen de heldkeuze wordt gebruikt; de rest van de character bible
+    // bouwt de route zelf op uit het kindprofiel. Overige velden die een
+    // (oudere) client meestuurt worden door zod weggelaten.
+    characterBible: z.object({
+      mainCharacterType: shortText,
+      mainCharacterDescription: mediumTextLoose.optional(),
+    }),
     storyRequest: z
       .object({
         // Een eigen plek wordt als setting opgeslagen en in de bibliotheek
@@ -170,8 +173,7 @@ export const createStorySchema = z
         mainCharacterType: shortText.optional(),
         mainCharacterDescription: mediumText.optional(),
         regenerationFeedback: longText.optional(),
-      })
-      .passthrough(),
+      }),
   })
   .strict();
 export type CreateStoryInput = z.infer<typeof createStorySchema>;
