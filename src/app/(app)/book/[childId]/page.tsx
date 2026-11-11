@@ -11,6 +11,7 @@ import {
   BookBuilderV2,
   type BookStoryData,
 } from "@/components/v2/book/BookBuilderV2";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -70,7 +71,7 @@ export default async function BookPage({ params }: Props) {
       createdAt: s.createdAt.toISOString(),
       // pages in DB + 2 for title/ending framing
       pageCount: Math.max(s.pages.length, 1),
-      firstIllustrationUrl: firstIllustrationPage?.illustrationUrl ?? null,
+      firstIllustrationUrl: toDisplayUrl(firstIllustrationPage?.illustrationUrl),
       firstParagraph:
         firstContentPage?.text?.slice(0, 400) ??
         "Een verhaal uit dit jaar.",

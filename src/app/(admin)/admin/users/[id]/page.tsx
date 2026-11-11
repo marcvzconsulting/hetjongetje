@@ -22,6 +22,7 @@ import { V2 } from "@/components/v2/tokens";
 import { Kicker, IconV2 } from "@/components/v2";
 import { EBtnSubmit } from "@/components/v2/EBtnSubmit";
 import { PendingButton } from "@/components/v2/PendingButton";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 function formatDateTime(date: Date | null | undefined): string {
   if (!date) return "-";
@@ -1931,7 +1932,7 @@ export default async function AdminUserDetailPage({
                   {child.approvedPreviewUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={child.approvedPreviewUrl}
+                      src={toDisplayUrl(child.approvedPreviewUrl) ?? undefined}
                       alt={`Character ${child.name}`}
                       style={{
                         height: 64,

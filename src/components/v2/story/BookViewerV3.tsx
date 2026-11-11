@@ -16,6 +16,7 @@ import { Logo, IconV2 } from "@/components/v2";
 import { SignOutButtonV2 } from "@/components/v2/app/SignOutButton";
 import type { Spread, PageType } from "@/lib/story/spread-types";
 import { splitWords } from "@/lib/story/word-split";
+import { isProtectedImageUrl } from "@/lib/storage/image-url";
 
 /** Actief voorgelezen woord: DB-paginanummer + woordindex in splitWords. */
 export type WordHighlight = { pageNumber: number; wordIndex: number };
@@ -1320,6 +1321,7 @@ function IllustrationPage({
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
         <Image
           src={page.url}
+          unoptimized={isProtectedImageUrl(page.url)}
           alt={page.description || "Illustratie"}
           fill
           priority

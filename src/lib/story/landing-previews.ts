@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { storyToSpreads } from "@/lib/story/storyToSpreads";
 import type { Spread } from "@/lib/story/spread-types";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 export type LandingPreviewSlot = "girl-2" | "girl-4" | "boy-2" | "boy-4";
 
@@ -79,7 +80,7 @@ export async function fetchLandingPreviews(): Promise<LandingPreview[]> {
         pages: story.pages.map((p) => ({
           pageNumber: p.pageNumber,
           text: p.text,
-          illustrationUrl: p.illustrationUrl,
+          illustrationUrl: toDisplayUrl(p.illustrationUrl),
           illustrationDescription: p.illustrationDescription,
           illustrationPrompt: p.illustrationPrompt,
         })),

@@ -20,6 +20,7 @@ import { enforceRateLimit } from "@/lib/rate-limit/api-rate-limit";
 import { approvePreviewSchema, parseJsonBody } from "@/lib/validation";
 import { maybeAlertFalBalanceExhausted } from "@/lib/ai/fal-balance";
 import { loadUserGate } from "@/lib/user-gate";
+import { toServerFetchUrl } from "@/lib/storage/scaleway";
 import { createPreviewToken, verifyPreviewToken } from "@/lib/ai/preview-token";
 
 // Goedkeuren maakt sinds sept 2026 ook het karakterblad (2 x flux-2-pro/edit,
@@ -212,7 +213,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
           bibleFromChild(child),
           await loadAiPromptSnippets(),
         );
-        const sheet = await generateCharacterSheet(persistedUrl, style);
+        // Privé-opslag: fal.ai krijgt een ondertekende link naar het portret.
+        const sheet = await generateCharacterSheet(
+          (await toServerFetchUrl(persistedUrl)) ?? persistedUrl,
+          style,
+        );
         if (sheet) {
           const [faceUrl, bodyUrl] = await Promise.all([
             uploadFromUrl(sheet.faceUrl, referenceFaceKey(childId)),

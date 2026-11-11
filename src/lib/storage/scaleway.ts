@@ -20,6 +20,23 @@ const PUBLIC_BASE_URL =
   process.env.SCALEWAY_PUBLIC_BASE_URL ||
   (BUCKET ? `https://${BUCKET}.s3.${REGION}.scw.cloud` : "");
 
+/**
+ * Schakelaar voor privé-opslag van kindplaatjes (illustraties, portret,
+ * karakterblad). Uit (standaard): objecten zijn `public-read` en de app
+ * toont de opgeslagen URL rechtstreeks, zoals altijd. Aan: nieuwe objecten
+ * krijgen geen publieke leesrechten en de app levert ze uit via
+ * /api/img/<key>, dat eerst controleert of de kijker het plaatje mag zien
+ * en dan doorstuurt naar een kortlevende ondertekende link.
+ *
+ * De waarde in de database blijft in beide standen dezelfde
+ * `https://<bucket>.s3.<regio>.scw.cloud/<key>`; alleen de manier van
+ * uitleveren verschilt. Bestaande objecten zet je om met
+ * scripts/set-storage-acl.ts.
+ */
+export function privateImagesEnabled(): boolean {
+  return process.env.STORAGE_PRIVATE_IMAGES === "1";
+}
+
 function requireEnv() {
   if (!BUCKET) throw new Error("SCALEWAY_BUCKET niet ingesteld");
   if (!process.env.SCALEWAY_ACCESS_KEY)
@@ -92,8 +109,14 @@ export async function uploadBuffer(
       Key: key,
       Body: buffer,
       ContentType: contentType,
-      ACL: "public-read",
-      CacheControl: "public, max-age=31536000, immutable",
+      // Privé-stand: geen ACL, dus het object erft de (privé) standaard
+      // van de bucket en is alleen met een ondertekende link te lezen.
+      ...(privateImagesEnabled()
+        ? { CacheControl: "private, max-age=3600" }
+        : {
+            ACL: "public-read" as const,
+            CacheControl: "public, max-age=31536000, immutable",
+          }),
     })
   );
   return `${PUBLIC_BASE_URL}/${key}`;
@@ -140,6 +163,44 @@ export async function getPresignedGetUrl(
     new GetObjectCommand({ Bucket: BUCKET!, Key: key }),
     { expiresIn: ttlSeconds }
   );
+}
+
+/** Hoe lang een ondertekende plaatjeslink maximaal geldig is. */
+const IMAGE_LINK_TTL_SECONDS = 2 * 60 * 60;
+const IMAGE_LINK_BUCKET_MS = 60 * 60 * 1000;
+
+/**
+ * Ondertekende leeslink voor een plaatje, stabiel binnen het lopende uur.
+ * De ondertekendatum wordt afgerond op het hele uur, zodat dezelfde key
+ * binnen dat uur steeds dezelfde URL oplevert en de browser het plaatje
+ * uit de cache kan halen. De link verloopt één tot twee uur na uitgifte.
+ */
+export async function getImageReadUrl(key: string): Promise<string> {
+  const signingDate = new Date(
+    Math.floor(Date.now() / IMAGE_LINK_BUCKET_MS) * IMAGE_LINK_BUCKET_MS
+  );
+  return getSignedUrl(
+    getClient(),
+    new GetObjectCommand({ Bucket: BUCKET!, Key: key }),
+    { expiresIn: IMAGE_LINK_TTL_SECONDS, signingDate }
+  );
+}
+
+/**
+ * URL waarmee de server zelf, of een dienst die namens ons werkt (fal.ai,
+ * de pdf-renderer, de deelafbeelding), een opgeslagen plaatje kan ophalen.
+ * In de publieke stand is dat de opgeslagen URL; in de privé-stand een
+ * ondertekende link. Nooit naar de browser sturen: daar hoort
+ * `toDisplayUrl` uit display-url.ts.
+ */
+export async function toServerFetchUrl(
+  url: string | null | undefined
+): Promise<string | null> {
+  if (!url) return null;
+  if (!privateImagesEnabled()) return url;
+  const key = keyFromUrl(url);
+  if (!key) return url; // geen object van ons (bijv. een fal-URL)
+  return getImageReadUrl(key);
 }
 
 export async function deleteObject(key: string): Promise<void> {

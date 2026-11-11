@@ -2,6 +2,7 @@ import { fal } from "@fal-ai/client";
 import type { GeneratedStory, CharacterBible } from "./story-generator";
 import { buildIllustrationStyle } from "./story-generator";
 import type { IllustrationModel } from "./pricing";
+import { toServerFetchUrl } from "@/lib/storage/scaleway";
 
 fal.config({
   credentials: process.env.FAL_KEY!,
@@ -235,15 +236,23 @@ export async function generateIllustrations(
   // kindprofiel (zie stories/route.ts en regenerate/route.ts). Zonder blad
   // (oud profiel, mislukte generatie) doet het portret alleen dienst.
   const engine = engineOverride ?? resolveIllustrationEngine();
-  const reference: ReferenceConfig | null =
+  // Privé-opslag: fal.ai haalt de referentiebeelden zelf op en krijgt
+  // daarom een kortlevende ondertekende link in plaats van de opgeslagen
+  // URL (die dan niet meer publiek leesbaar is).
+  const referenceUrls =
     !lora && engine !== "flux1" && characterBible.approvedPreviewUrl
-      ? {
-          urls: [
-            characterBible.approvedPreviewUrl,
-            ...(characterBible.referenceSheetUrls ?? []),
-          ],
-          engine,
-        }
+      ? (
+          await Promise.all(
+            [
+              characterBible.approvedPreviewUrl,
+              ...(characterBible.referenceSheetUrls ?? []),
+            ].map((u) => toServerFetchUrl(u)),
+          )
+        ).filter((u): u is string => !!u)
+      : [];
+  const reference: ReferenceConfig | null =
+    engine !== "flux1" && referenceUrls.length > 0
+      ? { urls: referenceUrls, engine }
       : null;
 
   if (process.env.NODE_ENV === "development") {

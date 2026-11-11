@@ -9,6 +9,7 @@ import {
   resolveReaderVersion,
 } from "@/lib/reader/version";
 import { StoryPageClient } from "./client";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 interface Props {
   params: Promise<{ storyId: string }>;
@@ -46,7 +47,7 @@ export default async function StoryPage({ params, searchParams }: Props) {
     pages: story.pages.map((p) => ({
       pageNumber: p.pageNumber,
       text: p.text,
-      illustrationUrl: p.illustrationUrl,
+      illustrationUrl: toDisplayUrl(p.illustrationUrl),
       illustrationDescription: p.illustrationDescription,
       illustrationPrompt: p.illustrationPrompt,
     })),

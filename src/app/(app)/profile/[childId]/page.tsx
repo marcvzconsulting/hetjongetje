@@ -11,6 +11,7 @@ import { Avatar } from "@/components/v2/Avatar";
 import { AppShell, buildAppNav } from "@/components/v2/app/AppShell";
 import { LoraTrainer } from "@/components/v2/lora/LoraTrainer";
 import { ProfileEditor } from "./client";
+import { toDisplayUrl } from "@/lib/storage/display-url";
 
 interface Props {
   params: Promise<{ childId: string }>;
@@ -159,6 +160,9 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               mainCharacterDescription: child.mainCharacterDescription || "",
               storyCount: child._count.stories,
               approvedPreviewUrl: child.approvedPreviewUrl || null,
+              // De opgeslagen URL blijft nodig voor opnieuw goedkeuren; dit
+              // is de variant die de browser mag tonen (privé-opslag).
+              approvedPreviewDisplayUrl: toDisplayUrl(child.approvedPreviewUrl),
               hasApprovedPrompt: !!child.approvedCharacterPrompt,
             }}
           />
