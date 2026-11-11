@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { calculateAge } from "@/lib/utils/age";
 import { loadUserGate } from "@/lib/user-gate";
+import { hasPaidOrder } from "@/lib/payments/paid-access";
 import { V2 } from "@/components/v2/tokens";
 import { Kicker } from "@/components/v2";
 import { Avatar } from "@/components/v2/Avatar";
@@ -22,6 +23,11 @@ export default async function ProfilePage({ params, searchParams }: Props) {
 
   const gate = await loadUserGate(session.user.id);
   const credits = gate && !gate.isAdmin ? gate.storyCredits : null;
+  // Een persoonlijk model trainen kan pas na een eerste aankoop (zie
+  // api/children/[childId]/lora). De route dwingt dit af; hier bepalen we
+  // alleen wat de pagina toont.
+  const canTrainLora =
+    !!gate && (gate.isAdmin || (await hasPaidOrder(session.user.id)));
 
   const { childId } = await params;
   const { from } = await searchParams;
@@ -219,6 +225,7 @@ export default async function ProfilePage({ params, searchParams }: Props) {
               child.loraTrainedAt ? child.loraTrainedAt.toISOString() : null
             }
             initialFailureReason={child.loraFailureReason}
+            locked={!canTrainLora}
           />
         </section>
       </div>

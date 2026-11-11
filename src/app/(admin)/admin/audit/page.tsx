@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
+import { requireAdmin } from "@/lib/admin";
 
 type SearchParams = Promise<{
   actor?: string;
@@ -115,6 +116,9 @@ export default async function AdminAuditPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const params = await searchParams;
   const actor = params.actor?.trim() ?? "";
   const action = params.action?.trim() ?? "";

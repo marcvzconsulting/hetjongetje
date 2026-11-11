@@ -187,6 +187,39 @@ export async function POST(
     regenerationFeedback: combinedFeedback,
   };
 
+  // Claim de regeneratie vóór de dure AI-aanroepen, atomair. Zonder deze
+  // claim werd de teller pas na afloop opgehoogd en leverden gelijktijdige
+  // verzoeken elk een volledige gratis generatie op. De voorwaarde op de
+  // gelezen stand laat precies één verzoek door; bij een fout of een
+  // onvolledig resultaat geven we de claim hieronder terug.
+  const claim = await prisma.story.updateMany({
+    where: {
+      id: storyId,
+      regenerationCount: story.regenerationCount,
+    },
+    data: { regenerationCount: { increment: 1 } },
+  });
+  if (claim.count === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "Dit verhaal wordt al opnieuw gegenereerd of is al opnieuw gegenereerd.",
+        code: "regen_limit_reached",
+      },
+      { status: 409 },
+    );
+  }
+  const releaseClaim = async () => {
+    try {
+      await prisma.story.updateMany({
+        where: { id: storyId, regenerationCount: story.regenerationCount + 1 },
+        data: { regenerationCount: story.regenerationCount },
+      });
+    } catch (releaseErr) {
+      console.error("[regen] claim teruggeven mislukt:", releaseErr);
+    }
+  };
+
   try {
     let generated = await generateStory(bible, storyRequest);
 
@@ -312,14 +345,7 @@ export async function POST(
     // terug te geven. Wel resetten we de regenerationCount-bump zodat de
     // parent het opnieuw mag proberen.
     if (isPartial) {
-      try {
-        await prisma.story.update({
-          where: { id: storyId },
-          data: { regenerationCount: story.regenerationCount },
-        });
-      } catch (resetErr) {
-        console.error("[regen] partial regen-count reset failed:", resetErr);
-      }
+      await releaseClaim();
       after(async () => {
         try {
           const user = await prisma.user.findUnique({
@@ -361,6 +387,7 @@ export async function POST(
     return NextResponse.json({ ok: true, storyId, partial: isPartial });
   } catch (err) {
     console.error(`[regen] failed for story ${storyId}`, err);
+    await releaseClaim();
     return NextResponse.json(
       { error: "Genereren mislukt — probeer het zo opnieuw." },
       { status: 500 },

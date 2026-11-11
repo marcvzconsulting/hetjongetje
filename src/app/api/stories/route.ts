@@ -65,7 +65,6 @@ export async function POST(request: NextRequest) {
   const parsed = await parseJsonBody(request, createStorySchema);
   if (parsed instanceof NextResponse) return parsed;
   const childId = parsed.childId;
-  const characterBible = parsed.characterBible as CharacterBible;
   const storyRequest = parsed.storyRequest as StoryRequest;
   // Sequel-context wordt uitsluitend server-side opgebouwd (hieronder,
   // uit het geverifieerde vorige verhaal). Een client die zelf `sequel`
@@ -86,25 +85,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // SECURITY: never trust a client-supplied loraUrl/loraTriggerWord. A
-    // client could otherwise point generation at an arbitrary fal model or
-    // URL (SSRF-via-fal / another child's trained character). Always derive
-    // them from the verified child profile — same as the regenerate route.
-    characterBible.loraUrl =
+    // SECURITY: de character bible wordt volledig uit het geverifieerde
+    // kindprofiel opgebouwd, net als in de regenerate-route. Uit de request
+    // komt alleen de heldkeuze van dit verhaal (type + omschrijving), en die
+    // is in het schema begrensd. Alles wat een client verder meestuurt wordt
+    // genegeerd: anders kan een gemanipuleerde body een eigen beeldprompt
+    // (approvedCharacterPrompt), een willekeurig fal-model (loraUrl), een
+    // ander referentieportret of duizenden "eerdere avonturen" in de prompt
+    // zetten voor de prijs van één credit.
+    // previousAdventures gaat bij een nieuw verhaal bewust niet mee: de
+    // wizard stuurde ze nooit, dus dat gedrag blijft gelijk.
+    const loraUrl =
       child.loraStatus === "ready" ? child.loraUrl ?? undefined : undefined;
-    characterBible.loraTriggerWord = characterBible.loraUrl
-      ? child.loraTriggerWord ?? undefined
-      : undefined;
-    // Idem voor het referentieportret: altijd uit het geverifieerde
-    // profiel, nooit uit de request-body (anders kan een client een
-    // willekeurige URL als "portret" naar fal.ai sturen).
-    characterBible.approvedPreviewUrl = child.approvedPreviewUrl ?? undefined;
-    // Naam en geslacht altijd uit het profiel: daar hangen de voornaamwoorden
-    // in het verhaal aan (hij/zij), en een verouderde of gemanipuleerde
-    // client-body mag dat niet kunnen omdraaien.
-    characterBible.childName = child.name;
-    characterBible.gender = child.gender;
-    characterBible.referenceSheetUrls = child.referenceSheetUrls;
+    const characterBible: CharacterBible = {
+      childName: child.name,
+      dateOfBirth: child.dateOfBirth.toISOString(),
+      gender: child.gender,
+      hairColor: child.hairColor || undefined,
+      hairStyle: child.hairStyle || undefined,
+      eyeColor: child.eyeColor || undefined,
+      skinColor: child.skinColor || undefined,
+      wearsGlasses: child.wearsGlasses,
+      hasFreckles: child.hasFreckles,
+      interests: child.interests ?? [],
+      pets: (child.pets || undefined) as CharacterBible["pets"],
+      friends: (child.friends || undefined) as CharacterBible["friends"],
+      favoriteThings: (child.favoriteThings ||
+        undefined) as CharacterBible["favoriteThings"],
+      fears: child.fears ?? undefined,
+      mainCharacterType: parsed.characterBible.mainCharacterType,
+      mainCharacterDescription:
+        parsed.characterBible.mainCharacterDescription || undefined,
+      approvedCharacterPrompt: child.approvedCharacterPrompt || undefined,
+      loraUrl,
+      loraTriggerWord: loraUrl ? child.loraTriggerWord ?? undefined : undefined,
+      approvedPreviewUrl: child.approvedPreviewUrl ?? undefined,
+      referenceSheetUrls: child.referenceSheetUrls,
+    };
 
     // Vervolg-verhaal: haal het vorige verhaal op en verifieer dat het
     // bij dit kind hoort (het kind is hierboven al aan de ingelogde user

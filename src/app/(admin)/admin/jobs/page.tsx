@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { V2 } from "@/components/v2/tokens";
 import { IconV2 } from "@/components/v2";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
+import { requireAdmin } from "@/lib/admin";
 
 type SearchParams = Promise<{ status?: string; type?: string }>;
 
@@ -96,6 +97,9 @@ export default async function AdminJobsPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const params = await searchParams;
   const status = params.status ?? "failed";
   const type = params.type ?? "";
