@@ -8,6 +8,7 @@ import {
   deleteFaqAction,
   updateFaqAction,
 } from "./actions";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,9 @@ export default async function AdminFaqPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const session = await auth();
   const sp = await searchParams;
   const flash =

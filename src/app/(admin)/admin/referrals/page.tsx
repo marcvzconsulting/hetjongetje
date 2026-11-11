@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { V2 } from "@/components/v2/tokens";
 import { AdminShell, ADMIN_NAV } from "@/components/v2/admin/AdminShell";
 import { REFERRAL_BONUS_CREDITS } from "@/lib/referral";
+import { requireAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,9 @@ function monthLabel(key: string): string {
 }
 
 export default async function AdminReferralsPage() {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const session = await auth();
 
   // Window: laatste 12 kalendermaanden (huidige maand + 11 ervoor).

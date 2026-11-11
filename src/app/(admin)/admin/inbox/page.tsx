@@ -9,6 +9,7 @@ import {
   closeContactMessageAction,
   reopenContactMessageAction,
 } from "./actions";
+import { requireAdmin } from "@/lib/admin";
 
 type SearchParams = Promise<{ status?: string }>;
 
@@ -45,6 +46,9 @@ export default async function AdminInboxPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Niet alleen op de layout leunen: een layout draait niet bij elke
+  // (deel)render opnieuw, dus elke adminpagina controleert zelf.
+  await requireAdmin();
   const params = await searchParams;
   const status = params.status === "closed" ? "closed" : "open";
 
