@@ -26,6 +26,7 @@ import {
 import { wavyEdge, type WavyEdge } from "./edge";
 import { PAPER_NOISE, type ReaderPalette } from "./palette";
 import { WORD_STYLE, dropcapStyle, textBlockStyle } from "./text-style";
+import { isProtectedImageUrl } from "@/lib/storage/image-url";
 
 type PageProps = {
   unit: DisplayUnit;
@@ -587,6 +588,7 @@ export function Illustration({
     return (
       <Image
         src={image.url}
+        unoptimized={isProtectedImageUrl(image.url)}
         alt={image.description || "Illustratie bij het verhaal"}
         fill
         sizes={sizes}

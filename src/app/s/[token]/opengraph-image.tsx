@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
+import { toServerFetchUrl } from "@/lib/storage/scaleway";
 
 /**
  * Open Graph preview voor een gedeeld verhaal. Geladen door social
@@ -51,7 +52,8 @@ export default async function Image({
 
   const title = story?.title ?? "Een gepersonaliseerd verhaaltje";
   const childName = story?.childProfile.name ?? "een kind";
-  const cover = story?.pages[0]?.illustrationUrl ?? null;
+  // Privé-opslag: de server haalt het plaatje op met een ondertekende link.
+  const cover = await toServerFetchUrl(story?.pages[0]?.illustrationUrl);
 
   return new ImageResponse(
     (

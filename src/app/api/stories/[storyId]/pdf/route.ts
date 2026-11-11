@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { StoryPdfDocument } from "@/lib/pdf/story-pdf";
+import { toServerFetchUrl } from "@/lib/storage/scaleway";
 
 /**
  * Genereert een PDF voor één verhaal en streamt 'm terug als
@@ -56,8 +57,14 @@ export async function GET(
   const storyPages = isEndingPlaceholder
     ? story.pages.slice(0, -1)
     : story.pages;
-  const endingIllustrationUrl =
-    isEndingPlaceholder && lastPage ? lastPage.illustrationUrl : null;
+  // Privé-opslag: de pdf-renderer haalt de plaatjes server-side op en
+  // heeft daar een ondertekende link voor nodig.
+  const endingIllustrationUrl = await toServerFetchUrl(
+    isEndingPlaceholder && lastPage ? lastPage.illustrationUrl : null,
+  );
+  const pageImageUrls = await Promise.all(
+    storyPages.map((p) => toServerFetchUrl(p.illustrationUrl)),
+  );
 
   const buffer = await renderToBuffer(
     StoryPdfDocument({
@@ -66,10 +73,10 @@ export async function GET(
         subtitle: story.subtitle,
         childName: story.childProfile.name,
         createdAt: story.createdAt,
-        pages: storyPages.map((p) => ({
+        pages: storyPages.map((p, i) => ({
           pageNumber: p.pageNumber,
           text: p.text,
-          illustrationUrl: p.illustrationUrl,
+          illustrationUrl: pageImageUrls[i],
         })),
         endingIllustrationUrl,
       },

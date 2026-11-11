@@ -8,10 +8,12 @@ interface Props {
   childId: string;
   childName: string;
   currentPreviewUrl: string | null;
+  /** Toonbare variant van currentPreviewUrl bij privé-opslag. */
+  currentPreviewDisplayUrl?: string | null;
   isApproved: boolean;
 }
 
-export function CharacterPreview({ childId, childName, currentPreviewUrl, isApproved }: Props) {
+export function CharacterPreview({ childId, childName, currentPreviewUrl, currentPreviewDisplayUrl, isApproved }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentPreviewUrl);
   const [characterPrompt, setCharacterPrompt] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -129,7 +131,11 @@ export function CharacterPreview({ childId, childName, currentPreviewUrl, isAppr
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={previewUrl}
+              src={
+                previewUrl === currentPreviewUrl
+                  ? (currentPreviewDisplayUrl ?? previewUrl)
+                  : previewUrl
+              }
               alt={`Illustratie van ${childName}`}
               style={{
                 width: "100%",
