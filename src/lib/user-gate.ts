@@ -9,6 +9,8 @@ export type UserGate = {
   /** User has requested account deletion and is in the 30-day grace period. */
   isPendingDeletion: boolean;
   canGenerate: boolean;
+  /** Startcredits die klaarstaan tot het e-mailadres is bevestigd. */
+  pendingStarterCredits: number;
 };
 
 export async function loadUserGate(userId: string): Promise<UserGate | null> {
@@ -19,6 +21,7 @@ export async function loadUserGate(userId: string): Promise<UserGate | null> {
       status: true,
       storyCredits: true,
       deletionRequestedAt: true,
+      pendingStarterCredits: true,
     },
   });
   if (!user) return null;

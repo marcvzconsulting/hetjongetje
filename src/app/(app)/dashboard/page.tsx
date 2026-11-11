@@ -17,10 +17,16 @@ import { OnboardingTour } from "@/components/v2/onboarding/OnboardingTour";
 import { ReferralCard } from "@/components/v2/app/ReferralCard";
 import { getOrCreateReferralCode } from "@/lib/referral";
 import { buildAppUrl } from "@/lib/url";
-import { markOnboardedAction } from "./actions";
+import { markOnboardedAction, resendVerifyEmailAction } from "./actions";
 import { toDisplayUrl } from "@/lib/storage/display-url";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ bevestigen?: string | string[] }>;
+}) {
+  const { bevestigen } = await searchParams;
+  const verifyState = Array.isArray(bevestigen) ? bevestigen[0] : bevestigen;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -234,8 +240,16 @@ export default async function DashboardPage() {
 
       {/* Low-credits nudge — only when there's a real number to show
           (admin sees no pill so we skip it for them too). */}
-      {typeof creditsToShow === "number" && creditsToShow <= 3 && (
-        <CreditsBanner credits={creditsToShow} />
+      {/* Startcredits staan klaar tot het e-mailadres is bevestigd; die
+          melding gaat voor op "tegoed is op". */}
+      {!gate.isAdmin && gate.pendingStarterCredits > 0 ? (
+        <VerifyEmailBanner
+          credits={gate.pendingStarterCredits}
+          state={verifyState}
+        />
+      ) : (
+        typeof creditsToShow === "number" &&
+        creditsToShow <= 3 && <CreditsBanner credits={creditsToShow} />
       )}
 
       {/* Child list / empty state */}
@@ -315,6 +329,91 @@ export default async function DashboardPage() {
 }
 
 // ── Sub components ──────────────────────────────────────────────────
+
+function VerifyEmailBanner({
+  credits,
+  state,
+}: {
+  credits: number;
+  state?: string;
+}) {
+  const note =
+    state === "verstuurd"
+      ? "We hebben de mail opnieuw gestuurd. Kijk ook in je spam."
+      : state === "mislukt"
+        ? "Die link werkt niet meer. Vraag hieronder een nieuwe aan."
+        : state === "te-vaak"
+          ? "Je hebt de mail al een paar keer aangevraagd. Probeer het over een uur opnieuw."
+          : state === "mail-mislukt"
+            ? "Versturen lukte niet. Probeer het zo nog eens."
+            : null;
+  return (
+    <section
+      className="app-section-pad"
+      style={{ maxWidth: 1200, margin: "0 auto", padding: "20px 40px 0" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          padding: "20px 28px",
+          background: "rgba(201,169,97,0.18)",
+          borderLeft: `3px solid ${V2.goldDeep}`,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontFamily: V2.mono,
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: V2.goldDeep,
+            }}
+          >
+            Nog één stap
+          </div>
+          <div
+            style={{
+              fontFamily: V2.display,
+              fontSize: 22,
+              fontWeight: 300,
+              letterSpacing: -0.4,
+              margin: "6px 0 0",
+              color: V2.ink,
+            }}
+          >
+            Bevestig je e-mailadres.{" "}
+            <span style={{ fontStyle: "italic" }}>
+              {credits === 1
+                ? "Daarna staat je gratis verhaal klaar."
+                : `Daarna staan je ${credits} gratis verhalen klaar.`}
+            </span>
+          </div>
+          <div
+            style={{
+              fontFamily: V2.ui,
+              fontSize: 14,
+              margin: "8px 0 0",
+              color: V2.ink,
+            }}
+          >
+            {note ?? "We hebben je een mail gestuurd met een bevestigingslink."}
+          </div>
+        </div>
+        <form action={resendVerifyEmailAction}>
+          <EBtn kind="primary" size="md" type="submit">
+            Mail opnieuw sturen
+          </EBtn>
+        </form>
+      </div>
+    </section>
+  );
+}
 
 function CreditsBanner({ credits }: { credits: number }) {
   const empty = credits === 0;
