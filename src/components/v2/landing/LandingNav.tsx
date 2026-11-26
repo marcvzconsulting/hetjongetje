@@ -72,7 +72,7 @@ export function LandingNav() {
         <Link href="/login" style={{ color: V2.ink, textDecoration: "none" }}>
           Inloggen
         </Link>
-        <EBtn kind="primary" size="sm" href="/register">
+        <EBtn kind="primary" size="sm" href="/register" style={{ whiteSpace: "nowrap" }}>
           Probeer het
         </EBtn>
       </div>
