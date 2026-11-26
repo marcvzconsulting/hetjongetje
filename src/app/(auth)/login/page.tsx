@@ -16,6 +16,12 @@ import {
 } from "@/components/v2/auth/GoogleSignInButton";
 import { requestMagicLinkAction } from "./actions";
 
+// Wie nog nooit een account had, probeert soms gewoon in te loggen (26 nov
+// 2026: 11 pogingen met twee adressen zonder account). Bij een mislukte
+// poging wijzen we daarom direct op registreren. We zeggen niet óf het
+// adres bekend is, om accounts niet te verraden.
+const WRONG_CREDENTIALS = "Onjuist e-mailadres of wachtwoord.";
+
 /**
  * Sits inside the magic-link <form> so useFormStatus picks up the pending
  * state of that form's server action. The action does a Brevo round-trip
@@ -112,7 +118,7 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError("Onjuist e-mailadres of wachtwoord");
+        setError(WRONG_CREDENTIALS);
       } else {
         // Admins land directly on the admin overview, others on their
         // own dashboard.
@@ -210,6 +216,17 @@ function LoginForm() {
             }}
           >
             {error}
+            {error === WRONG_CREDENTIALS && (
+              <div style={{ marginTop: 8 }}>
+                Nog geen account?{" "}
+                <Link
+                  href="/register"
+                  style={{ color: V2.ink, textDecoration: "underline", fontWeight: 600 }}
+                >
+                  Maak er hier gratis een aan
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

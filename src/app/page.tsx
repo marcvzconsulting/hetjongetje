@@ -205,6 +205,7 @@ function Nav() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        gap: 16,
         padding: "24px 48px",
         borderBottom: `1px solid ${V2.paperShade}`,
       }}
@@ -235,7 +236,7 @@ function Nav() {
         <Link href="/login" style={{ color: V2.ink, textDecoration: "none" }}>
           Inloggen
         </Link>
-        <EBtn kind="primary" size="sm" href="/register">
+        <EBtn kind="primary" size="sm" href="/register" style={{ whiteSpace: "nowrap" }}>
           Probeer het
         </EBtn>
       </div>
