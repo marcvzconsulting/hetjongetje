@@ -112,10 +112,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   // de kale "Server error"-pagina en het spoor was de volgende dag weg.)
   logger: {
     error(error) {
+      // Een fout wachtwoord of onbekend adres is geen storing: de ouder
+      // ziet gewoon "Onjuist e-mailadres of wachtwoord". Niet naar Sentry,
+      // anders krijgen we bij elke tikfout een foutmelding per mail.
+      // Let op: `error.name` is in de productiebuild geminificeerd (bv.
+      // "h"), `error.type` is de vaste foutcode van Auth.js.
+      const type = (error as { type?: string }).type ?? error.name;
+      if (type === "CredentialsSignin") {
+        console.warn(`[auth][warn] ${type}: inloggen geweigerd`);
+        return;
+      }
       const cause = (error as { cause?: unknown }).cause;
-      console.error(`[auth][error] ${error.name}: ${error.message}`, cause ?? "");
+      console.error(`[auth][error] ${type}: ${error.message}`, cause ?? "");
       Sentry.captureException(error, {
-        tags: { source: "authjs", authErrorType: error.name },
+        tags: { source: "authjs", authErrorType: type },
       });
     },
   },
@@ -159,8 +169,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
         if (!emailLimit.allowed) return null;
 
+        // Zoek op het genormaliseerde adres: bij registratie slaan we het
+        // e-mailadres in kleine letters op, maar telefoontoetsenborden en
+        // autofill zetten er vaak een hoofdletter in ("Marie@gmail.com").
+        // Met het ruwe adres vond Postgres (hoofdlettergevoelig) het account
+        // dan niet en kreeg de ouder "Onjuist e-mailadres of wachtwoord".
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
         });
 
         // Always run bcrypt to equalize timing between found/not-found
